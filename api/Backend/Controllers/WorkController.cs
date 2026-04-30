@@ -1,0 +1,636 @@
+using Backend.Data;
+using Backend.Models;
+using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
+using System.Security.Claims;
+
+namespace Backend.Controllers
+{
+    [Route("api/[controller]")]
+    [ApiController]
+    [Authorize]
+    public class WorkController : ControllerBase
+    {
+        private readonly AppDbContext _context;
+
+        public WorkController(AppDbContext context)
+        {
+            _context = context;
+        }
+
+        /// <summary>
+        /// 从JWT token中获取当前用户ID
+        /// </summary>
+        private int? GetCurrentUserId()
+        {
+            var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier);
+            if (userIdClaim == null || !int.TryParse(userIdClaim.Value, out int userId))
+            {
+                return null;
+            }
+            return userId;
+        }
+
+        // GET: api/Work
+        [HttpGet]
+        public async Task<ActionResult> GetWorks(
+            [FromQuery] string? search = null,
+            [FromQuery] string? category = null,
+            [FromQuery] string? status = null,
+            [FromQuery] int page = 1,
+            [FromQuery] int pageSize = 12)
+        {
+            try
+            {
+                var userId = GetCurrentUserId();
+                if (userId == null)
+                {
+                    return Unauthorized(new { message = "未授权" });
+                }
+
+                var isAdmin = User.IsInRole("Admin");
+                IQueryable<Work> query;
+                
+                if (isAdmin)
+                {
+                    // 管理员可以查看所有作品
+                    query = _context.Works;
+                }
+                else
+                {
+                    // 普通用户可以查看自己的所有作品（无论状态）和其他用户的已发布作品
+                    query = _context.Works.Where(w => 
+                        w.UserId == userId.Value || // 自己的作品
+                        w.Status == "已发布" // 其他用户的已发布作品
+                    );
+                }
+
+                // 搜索筛选
+                if (!string.IsNullOrEmpty(search))
+                {
+                    query = query.Where(w => w.Title.Contains(search));
+                }
+
+                // 分类筛选
+                if (!string.IsNullOrEmpty(category))
+                {
+                    query = query.Where(w => w.Category == category);
+                }
+
+                // 状态筛选
+                if (!string.IsNullOrEmpty(status))
+                {
+                    query = query.Where(w => w.Status == status);
+                }
+
+                // 计算总数
+                var total = await query.CountAsync();
+
+                // 分页并关联用户表
+                var worksWithUserInfo = await query
+                    .Join(
+                        _context.Users,
+                        w => w.UserId,
+                        u => u.Id,
+                        (w, u) => new {
+                            w.Id,
+                            w.Title,
+                            uploadUserName = u.Name,
+                            w.Category,
+                            w.Description,
+                            w.UploadDate,
+                            w.Status,
+                            w.FilePath,
+                            w.FileName,
+                            w.FileSize,
+                            w.FileMD5,
+                            w.FileUploadTime,
+                            w.PreviewImage,
+                            w.UserId,
+                            w.Views,
+                            w.Favorites,
+                            w.IsExcellent,
+                            uploadUserUsername = u.Username // 上传用户账号
+                        }
+                    )
+                    .Skip((page - 1) * pageSize)
+                    .Take(pageSize)
+                    .ToListAsync();
+
+                return Ok(new {
+                    items = worksWithUserInfo,
+                    total = total,
+                    isAdmin = isAdmin
+                });
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"获取作品列表失败: {ex.Message}");
+                return StatusCode(500, new { message = "获取作品列表失败" });
+            }
+        }
+
+        // GET: api/Work/public
+        [HttpGet("public")]
+        [AllowAnonymous]
+        public async Task<ActionResult> GetPublicWorks(
+            [FromQuery] int limit = 10)
+        {
+            try
+            {
+                // 只返回已发布的作品
+                var query = _context.Works.Where(w => w.Status == "已发布");
+
+                // 关联用户表
+                var worksWithUserInfo = await query
+                    .Join(
+                        _context.Users,
+                        w => w.UserId,
+                        u => u.Id,
+                        (w, u) => new {
+                            w.Id,
+                            w.Title,
+                            uploadUserName = u.Name,
+                            w.Category,
+                            w.Description,
+                            w.UploadDate,
+                            w.Status,
+                            w.FilePath,
+                            w.FileName,
+                            w.FileSize,
+                            w.FileMD5,
+                            w.FileUploadTime,
+                            w.PreviewImage,
+                            w.UserId,
+                            w.Views,
+                            w.Favorites,
+                            w.IsExcellent,
+                            uploadUserUsername = u.Username // 上传用户账号
+                        }
+                    )
+                    .OrderByDescending(w => w.FileUploadTime)
+                    .Take(limit)
+                    .ToListAsync();
+
+                return Ok(new {
+                    items = worksWithUserInfo,
+                    total = worksWithUserInfo.Count
+                });
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"获取公开作品列表失败: {ex.Message}");
+                return StatusCode(500, new { message = "获取作品列表失败" });
+            }
+        }
+
+        // GET: api/Work/5
+        [HttpGet("{id}")]
+        public async Task<ActionResult<Work>> GetWork(int id)
+        {
+            var userId = GetCurrentUserId();
+            if (userId == null)
+            {
+                return Unauthorized(new { message = "未授权" });
+            }
+
+            var workWithUserInfo = await _context.Works
+                .Where(w => w.Id == id)
+                .Join(
+                    _context.Users,
+                    w => w.UserId,
+                    u => u.Id,
+                    (w, u) => new {
+                        w.Id,
+                        w.Title,
+                        uploadUserName = u.Name,
+                        w.Category,
+                        w.Description,
+                        w.UploadDate,
+                        w.Status,
+                        w.FilePath,
+                        w.FileName,
+                        w.FileSize,
+                        w.FileMD5,
+                        w.FileUploadTime,
+                        w.PreviewImage,
+                        w.UserId,
+                        uploadUserUsername = u.Username // 上传用户账号
+                    }
+                )
+                .FirstOrDefaultAsync();
+
+            if (workWithUserInfo == null)
+            {
+                return NotFound();
+            }
+
+            // 检查作品是否属于当前用户
+            if (workWithUserInfo.UserId != userId)
+            {
+                return Forbid("无权访问该作品");
+            }
+
+            return Ok(workWithUserInfo);
+        }
+
+        // PUT: api/Work/5
+        [HttpPut("{id}")]
+        public async Task<IActionResult> PutWork(int id, Work work)
+        {
+            try
+            {
+                var userId = GetCurrentUserId();
+                if (userId == null)
+                {
+                    return Unauthorized(new { message = "未授权" });
+                }
+
+                if (id != work.Id)
+                {
+                    return BadRequest();
+                }
+
+                // 检查作品是否存在
+                var existingWork = await _context.Works.FindAsync(id);
+                if (existingWork == null)
+                {
+                    return NotFound();
+                }
+
+                // 检查作品是否属于当前用户
+                if (existingWork.UserId != userId)
+                {
+                    return Forbid("无权修改该作品");
+                }
+
+                // 更新字段
+                existingWork.Title = work.Title;
+                existingWork.Category = work.Category;
+                existingWork.Description = work.Description;
+                existingWork.UploadDate = work.UploadDate;
+                existingWork.Status = work.Status;
+                existingWork.FilePath = work.FilePath;
+                existingWork.FileName = work.FileName;
+                existingWork.FileSize = work.FileSize;
+                existingWork.FileMD5 = work.FileMD5;
+                existingWork.FileUploadTime = work.FileUploadTime;
+                // 保持原始的UserId
+                // existingWork.UserId = work.UserId;
+
+                try
+                {
+                    await _context.SaveChangesAsync();
+                }
+                catch (DbUpdateConcurrencyException)
+                {
+                    if (!WorkExists(id))
+                    {
+                        return NotFound();
+                    }
+                    else
+                    {
+                        throw;
+                    }
+                }
+
+                return Ok(new { message = "更新成功", work = existingWork });
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"更新作品失败: {ex.Message}");
+                return StatusCode(500, new { message = "更新作品失败", error = ex.Message });
+            }
+        }
+
+        // POST: api/Work
+        [HttpPost]
+        public async Task<ActionResult<Work>> PostWork(Work work)
+        {
+            var userId = GetCurrentUserId();
+            if (userId == null)
+            {
+                return Unauthorized(new { message = "未授权" });
+            }
+
+            if (work.UploadDate == default)
+            {
+                work.UploadDate = DateTime.Now;
+            }
+
+            // 设置文件上传时间
+            work.FileUploadTime = DateTime.Now;
+
+            // 设置作品的UserId为当前用户ID
+            work.UserId = userId.Value;
+
+            _context.Works.Add(work);
+            await _context.SaveChangesAsync();
+
+            return CreatedAtAction(nameof(GetWork), new { id = work.Id }, work);
+        }
+
+        // DELETE: api/Work/5
+        [HttpDelete("{id}")]
+        public async Task<IActionResult> DeleteWork(int id)
+        {
+            var userId = GetCurrentUserId();
+            if (userId == null)
+            {
+                return Unauthorized(new { message = "未授权" });
+            }
+
+            var work = await _context.Works.FindAsync(id);
+            if (work == null)
+            {
+                return NotFound();
+            }
+
+            // 检查作品是否属于当前用户
+            if (work.UserId != userId)
+            {
+                return Forbid("无权删除该作品");
+            }
+
+            _context.Works.Remove(work);
+            await _context.SaveChangesAsync();
+
+            return Ok(new { message = "删除成功" });
+        }
+
+        private bool WorkExists(int id)
+        {
+            return _context.Works.Any(e => e.Id == id);
+        }
+
+        // POST: api/Work/{id}/review
+        [HttpPost("{id}/review")]
+        public async Task<IActionResult> ReviewWork(int id, [FromBody] ReviewRequest request)
+        {
+            try
+            {
+                // 检查当前用户是否为管理员
+                if (!User.IsInRole("Admin"))
+                {
+                    return Forbid("只有管理员可以审核作品");
+                }
+
+                var work = await _context.Works.FindAsync(id);
+                if (work == null)
+                {
+                    return NotFound(new { message = "作品不存在" });
+                }
+
+                // 更新作品状态
+                work.Status = request.Status;
+                
+                await _context.SaveChangesAsync();
+
+                return Ok(new { 
+                    message = $"作品审核成功，状态已更新为：{request.Status}",
+                    work = work
+                });
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"审核作品失败: {ex.Message}");
+                return StatusCode(500, new { message = "审核作品失败", error = ex.Message });
+            }
+        }
+
+        // GET: api/Work/recent
+        [HttpGet("recent")]
+        public async Task<ActionResult> GetRecentWorks([FromQuery] int hours = 6)
+        {
+            try
+            {
+                var userId = GetCurrentUserId();
+                if (userId == null)
+                {
+                    return Unauthorized(new { message = "未授权" });
+                }
+
+                var isAdmin = User.IsInRole("Admin");
+                IQueryable<Work> query;
+                
+                if (isAdmin)
+                {
+                    // 管理员可以查看所有作品
+                    query = _context.Works;
+                }
+                else
+                {
+                    // 普通用户可以查看自己的所有作品（无论状态）和其他用户的已发布作品
+                    query = _context.Works.Where(w => 
+                        w.UserId == userId.Value || // 自己的作品
+                        w.Status == "已发布" // 其他用户的已发布作品
+                    );
+                }
+
+                // 筛选最近hours小时内上传的作品
+                var cutoffTime = DateTime.Now.AddHours(-hours);
+                Console.WriteLine($"获取最近{hours}小时上传的作品，截止时间: {cutoffTime}");
+                
+                // 先获取所有作品，查看FileUploadTime字段
+                var allWorks = await query.ToListAsync();
+                Console.WriteLine($"所有作品数量: {allWorks.Count}");
+                foreach (var work in allWorks)
+                {
+                    Console.WriteLine($"作品ID: {work.Id}, FileUploadTime: {work.FileUploadTime}");
+                }
+                
+                // 筛选最近hours小时内上传的作品
+                query = query.Where(w => w.FileUploadTime.HasValue && w.FileUploadTime >= cutoffTime);
+
+                // 按上传时间倒序排序
+                var works = await query
+                    .OrderByDescending(w => w.FileUploadTime)
+                    .ToListAsync();
+                
+                Console.WriteLine($"最近{hours}小时上传的作品数量: {works.Count}");
+
+                return Ok(new {
+                    items = works,
+                    count = works.Count,
+                    hours = hours,
+                    cutoffTime = cutoffTime
+                });
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"获取最近作品失败: {ex.Message}");
+                return StatusCode(500, new { message = "获取最近作品失败" });
+            }
+        }
+
+        // GET: api/Work/{id}/view
+        [HttpGet("{id}/view")]
+        [AllowAnonymous]
+        public async Task<ActionResult> IncrementView(int id)
+        {
+            try
+            {
+                var work = await _context.Works.FindAsync(id);
+                if (work == null)
+                {
+                    return NotFound(new { message = "作品不存在" });
+                }
+
+                // 增加浏览量
+                work.Views++;
+                await _context.SaveChangesAsync();
+
+                return Ok(new {
+                    message = "浏览量增加成功",
+                    views = work.Views
+                });
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"增加浏览量失败: {ex.Message}");
+                return StatusCode(500, new { message = "增加浏览量失败" });
+            }
+        }
+
+        // POST: api/Work/{id}/favorite
+        [HttpPost("{id}/favorite")]
+        public async Task<ActionResult> AddFavorite(int id)
+        {
+            try
+            {
+                var userId = GetCurrentUserId();
+                if (userId == null)
+                {
+                    return Unauthorized(new { message = "未授权" });
+                }
+
+                var work = await _context.Works.FindAsync(id);
+                if (work == null)
+                {
+                    return NotFound(new { message = "作品不存在" });
+                }
+
+                // 检查是否已经收藏
+                var existingFavorite = await _context.WorkFavorites
+                    .Where(f => f.UserId == userId.Value && f.WorkId == id)
+                    .FirstOrDefaultAsync();
+
+                if (existingFavorite != null)
+                {
+                    return BadRequest(new { message = "已经收藏过该作品" });
+                }
+
+                // 添加收藏记录
+                var favorite = new WorkFavorite
+                {
+                    UserId = userId.Value,
+                    WorkId = id,
+                    FavoriteDate = DateTime.Now
+                };
+
+                _context.WorkFavorites.Add(favorite);
+                
+                // 增加收藏量
+                work.Favorites++;
+                
+                await _context.SaveChangesAsync();
+
+                return Ok(new {
+                    message = "收藏成功",
+                    favorites = work.Favorites
+                });
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"添加收藏失败: {ex.Message}");
+                return StatusCode(500, new { message = "添加收藏失败" });
+            }
+        }
+
+        // DELETE: api/Work/{id}/favorite
+        [HttpDelete("{id}/favorite")]
+        public async Task<ActionResult> RemoveFavorite(int id)
+        {
+            try
+            {
+                var userId = GetCurrentUserId();
+                if (userId == null)
+                {
+                    return Unauthorized(new { message = "未授权" });
+                }
+
+                var work = await _context.Works.FindAsync(id);
+                if (work == null)
+                {
+                    return NotFound(new { message = "作品不存在" });
+                }
+
+                // 查找收藏记录
+                var favorite = await _context.WorkFavorites
+                    .Where(f => f.UserId == userId.Value && f.WorkId == id)
+                    .FirstOrDefaultAsync();
+
+                if (favorite == null)
+                {
+                    return BadRequest(new { message = "未收藏该作品" });
+                }
+
+                // 删除收藏记录
+                _context.WorkFavorites.Remove(favorite);
+                
+                // 减少收藏量
+                if (work.Favorites > 0)
+                {
+                    work.Favorites--;
+                }
+                
+                await _context.SaveChangesAsync();
+
+                return Ok(new {
+                    message = "取消收藏成功",
+                    favorites = work.Favorites
+                });
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"取消收藏失败: {ex.Message}");
+                return StatusCode(500, new { message = "取消收藏失败" });
+            }
+        }
+
+        // GET: api/Work/{id}/is-favorite
+        [HttpGet("{id}/is-favorite")]
+        public async Task<ActionResult> CheckIsFavorite(int id)
+        {
+            try
+            {
+                var userId = GetCurrentUserId();
+                if (userId == null)
+                {
+                    return Unauthorized(new { message = "未授权" });
+                }
+
+                var isFavorite = await _context.WorkFavorites
+                    .AnyAsync(f => f.UserId == userId.Value && f.WorkId == id);
+
+                return Ok(new {
+                    isFavorite = isFavorite
+                });
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"检查收藏状态失败: {ex.Message}");
+                return StatusCode(500, new { message = "检查收藏状态失败" });
+            }
+        }
+    }
+
+    /// <summary>
+    /// 审核作品请求模型
+    /// </summary>
+    public class ReviewRequest
+    {
+        public string Status { get; set; } = string.Empty;
+    }
+}

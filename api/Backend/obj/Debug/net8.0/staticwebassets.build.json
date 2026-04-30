@@ -1,0 +1,19 @@
+{
+  "Version": 1,
+  "Hash": "Dw81r/Ut6r0IgLEIH8cx1RUsBRwdyEBQ5dIbRzgmFmE=",
+  "Source": "Backend",
+  "BasePath": "_content/Backend",
+  "Mode": "Default",
+  "ManifestType": "Build",
+  "ReferencedProjectsConfiguration": [],
+  "DiscoveryPatterns": [
+    {
+      "Name": "Backend\\wwwroot",
+      "Source": "Backend",
+      "ContentRoot": "D:\\毕设\\web - 副本\\api\\Backend\\wwwroot\\",
+      "BasePath": "_content/Backend",
+      "Pattern": "**"
+    }
+  ],
+  "Assets": []
+}
