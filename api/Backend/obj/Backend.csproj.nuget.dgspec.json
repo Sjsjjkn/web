@@ -1,17 +1,17 @@
 {
   "format": 1,
   "restore": {
-    "D:\\毕设\\web\\api\\Backend\\Backend.csproj": {}
+    "d:\\毕设\\web\\api\\Backend\\Backend.csproj": {}
   },
   "projects": {
-    "D:\\毕设\\web\\api\\Backend\\Backend.csproj": {
+    "d:\\毕设\\web\\api\\Backend\\Backend.csproj": {
       "version": "1.0.0",
       "restore": {
-        "projectUniqueName": "D:\\毕设\\web\\api\\Backend\\Backend.csproj",
+        "projectUniqueName": "d:\\毕设\\web\\api\\Backend\\Backend.csproj",
         "projectName": "Backend",
-        "projectPath": "D:\\毕设\\web\\api\\Backend\\Backend.csproj",
+        "projectPath": "d:\\毕设\\web\\api\\Backend\\Backend.csproj",
         "packagesPath": "C:\\Users\\sbb\\.nuget\\packages\\",
-        "outputPath": "D:\\毕设\\web\\api\\Backend\\obj\\",
+        "outputPath": "d:\\毕设\\web\\api\\Backend\\obj\\",
         "projectStyle": "PackageReference",
         "configFilePaths": [
           "C:\\Users\\sbb\\AppData\\Roaming\\NuGet\\NuGet.Config"

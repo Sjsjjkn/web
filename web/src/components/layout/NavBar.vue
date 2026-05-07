@@ -14,6 +14,10 @@
           <i class="el-icon-s-home"></i>首页
         </router-link>
 
+        <router-link to="/account/announcements" class="nav-item">
+          <i class="el-icon-bell"></i>系统公告
+        </router-link>
+
         <router-link to="/works" class="nav-item">
           <i class="el-icon-picture-outline"></i>作品展厅
         </router-link>
@@ -25,8 +29,10 @@
             <router-link to="/account/profile" class="dropdown-link">个人信息</router-link>
             <router-link to="/account/favorites" class="dropdown-link">我的收藏</router-link>
             <router-link to="/account/works" class="dropdown-link">个人作品集</router-link>
+            <router-link to="/account/announcements" class="dropdown-link">系统公告</router-link>
             <div class="dropdown-divider" v-if="hasPermission(['Admin', 'Teacher'])"></div>
             <router-link v-if="hasPermission(['Admin', 'Teacher'])" to="/works/manage" class="dropdown-link">作品管理</router-link>
+            <router-link to="/account/feedback" class="dropdown-link">意见反馈</router-link>
             <router-link to="/account/settings" class="dropdown-link">偏好设置</router-link>
           </div>
         </div>
@@ -56,6 +62,7 @@
             <router-link to="/admin/users" class="dropdown-link">用户与权限</router-link>
             <router-link to="/admin/moderation" class="dropdown-link">内容审核与安全</router-link>
             <router-link to="/admin/announcements" class="dropdown-link">公告管理</router-link>
+            <router-link to="/admin/feedbacks" class="dropdown-link">反馈管理</router-link>
           </div>
         </div>
 

@@ -196,6 +196,29 @@ export const announcementApi = {
   }
 }
 
+// ==================== 意见反馈 ====================
+
+export const feedbackApi = {
+  getFeedbacks(params) {
+    return http.get('/api/Feedback', { params })
+  },
+  getFeedbackById(id) {
+    return http.get(`/api/Feedback/${id}`)
+  },
+  createFeedback(data) {
+    return http.post('/api/Feedback', data)
+  },
+  replyFeedback(id, data) {
+    return http.put(`/api/Feedback/${id}/reply`, data)
+  },
+  updateFeedbackStatus(id, data) {
+    return http.put(`/api/Feedback/${id}/status`, data)
+  },
+  deleteFeedback(id) {
+    return http.delete(`/api/Feedback/${id}`)
+  }
+}
+
 // ==================== 数据分析 ====================
 
 export const dataApi = {

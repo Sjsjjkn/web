@@ -17,6 +17,7 @@ namespace Backend.Data
         public DbSet<ModerationItem> ModerationItems { get; set; }
         public DbSet<Notification> Notifications { get; set; }
         public DbSet<Announcement> Announcements { get; set; }
+        public DbSet<Feedback> Feedbacks { get; set; }
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {

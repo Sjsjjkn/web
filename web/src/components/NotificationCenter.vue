@@ -3,9 +3,14 @@
     <div class="notification-center">
       <div class="notification-header">
         <h3>通知中心</h3>
-        <button class="mark-all-btn" @click="markAllRead">
-          全部标为已读
-        </button>
+        <div class="header-actions">
+          <button class="mark-all-btn" @click="markAllRead">
+            全部标为已读
+          </button>
+          <button class="view-all-btn" @click="goToNotificationList">
+            查看全部
+          </button>
+        </div>
       </div>
 
       <div class="notification-list" v-if="notifications.length > 0">
@@ -19,6 +24,9 @@
           <div class="notification-icon">
             <svg v-if="notification.type === 'work_approval'" class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
+            </svg>
+            <svg v-else-if="notification.type === 'feedback'" class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z"/>
             </svg>
             <svg v-else class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"/>
@@ -41,6 +49,34 @@
         </svg>
         <p>暂无通知</p>
       </div>
+
+      <!-- 分页组件 -->
+      <div class="pagination-container" v-if="total > pageSize">
+        <div class="pagination-info">
+          共 {{ total }} 条通知
+        </div>
+        <div class="pagination">
+          <button 
+            class="page-btn" 
+            :disabled="currentPage === 1" 
+            @click="prevPage"
+          >
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/>
+            </svg>
+          </button>
+          <span class="page-info">{{ currentPage }} / {{ totalPages }}</span>
+          <button 
+            class="page-btn" 
+            :disabled="currentPage === totalPages" 
+            @click="nextPage"
+          >
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
+            </svg>
+          </button>
+        </div>
+      </div>
     </div>
 
     <!-- 通知详情弹窗 -->
@@ -50,6 +86,9 @@
           <div class="modal-icon">
             <svg v-if="selectedNotification?.type === 'work_approval'" viewBox="0 0 24 24" fill="none" stroke="currentColor">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
+            </svg>
+            <svg v-else-if="selectedNotification?.type === 'feedback'" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z"/>
             </svg>
             <svg v-else viewBox="0 0 24 24" fill="none" stroke="currentColor">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"/>
@@ -82,11 +121,18 @@
         <div class="modal-footer">
           <button class="btn btn-secondary" @click="showDetailModal = false">关闭</button>
           <button 
-            v-if="selectedNotification?.workId" 
+            v-if="selectedNotification?.workId && selectedNotification?.type === 'work_approval'" 
             class="btn btn-primary" 
             @click="goToWorkDetail"
           >
             查看作品详情
+          </button>
+          <button 
+            v-if="selectedNotification?.type === 'feedback' && isAdmin" 
+            class="btn btn-primary" 
+            @click="goToFeedback"
+          >
+            处理反馈
           </button>
         </div>
       </div>
@@ -96,6 +142,7 @@
 
 <script>
 import { notificationApi } from '@/services/api'
+import eventBus from '@/utils/eventBus'
 
 export default {
   name: 'NotificationCenter',
@@ -103,20 +150,61 @@ export default {
     return {
       notifications: [],
       showDetailModal: false,
-      selectedNotification: null
+      selectedNotification: null,
+      currentPage: 1,
+      pageSize: 5,
+      total: 0
+    }
+  },
+  computed: {
+    totalPages() {
+      return Math.ceil(this.total / this.pageSize)
+    },
+    isAdmin() {
+      const user = JSON.parse(localStorage.getItem('userInfo') || '{}')
+      return user.role === 'Admin'
     }
   },
   mounted() {
     this.loadNotifications()
+    // 监听通知更新事件
+    eventBus.$on('notification-updated', this.loadNotifications)
+  },
+  beforeDestroy() {
+    // 移除事件监听
+    eventBus.$off('notification-updated', this.loadNotifications)
   },
   methods: {
     async loadNotifications() {
       try {
-        const res = await notificationApi.getNotifications()
-        this.notifications = res.data || []
+        const res = await notificationApi.getNotifications({
+          page: this.currentPage,
+          limit: this.pageSize
+        })
+        this.notifications = res.data.items || []
+        this.total = res.data.total || 0
       } catch (error) {
         console.error('加载通知失败:', error)
       }
+    },
+
+    prevPage() {
+      if (this.currentPage > 1) {
+        this.currentPage--
+        this.loadNotifications()
+      }
+    },
+
+    nextPage() {
+      if (this.currentPage < this.totalPages) {
+        this.currentPage++
+        this.loadNotifications()
+      }
+    },
+
+    goToNotificationList() {
+      this.$emit('close')
+      this.$router.push('/account/notifications')
     },
 
     async markAllRead() {
@@ -148,9 +236,21 @@ export default {
       }
     },
 
+    goToFeedback() {
+      this.showDetailModal = false
+      // 管理员跳转到管理页面，普通用户跳转到用户中心
+      const user = JSON.parse(localStorage.getItem('userInfo') || '{}')
+      if (user.role === 'Admin') {
+        this.$router.push(`/admin/feedbacks`)
+      } else {
+        this.$router.push(`/account/feedback`)
+      }
+    },
+
     getTypeLabel(type) {
       const typeMap = {
         work_approval: '作品审核',
+        feedback: '意见反馈',
         system: '系统通知',
         message: '消息通知'
       }
@@ -184,15 +284,15 @@ export default {
   width: 380px;
   max-height: 500px;
   background: #fff;
-  border-radius: 12px;
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.12);
+  border-radius: 8px;
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.1);
   display: flex;
   flex-direction: column;
 }
 
 .notification-header {
-  padding: 16px 20px;
-  border-bottom: 1px solid #f0f0f0;
+  padding: 14px 16px;
+  border-bottom: 1px solid #eee;
   display: flex;
   justify-content: space-between;
   align-items: center;
@@ -202,12 +302,18 @@ export default {
   margin: 0;
   font-size: 15px;
   font-weight: 600;
-  color: #1d2129;
+  color: #303133;
 }
 
-.mark-all-btn {
-  font-size: 13px;
-  color: #165dff;
+.header-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.mark-all-btn,
+.view-all-btn {
+  font-size: 12px;
+  color: #409eff;
   background: none;
   border: none;
   cursor: pointer;
@@ -216,8 +322,9 @@ export default {
   transition: background 0.2s;
 }
 
-.mark-all-btn:hover {
-  background: rgba(22, 93, 255, 0.08);
+.mark-all-btn:hover,
+.view-all-btn:hover {
+  background: #e6f7ff;
 }
 
 .notification-list {
@@ -455,11 +562,64 @@ export default {
 }
 
 .btn-primary {
-  background: #165dff;
+  background: #409eff;
   color: #fff;
 }
 
 .btn-primary:hover {
-  background: #0d47a1;
+  background: #66b1ff;
+}
+
+/* 分页组件 */
+.pagination-container {
+  padding: 12px 16px;
+  border-top: 1px solid #eee;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 16px;
+}
+
+.pagination-info {
+  font-size: 12px;
+  color: #999;
+}
+
+.pagination {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.page-btn {
+  width: 28px;
+  height: 28px;
+  border: 1px solid #d9d9d9;
+  border-radius: 4px;
+  background: #fff;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.page-btn:hover:not(:disabled) {
+  border-color: #409eff;
+  color: #409eff;
+}
+
+.page-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.page-btn svg {
+  width: 14px;
+  height: 14px;
+}
+
+.page-info {
+  font-size: 13px;
+  color: #666;
 }
 </style>

@@ -495,6 +495,12 @@ namespace Backend.Controllers
             _context.Works.Add(work);
             await _context.SaveChangesAsync();
 
+            // 如果作品状态是待审核，通知所有管理员
+            if (work.Status == "待审核")
+            {
+                await NotifyAdminForReview(work);
+            }
+
             return Ok(new 
             {
                 message = "作品提交成功",
@@ -548,6 +554,41 @@ namespace Backend.Controllers
         private bool WorkExists(int id)
         {
             return _context.Works.Any(e => e.Id == id);
+        }
+
+        /// <summary>
+        /// 通知管理员有作品待审核
+        /// </summary>
+        private async Task NotifyAdminForReview(Work work)
+        {
+            try
+            {
+                // 获取所有管理员用户
+                var adminUsers = await _context.Users
+                    .Where(u => u.Role == "Admin")
+                    .Select(u => u.Id)
+                    .ToListAsync();
+
+                // 为每个管理员创建通知
+                var notifications = adminUsers.Select(adminId => new Notification
+                {
+                    UserId = adminId,
+                    Type = "work_approval",
+                    Title = $"新作品待审核：{work.Title}",
+                    Content = $"用户 {work.Uploader?.Name} 提交了作品《{work.Title}》，请尽快审核。",
+                    WorkId = work.Id,
+                    CreatedAt = DateTime.Now,
+                    IsRead = false
+                }).ToList();
+
+                _context.Notifications.AddRange(notifications);
+                await _context.SaveChangesAsync();
+            }
+            catch (Exception ex)
+            {
+                // 通知发送失败不影响作品提交
+                Console.WriteLine($"发送审核通知失败: {ex.Message}");
+            }
         }
 
         // POST: api/Work/{id}/review

@@ -22,14 +22,39 @@ namespace Backend.Controllers
         /// 获取当前用户的通知列表
         /// </summary>
         [HttpGet]
-        public async Task<ActionResult<List<Notification>>> GetNotifications([FromQuery] bool unreadOnly = false)
+        public async Task<ActionResult> GetNotifications(
+            [FromQuery] bool unreadOnly = false,
+            [FromQuery] bool? isRead = null,
+            [FromQuery] string? type = null,
+            [FromQuery] int page = 1,
+            [FromQuery] int limit = 10)
         {
             var userId = GetCurrentUserId();
             if (userId == null)
                 return Unauthorized(new { message = "未授权" });
 
             var notifications = await _notificationService.GetUserNotifications(userId.Value, unreadOnly);
-            return Ok(notifications);
+
+            // 按类型筛选
+            if (!string.IsNullOrEmpty(type))
+            {
+                notifications = notifications.Where(n => n.Type == type).ToList();
+            }
+
+            // 按已读状态筛选
+            if (isRead.HasValue)
+            {
+                notifications = notifications.Where(n => n.IsRead == isRead.Value).ToList();
+            }
+
+            // 分页处理
+            var total = notifications.Count;
+            var items = notifications
+                .Skip((page - 1) * limit)
+                .Take(limit)
+                .ToList();
+
+            return Ok(new { items, total });
         }
 
         /// <summary>

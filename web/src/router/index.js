@@ -85,6 +85,21 @@ const routes = [
     component: () => import('../views/account/Settings.vue')
   },
   {
+    path: '/account/notifications',
+    name: 'AccountNotifications',
+    component: () => import('../views/account/NotificationList.vue')
+  },
+  {
+    path: '/account/announcements',
+    name: 'AccountAnnouncements',
+    component: () => import('../views/account/Announcements.vue')
+  },
+  {
+    path: '/account/feedback',
+    name: 'AccountFeedback',
+    component: () => import('../views/account/Feedback.vue')
+  },
+  {
     path: '/admin/analytics',
     name: 'AdminAnalytics',
     component: () => import('../views/admin/DataAnalysis.vue'),
@@ -106,6 +121,12 @@ const routes = [
     path: '/admin/announcements',
     name: 'AdminAnnouncements',
     component: () => import('../views/admin/AnnouncementManagement.vue'),
+    meta: { roles: ['Admin'] }
+  },
+  {
+    path: '/admin/feedbacks',
+    name: 'AdminFeedbacks',
+    component: () => import('../views/admin/FeedbackManagement.vue'),
     meta: { roles: ['Admin'] }
   },
   {
