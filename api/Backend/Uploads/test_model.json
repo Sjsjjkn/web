@@ -1,0 +1,33 @@
+{
+  "metadata": {
+    "type": "Object",
+    "version": 4.5
+  },
+  "object": {
+    "type": "Mesh",
+    "geometry": 0,
+    "material": 0,
+    "position": [0, 0, 0],
+    "rotation": [0, 0, 0],
+    "scale": [1, 1, 1]
+  },
+  "geometries": [
+    {
+      "type": "BoxGeometry",
+      "width": 2,
+      "height": 2,
+      "depth": 2
+    }
+  ],
+  "materials": [
+    {
+      "type": "MeshPhongMaterial",
+      "color": 4738372,
+      "emissive": 0,
+      "specular": 1118481,
+      "shininess": 100,
+      "opacity": 1,
+      "transparent": false
+    }
+  ]
+}

@@ -1,6 +1,7 @@
 using Backend.Data;
 using Backend.Models;
 using Backend.Security;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
@@ -23,6 +24,62 @@ namespace Backend.Controllers
             _configuration = configuration ?? throw new ArgumentNullException(nameof(configuration));
         }
 
+        // ==================== 辅助方法 ====================
+
+        /// <summary>从 JWT Token 中获取当前登录用户的 Id</summary>
+        private int GetCurrentUserId()
+        {
+            var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value
+                           ?? User.FindFirst("sub")?.Value;
+            if (string.IsNullOrEmpty(userIdClaim))
+                throw new UnauthorizedAccessException("无法识别当前用户身份");
+            return int.Parse(userIdClaim);
+        }
+
+        /// <summary>获取当前登录用户实体</summary>
+        private async Task<User> GetCurrentUserAsync()
+        {
+            var userId = GetCurrentUserId();
+            var user = await _context.Users.FindAsync(userId);
+            if (user == null)
+                throw new InvalidOperationException("当前用户不存在");
+            return user;
+        }
+
+        /// <summary>构建用户信息返回对象</summary>
+        private static object BuildUserResponse(User user)
+        {
+            return new
+            {
+                id = user.Id,
+                username = user.Username,
+                role = user.Role,
+                name = user.Name,
+                workId = user.WorkId,
+                department = user.Department,
+                phone = user.Phone,
+                email = user.Email,
+                bio = user.Bio,
+                title = user.Title,
+                researchArea = user.ResearchArea,
+                position = user.Position,
+                avatar = user.Avatar,
+                createdAt = user.CreatedAt,
+
+                // 偏好设置
+                theme = user.Theme,
+                language = user.Language,
+                notificationEnabled = user.NotificationEnabled,
+                emailNotification = user.EmailNotification,
+                workModerationRequired = user.WorkModerationRequired,
+                profilePublic = user.ProfilePublic,
+                showContactInfo = user.ShowContactInfo,
+                favoritesVisibility = user.FavoritesVisibility
+            };
+        }
+
+        // ==================== 登录 / 注册 ====================
+
         // POST: api/Auth/login
         [HttpPost("login")]
         public async Task<IActionResult> Login([FromBody] LoginRequest request)
@@ -37,10 +94,8 @@ namespace Backend.Controllers
                     return BadRequest(new { message = "用户名和密码不能为空" });
                 }
 
-                // 注意：不要打印密码等敏感信息
                 Console.WriteLine($"Login attempt: Username={request.Username}");
 
-                // 查找用户
                 var user = await _context.Users.FirstOrDefaultAsync(u => u.Username == request.Username);
                 Console.WriteLine($"User found: {user != null}");
 
@@ -52,17 +107,14 @@ namespace Backend.Controllers
 
                 Console.WriteLine($"User found: Id={user.Id}, Username={user.Username}");
 
-                // 密码校验：PBKDF2 哈希（兼容旧的明文数据）
                 if (!PasswordHasher.Verify(request.Password, user.Password))
                 {
                     Console.WriteLine($"Password mismatch for user: {request.Username}");
                     return Unauthorized(new { message = "用户名或密码错误" });
                 }
 
-                // 角色以数据库字段为准（避免按用户名硬编码导致权限混乱）
                 var role = string.IsNullOrWhiteSpace(user.Role) ? "Student" : user.Role;
 
-                // 生成JWT token
                 try
                 {
                     var claims = new[]
@@ -72,7 +124,6 @@ namespace Backend.Controllers
                         new Claim(ClaimTypes.NameIdentifier, user.Id.ToString())
                     };
 
-                    // 从配置文件中读取密钥
                     var jwtKey = _configuration["Jwt:Key"];
                     if (string.IsNullOrWhiteSpace(jwtKey))
                     {
@@ -91,30 +142,24 @@ namespace Backend.Controllers
                     var tokenString = new JwtSecurityTokenHandler().WriteToken(token);
                     Console.WriteLine($"Token generated: {tokenString.Substring(0, 50)}...");
 
-                    // 登录成功，返回用户信息和token
                     Console.WriteLine($"Login successful: {request.Username}, Role: {role}");
-                    return Ok(new {
+
+                    // 登录成功返回完整用户信息（含偏好设置）
+                    return Ok(new
+                    {
                         message = "登录成功",
                         token = tokenString,
-                        user = new {
-                            id = user.Id,
-                            username = user.Username,
-                            role = role
-                        }
+                        user = BuildUserResponse(user)
                     });
                 }
                 catch (Exception tokenEx)
                 {
                     Console.WriteLine($"Token generation error: {tokenEx.Message}");
                     Console.WriteLine($"Token generation stack trace: {tokenEx.StackTrace}");
-                    // 如果token生成失败，仍然返回登录成功，但不包含token
-                    return Ok(new {
+                    return Ok(new
+                    {
                         message = "登录成功（Token生成失败）",
-                        user = new {
-                            id = user.Id,
-                            username = user.Username,
-                            role = role
-                        }
+                        user = BuildUserResponse(user)
                     });
                 }
             }
@@ -142,46 +187,45 @@ namespace Backend.Controllers
                 return BadRequest(new { message = "用户名和密码不能为空" });
             }
 
-            // 验证用户名格式
             if (request.Username.Length < 4 || request.Username.Length > 20 || !System.Text.RegularExpressions.Regex.IsMatch(request.Username, "^[a-zA-Z0-9_]+$"))
             {
                 return BadRequest(new { message = "用户名格式不正确（4-20位字母、数字或下划线）" });
             }
 
-            // 验证密码长度（基本长度检查）
             if (request.Password.Length < 6 || request.Password.Length > 20)
             {
                 return BadRequest(new { message = "密码长度必须在6-20位之间" });
             }
 
-            // 检查用户名是否已存在
             var existingUser = await _context.Users.FirstOrDefaultAsync(u => u.Username == request.Username);
             if (existingUser != null)
             {
                 return Conflict(new { message = "用户名已被注册" });
             }
 
-            // 创建新用户
-            // 创建新用户（密码哈希后存储）
             var newUser = new User
             {
                 Username = request.Username,
                 Password = PasswordHasher.Hash(request.Password),
                 CreatedAt = DateTime.Now,
-                Role = "Student" // 默认角色为学生
+                Role = "Student"
             };
 
             _context.Users.Add(newUser);
             await _context.SaveChangesAsync();
 
-            return Ok(new {
+            return Ok(new
+            {
                 message = "注册成功",
-                user = new {
+                user = new
+                {
                     id = newUser.Id,
                     username = newUser.Username
                 }
             });
         }
+
+        // ==================== 个人信息（需认证）====================
 
         // GET: api/Auth/profile
         [HttpGet("profile")]
@@ -189,31 +233,16 @@ namespace Backend.Controllers
         {
             try
             {
-                // 这里应该根据当前登录用户获取信息
-                // 暂时返回第一个用户的信息作为示例
-                var user = await _context.Users.FirstOrDefaultAsync();
-
-                if (user == null)
-                {
-                    return NotFound(new { message = "用户不存在" });
-                }
-
-                return Ok(new {
-                    id = user.Id,
-                    username = user.Username,
-                    role = user.Role,
-                    name = user.Name,
-                    workId = user.WorkId,
-                    department = user.Department,
-                    phone = user.Phone,
-                    email = user.Email,
-                    bio = user.Bio,
-                    title = user.Title,
-                    researchArea = user.ResearchArea,
-                    position = user.Position,
-                    avatar = user.Avatar,
-                    createdAt = user.CreatedAt
-                });
+                var user = await GetCurrentUserAsync();
+                return Ok(BuildUserResponse(user));
+            }
+            catch (UnauthorizedAccessException ex)
+            {
+                return Unauthorized(new { message = ex.Message });
+            }
+            catch (InvalidOperationException ex)
+            {
+                return NotFound(new { message = ex.Message });
             }
             catch (Exception ex)
             {
@@ -232,14 +261,7 @@ namespace Backend.Controllers
                     return BadRequest(new { message = "请求数据不能为空" });
                 }
 
-                // 这里应该根据当前登录用户更新信息
-                // 暂时更新第一个用户的信息作为示例
-                var user = await _context.Users.FirstOrDefaultAsync();
-
-                if (user == null)
-                {
-                    return NotFound(new { message = "用户不存在" });
-                }
+                var user = await GetCurrentUserAsync();
 
                 // 更新用户基本信息
                 if (!string.IsNullOrEmpty(request.Name))
@@ -264,41 +286,32 @@ namespace Backend.Controllers
                 // 更新密码（如果提供了当前密码和新密码）
                 if (!string.IsNullOrEmpty(request.CurrentPassword) && !string.IsNullOrEmpty(request.NewPassword))
                 {
-                    // 验证当前密码
                     if (!PasswordHasher.Verify(request.CurrentPassword, user.Password))
                     {
                         return Unauthorized(new { message = "当前密码错误" });
                     }
-
-                    // 基本密码长度检查
                     if (request.NewPassword.Length < 6 || request.NewPassword.Length > 20)
                     {
                         return BadRequest(new { message = "新密码长度必须在6-20位之间" });
                     }
-
                     user.Password = PasswordHasher.Hash(request.NewPassword);
                 }
 
                 await _context.SaveChangesAsync();
 
-                return Ok(new {
+                return Ok(new
+                {
                     message = "个人信息更新成功",
-                    user = new {
-                        id = user.Id,
-                        username = user.Username,
-                        role = user.Role,
-                        name = user.Name,
-                        workId = user.WorkId,
-                        department = user.Department,
-                        phone = user.Phone,
-                        email = user.Email,
-                        bio = user.Bio,
-                        title = user.Title,
-                        researchArea = user.ResearchArea,
-                        position = user.Position,
-                        createdAt = user.CreatedAt
-                    }
+                    user = BuildUserResponse(user)
                 });
+            }
+            catch (UnauthorizedAccessException ex)
+            {
+                return Unauthorized(new { message = ex.Message });
+            }
+            catch (InvalidOperationException ex)
+            {
+                return NotFound(new { message = ex.Message });
             }
             catch (Exception ex)
             {
@@ -306,7 +319,228 @@ namespace Backend.Controllers
             }
         }
 
-        // PUT: api/Auth/role/{id},需要手动更换权限情况。
+        // ==================== 用户偏好设置（需认证）====================
+
+        // GET: api/Auth/preferences
+        [HttpGet("preferences")]
+        public async Task<IActionResult> GetPreferences()
+        {
+            try
+            {
+                var user = await GetCurrentUserAsync();
+                return Ok(new
+                {
+                    theme = user.Theme,
+                    language = user.Language,
+                    notificationEnabled = user.NotificationEnabled,
+                    emailNotification = user.EmailNotification,
+                    workModerationRequired = user.WorkModerationRequired,
+                    profilePublic = user.ProfilePublic,
+                    showContactInfo = user.ShowContactInfo,
+                    favoritesVisibility = user.FavoritesVisibility
+                });
+            }
+            catch (UnauthorizedAccessException ex)
+            {
+                return Unauthorized(new { message = ex.Message });
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { message = $"获取偏好设置失败: {ex.Message}" });
+            }
+        }
+
+        // PUT: api/Auth/preferences
+        [HttpPut("preferences")]
+        public async Task<IActionResult> UpdatePreferences([FromBody] UpdatePreferencesRequest request)
+        {
+            try
+            {
+                if (request == null)
+                    return BadRequest(new { message = "请求数据不能为空" });
+
+                var user = await GetCurrentUserAsync();
+
+                // 仅更新非 null / 非默认值的字段
+                if (!string.IsNullOrEmpty(request.Theme))
+                    user.Theme = request.Theme;
+                if (!string.IsNullOrEmpty(request.Language))
+                    user.Language = request.Language;
+                if (request.NotificationEnabled.HasValue)
+                    user.NotificationEnabled = request.NotificationEnabled.Value;
+                if (request.EmailNotification.HasValue)
+                    user.EmailNotification = request.EmailNotification.Value;
+                if (request.WorkModerationRequired.HasValue)
+                    user.WorkModerationRequired = request.WorkModerationRequired.Value;
+                if (request.ProfilePublic.HasValue)
+                    user.ProfilePublic = request.ProfilePublic.Value;
+                if (request.ShowContactInfo.HasValue)
+                    user.ShowContactInfo = request.ShowContactInfo.Value;
+                if (!string.IsNullOrEmpty(request.FavoritesVisibility))
+                    user.FavoritesVisibility = request.FavoritesVisibility;
+
+                await _context.SaveChangesAsync();
+
+                return Ok(new
+                {
+                    message = "偏好设置更新成功",
+                    preferences = new
+                    {
+                        theme = user.Theme,
+                        language = user.Language,
+                        notificationEnabled = user.NotificationEnabled,
+                        emailNotification = user.EmailNotification,
+                        workModerationRequired = user.WorkModerationRequired,
+                        profilePublic = user.ProfilePublic,
+                        showContactInfo = user.ShowContactInfo,
+                        favoritesVisibility = user.FavoritesVisibility
+                    }
+                });
+            }
+            catch (UnauthorizedAccessException ex)
+            {
+                return Unauthorized(new { message = ex.Message });
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { message = $"更新偏好设置失败: {ex.Message}" });
+            }
+        }
+
+        // ==================== 公开个人主页 ====================
+
+        // GET: api/Auth/public-profile/{userId}
+        [AllowAnonymous]
+        [HttpGet("public-profile/{userId}")]
+        public async Task<IActionResult> GetPublicProfile(int userId)
+        {
+            try
+            {
+                Console.WriteLine($"收到公开资料请求，userId: {userId}");
+                
+                var user = await _context.Users
+                    .Include(u => u.UploadedWorks)
+                    .FirstOrDefaultAsync(u => u.Id == userId);
+
+                if (user == null)
+                {
+                    Console.WriteLine($"用户不存在，userId: {userId}");
+                    return NotFound(new { message = "用户不存在" });
+                }
+
+                if (!user.ProfilePublic)
+                {
+                    Console.WriteLine($"用户主页未公开，userId: {userId}, ProfilePublic: {user.ProfilePublic}");
+                    return StatusCode(403, new { message = "该用户的个人主页未公开" });
+                }
+
+                Console.WriteLine($"成功获取用户资料，userId: {userId}, name: {user.Name}");
+                
+                return Ok(new
+                {
+                    id = user.Id,
+                    name = user.Name,
+                    role = user.Role,
+                    workId = user.WorkId,
+                    department = user.Department,
+                    avatar = user.Avatar != null ? $"/api/File/download?fileName={Uri.EscapeDataString(user.Avatar)}" : null,
+                    bio = user.Bio,
+                    works = user.UploadedWorks
+                        .Where(w => w.Status == "已发布")
+                        .Select(w => new
+                        {
+                            id = w.Id,
+                            title = w.Title,
+                            description = w.Description,
+                            thumbnailUrl = w.PreviewImage != null ? $"/api/File/download?fileName={Uri.EscapeDataString(w.PreviewImage)}" : null,
+                            fileType = Path.GetExtension(w.FileName ?? "").TrimStart('.').ToUpper(),
+                            createdAt = w.UploadDate
+                        })
+                        .Take(6)
+                        .ToList(),
+                    workCount = user.UploadedWorks.Count(w => w.Status == "已发布")
+                });
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { message = $"获取公开资料失败: {ex.Message}" });
+            }
+        }
+
+        // ==================== 头像上传 ====================
+
+        // PUT: api/Auth/avatar
+        [HttpPut("avatar")]
+        public async Task<IActionResult> UploadAvatar(IFormFile file)
+        {
+            try
+            {
+                if (file == null || file.Length == 0)
+                    return BadRequest(new { message = "请选择要上传的头像文件" });
+
+                // 文件类型校验
+                var allowedExtensions = new[] { ".jpg", ".jpeg", ".png", ".gif" };
+                var ext = Path.GetExtension(file.FileName).ToLower();
+                if (!allowedExtensions.Contains(ext))
+                {
+                    return BadRequest(new { message = "仅支持 JPG、PNG、GIF 格式的图片" });
+                }
+
+                if (file.Length > 2 * 1024 * 1024) // 2MB
+                {
+                    return BadRequest(new { message = "图片大小不能超过 2MB" });
+                }
+
+                var user = await GetCurrentUserAsync();
+
+                // 生成唯一文件名
+                var fileName = $"avatar_{user.Id}_{DateTime.Now:yyyyMMddHHmmss}{ext}";
+                var uploadDir = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot", "uploads", "avatars");
+                if (!Directory.Exists(uploadDir))
+                    Directory.CreateDirectory(uploadDir);
+
+                var filePath = Path.Combine(uploadDir, fileName);
+
+                // 保存文件
+                using (var stream = new FileStream(filePath, FileMode.Create))
+                {
+                    await file.CopyToAsync(stream);
+                }
+
+                // 删除旧头像（可选保留）
+                if (!string.IsNullOrEmpty(user.Avatar))
+                {
+                    var oldPath = Path.Combine(uploadDir, user.Avatar);
+                    if (System.IO.File.Exists(oldPath))
+                    {
+                        try { System.IO.File.Delete(oldPath); } catch { /* 忽略删除旧文件错误 */ }
+                    }
+                }
+
+                // 更新数据库
+                user.Avatar = fileName;
+                await _context.SaveChangesAsync();
+
+                return Ok(new
+                {
+                    message = "头像上传成功",
+                    avatar = fileName,
+                    avatarUrl = $"/api/File/download?fileName={Uri.EscapeDataString(fileName)}"
+                });
+            }
+            catch (UnauthorizedAccessException ex)
+            {
+                return Unauthorized(new { message = ex.Message });
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { message = $"头像上传失败: {ex.Message}" });
+            }
+        }
+
+        // ==================== 管理接口 ====================
+
+        // PUT: api/Auth/role/{id}
         [HttpPut("role/{id}")]
         public async Task<IActionResult> UpdateRole(int id, [FromBody] UpdateRoleRequest request)
         {
@@ -318,7 +552,6 @@ namespace Backend.Controllers
                     return NotFound(new { message = "用户不存在" });
                 }
 
-                // 验证角色值
                 if (!new[] { "Admin", "Teacher", "Student" }.Contains(request.Role))
                 {
                     return BadRequest(new { message = "角色值无效，可选值: Admin, Teacher, Student" });
@@ -327,9 +560,11 @@ namespace Backend.Controllers
                 user.Role = request.Role;
                 await _context.SaveChangesAsync();
 
-                return Ok(new {
+                return Ok(new
+                {
                     message = "角色更新成功",
-                    user = new {
+                    user = new
+                    {
                         id = user.Id,
                         username = user.Username,
                         role = user.Role
@@ -353,22 +588,13 @@ namespace Backend.Controllers
                     return BadRequest(new { message = "请求数据不能为空" });
                 }
 
-                // 这里应该根据当前登录用户更新密码
-                // 暂时更新第一个用户的密码作为示例
-                var user = await _context.Users.FirstOrDefaultAsync();
+                var user = await GetCurrentUserAsync();
 
-                if (user == null)
-                {
-                    return NotFound(new { message = "用户不存在" });
-                }
-
-                // 验证当前密码
                 if (!PasswordHasher.Verify(request.CurrentPassword, user.Password))
                 {
                     return Unauthorized(new { message = "当前密码错误" });
                 }
 
-                // 基本密码长度检查
                 if (request.NewPassword.Length < 6 || request.NewPassword.Length > 20)
                 {
                     return BadRequest(new { message = "新密码长度必须在6-20位之间" });
@@ -377,9 +603,11 @@ namespace Backend.Controllers
                 user.Password = PasswordHasher.Hash(request.NewPassword);
                 await _context.SaveChangesAsync();
 
-                return Ok(new {
-                    message = "密码修改成功"
-                });
+                return Ok(new { message = "密码修改成功" });
+            }
+            catch (UnauthorizedAccessException ex)
+            {
+                return Unauthorized(new { message = ex.Message });
             }
             catch (Exception ex)
             {
@@ -395,26 +623,23 @@ namespace Backend.Controllers
             {
                 var query = _context.Users.AsQueryable();
 
-                // 搜索筛选
                 if (!string.IsNullOrEmpty(search))
                 {
                     query = query.Where(u => u.Username.Contains(search) || u.Name.Contains(search));
                 }
 
-                // 角色筛选
                 if (!string.IsNullOrEmpty(role))
                 {
                     query = query.Where(u => u.Role == role);
                 }
 
-                // 计算总数
                 var total = await query.CountAsync();
 
-                // 分页
                 var users = await query
                     .Skip((page - 1) * pageSize)
                     .Take(pageSize)
-                    .Select(u => new {
+                    .Select(u => new
+                    {
                         id = u.Id,
                         username = u.Username,
                         name = u.Name,
@@ -425,7 +650,8 @@ namespace Backend.Controllers
                     })
                     .ToListAsync();
 
-                return Ok(new {
+                return Ok(new
+                {
                     items = users,
                     total = total
                 });
@@ -453,12 +679,10 @@ namespace Backend.Controllers
 
                 if (fileType == "excel" || file.FileName.EndsWith(".xlsx", StringComparison.OrdinalIgnoreCase) || file.FileName.EndsWith(".xls", StringComparison.OrdinalIgnoreCase))
                 {
-                    // 解析Excel文件
                     importedUsers = await ParseExcelFile(file);
                 }
                 else if (fileType == "csv" || file.FileName.EndsWith(".csv", StringComparison.OrdinalIgnoreCase))
                 {
-                    // 解析CSV文件
                     importedUsers = await ParseCsvFile(file);
                 }
                 else
@@ -466,13 +690,11 @@ namespace Backend.Controllers
                     return BadRequest(new { message = "不支持的文件类型" });
                 }
 
-                // 导入用户到数据库
                 int importedCount = 0;
                 int skippedCount = 0;
 
                 foreach (var user in importedUsers)
                 {
-                    // 检查用户是否已存在
                     var existingUser = await _context.Users.FirstOrDefaultAsync(u => u.Username == user.Username);
                     if (existingUser == null)
                     {
@@ -487,7 +709,8 @@ namespace Backend.Controllers
 
                 await _context.SaveChangesAsync();
 
-                return Ok(new {
+                return Ok(new
+                {
                     message = "导入成功",
                     importedCount = importedCount,
                     skippedCount = skippedCount
@@ -500,7 +723,6 @@ namespace Backend.Controllers
             }
         }
 
-        // 解析Excel文件
         private async Task<List<User>> ParseExcelFile(IFormFile file)
         {
             var users = new List<User>();
@@ -515,7 +737,6 @@ namespace Backend.Controllers
                     var worksheet = package.Workbook.Worksheets[0];
                     int rowCount = worksheet.Dimension.Rows;
 
-                    // 从第二行开始解析（第一行是表头）
                     for (int row = 2; row <= rowCount; row++)
                     {
                         try
@@ -531,9 +752,9 @@ namespace Backend.Controllers
                                 users.Add(new User
                                 {
                                     Username = username,
-                                    Password = workId ?? "123456", // 初始密码为工号/学号，为空时使用默认密码
+                                    Password = workId ?? "123456",
                                     Name = name,
-                                    Role = role, // Admin, Teacher, College, Student
+                                    Role = role,
                                     WorkId = workId,
                                     Department = department,
                                     CreatedAt = DateTime.Now
@@ -551,14 +772,12 @@ namespace Backend.Controllers
             return users;
         }
 
-        // 解析CSV文件
         private async Task<List<User>> ParseCsvFile(IFormFile file)
         {
             var users = new List<User>();
 
             using (var stream = new StreamReader(file.OpenReadStream()))
             {
-                // 跳过表头
                 await stream.ReadLineAsync();
 
                 string line;
@@ -580,9 +799,9 @@ namespace Backend.Controllers
                                 users.Add(new User
                                 {
                                     Username = username,
-                                    Password = workId ?? "123456", // 初始密码为工号/学号，为空时使用默认密码
+                                    Password = workId ?? "123456",
                                     Name = name,
-                                    Role = role, // Admin, Teacher, College, Student
+                                    Role = role,
                                     WorkId = workId,
                                     Department = department,
                                     CreatedAt = DateTime.Now
@@ -608,12 +827,10 @@ namespace Backend.Controllers
             {
                 Console.WriteLine("Exporting users");
 
-                // 创建Excel文件
                 using (var package = new OfficeOpenXml.ExcelPackage())
                 {
                     var worksheet = package.Workbook.Worksheets.Add("Users");
 
-                    // 设置表头
                     worksheet.Cells[1, 1].Value = "用户名";
                     worksheet.Cells[1, 2].Value = "姓名";
                     worksheet.Cells[1, 3].Value = "角色";
@@ -621,7 +838,6 @@ namespace Backend.Controllers
                     worksheet.Cells[1, 5].Value = "部门/院系";
                     worksheet.Cells[1, 6].Value = "密码";
 
-                    // 设置表头样式
                     using (var headerRange = worksheet.Cells[1, 1, 1, 6])
                     {
                         headerRange.Style.Font.Bold = true;
@@ -630,7 +846,6 @@ namespace Backend.Controllers
                         headerRange.Style.HorizontalAlignment = OfficeOpenXml.Style.ExcelHorizontalAlignment.Center;
                     }
 
-                    // 填充数据
                     var users = await _context.Users.ToListAsync();
                     for (int i = 0; i < users.Count; i++)
                     {
@@ -644,15 +859,12 @@ namespace Backend.Controllers
                         worksheet.Cells[row, 6].Value = user.Password;
                     }
 
-                    // 自动调整列宽
                     worksheet.Cells[worksheet.Dimension.Address].AutoFitColumns();
 
-                    // 保存到内存流
                     var stream = new MemoryStream();
                     package.SaveAs(stream);
                     stream.Position = 0;
 
-                    // 返回Excel文件
                     return File(stream, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", $"users-{DateTime.Now:yyyyMMdd}.xlsx");
                 }
             }
@@ -675,7 +887,6 @@ namespace Backend.Controllers
                     return NotFound(new { message = "用户不存在" });
                 }
 
-                // 防止删除admin用户
                 if (user.Username == "admin")
                 {
                     return BadRequest(new { message = "不能删除管理员用户" });
@@ -708,66 +919,71 @@ namespace Backend.Controllers
                 user.Password = request.Password;
                 await _context.SaveChangesAsync();
 
-                return Ok(new {
-                    message = "密码重置成功"
-                });
+                return Ok(new { message = "密码重置成功" });
             }
             catch (Exception ex)
             {
                 return StatusCode(500, new { message = $"密码重置失败: {ex.Message}" });
             }
         }
-
     }
-}
 
-// 修改密码请求模型
-public class ChangePasswordRequest
-{
-    public string CurrentPassword { get; set; } = string.Empty;
-    public string NewPassword { get; set; } = string.Empty;
-    public string ConfirmPassword { get; set; } = string.Empty;
-}
+    // ==================== 请求模型 ====================
 
-// 重置密码请求模型
-public class ResetPasswordRequest
-{
-    public string Password { get; set; } = string.Empty;
-}
+    public class ChangePasswordRequest
+    {
+        public string CurrentPassword { get; set; } = string.Empty;
+        public string NewPassword { get; set; } = string.Empty;
+        public string ConfirmPassword { get; set; } = string.Empty;
+    }
 
-// 登录请求模型
-public class LoginRequest
-{
-    public string Username { get; set; } = string.Empty;
-    public string Password { get; set; } = string.Empty;
-    public bool Remember { get; set; }
-}
+    public class ResetPasswordRequest
+    {
+        public string Password { get; set; } = string.Empty;
+    }
 
-// 注册请求模型
-public class RegisterRequest
-{
-    public string? Username { get; set; }
-    public string? Password { get; set; }
-}
+    public class LoginRequest
+    {
+        public string Username { get; set; } = string.Empty;
+        public string Password { get; set; } = string.Empty;
+        public bool Remember { get; set; }
+    }
 
-// 更新个人信息请求模型
-public class UpdateProfileRequest
-{
-    public string? CurrentPassword { get; set; }
-    public string? NewPassword { get; set; }
-    public string? Name { get; set; }
-    public string? WorkId { get; set; }
-    public string? Department { get; set; }
-    public string? Phone { get; set; }
-    public string? Email { get; set; }
-    public string? Bio { get; set; }
-    public string? Title { get; set; }
-    public string? ResearchArea { get; set; }
-    public string? Position { get; set; }
-}
+    public class RegisterRequest
+    {
+        public string? Username { get; set; }
+        public string? Password { get; set; }
+    }
 
-// 更新角色请求模型
-public class UpdateRoleRequest
-{
-    public string? Role { get; set; }
+    public class UpdateProfileRequest
+    {
+        public string? CurrentPassword { get; set; }
+        public string? NewPassword { get; set; }
+        public string? Name { get; set; }
+        public string? WorkId { get; set; }
+        public string? Department { get; set; }
+        public string? Phone { get; set; }
+        public string? Email { get; set; }
+        public string? Bio { get; set; }
+        public string? Title { get; set; }
+        public string? ResearchArea { get; set; }
+        public string? Position { get; set; }
+    }
+
+    public class UpdatePreferencesRequest
+    {
+        public string? Theme { get; set; }
+        public string? Language { get; set; }
+        public bool? NotificationEnabled { get; set; }
+        public bool? EmailNotification { get; set; }
+        public bool? WorkModerationRequired { get; set; }
+        public bool? ProfilePublic { get; set; }
+        public bool? ShowContactInfo { get; set; }
+        public string? FavoritesVisibility { get; set; }
+    }
+
+    public class UpdateRoleRequest
+    {
+        public string? Role { get; set; }
+    }
 }

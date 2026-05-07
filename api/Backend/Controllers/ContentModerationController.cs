@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Backend.Data;
 using Backend.Models;
+using Backend.Services;
 using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.EntityFrameworkCore;
@@ -15,10 +16,12 @@ namespace Backend.Controllers
     public class ContentModerationController : ControllerBase
     {
         private readonly AppDbContext _context;
+        private readonly NotificationService _notificationService;
 
-        public ContentModerationController(AppDbContext context)
+        public ContentModerationController(AppDbContext context, NotificationService notificationService)
         {
             _context = context;
+            _notificationService = notificationService;
         }
 
         /// <summary>
@@ -169,6 +172,13 @@ namespace Backend.Controllers
                 work.Status = "已发布";
                 await _context.SaveChangesAsync();
 
+                // 发送审核通过通知
+                await _notificationService.SendWorkApprovalNotification(
+                    work.UserId, 
+                    work.Id, 
+                    work.Title, 
+                    isApproved: true);
+
                 return Ok(new { message = "审核通过" });
             }
             catch (Exception ex)
@@ -184,7 +194,7 @@ namespace Backend.Controllers
         /// <param name="id">项目ID</param>
         /// <returns>操作结果</returns>
         [HttpPut("reject/{id}")]
-        public async Task<IActionResult> RejectItem(int id)
+        public async Task<IActionResult> RejectItem(int id, [FromBody] RejectRequest request)
         {
             try
             {
@@ -197,6 +207,14 @@ namespace Backend.Controllers
                 work.Status = "已拒绝";
                 await _context.SaveChangesAsync();
 
+                // 发送审核拒绝通知
+                await _notificationService.SendWorkApprovalNotification(
+                    work.UserId,
+                    work.Id,
+                    work.Title,
+                    isApproved: false,
+                    reason: request?.Reason);
+
                 return Ok(new { message = "已拒绝" });
             }
             catch (Exception ex)
@@ -204,6 +222,11 @@ namespace Backend.Controllers
                 Console.WriteLine($"Reject item error: {ex.Message}");
                 return StatusCode(500, new { message = $"操作失败: {ex.Message}" });
             }
+        }
+
+        public class RejectRequest
+        {
+            public string? Reason { get; set; }
         }
 
         /// <summary>

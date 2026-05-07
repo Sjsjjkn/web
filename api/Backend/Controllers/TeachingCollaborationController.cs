@@ -181,7 +181,7 @@ namespace Backend.Controllers
                 {
                     if (!studentIds.Contains(studentId.Value))
                     {
-                        return Forbid("无权查看该学生作品");
+                        return Forbid();
                     }
 
                     studentIds = new List<int> { studentId.Value };

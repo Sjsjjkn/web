@@ -80,7 +80,7 @@ namespace Backend.Controllers
                 // 检查用户是否为管理员或教师
                 if (!User.IsInRole("Admin") && !User.IsInRole("Teacher"))
                 {
-                    return Forbid("只有管理员和教师可以查看数据统计");
+                return Forbid();
                 }
 
                 // 生成最近days天的日期
@@ -118,7 +118,7 @@ namespace Backend.Controllers
                 // 检查用户是否为管理员或教师
                 if (!User.IsInRole("Admin") && !User.IsInRole("Teacher"))
                 {
-                    return Forbid("只有管理员和教师可以查看数据统计");
+                return Forbid();
                 }
 
                 // 统计各分类的作品数量
@@ -148,7 +148,7 @@ namespace Backend.Controllers
                 // 检查用户是否为管理员或教师
                 if (!User.IsInRole("Admin") && !User.IsInRole("Teacher"))
                 {
-                    return Forbid("只有管理员和教师可以查看数据统计");
+                return Forbid();
                 }
 
                 // 统计各状态的作品数量
@@ -178,7 +178,7 @@ namespace Backend.Controllers
                 // 检查用户是否为管理员或教师
                 if (!User.IsInRole("Admin") && !User.IsInRole("Teacher"))
                 {
-                    return Forbid("只有管理员和教师可以查看数据统计");
+                return Forbid();
                 }
 
                 // 生成全年12个月

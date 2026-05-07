@@ -1,5 +1,6 @@
 using Backend.Data;
 using Backend.Models;
+using Backend.Models.DTO;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
@@ -24,8 +25,9 @@ namespace Backend.Controllers
         /// </summary>
         private int? GetCurrentUserId()
         {
-            var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier);
-            if (userIdClaim == null || !int.TryParse(userIdClaim.Value, out int userId))
+            var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value
+                           ?? User.FindFirst("sub")?.Value;
+            if (string.IsNullOrEmpty(userIdClaim) || !int.TryParse(userIdClaim, out int userId))
             {
                 return null;
             }
@@ -33,8 +35,111 @@ namespace Backend.Controllers
         }
 
         // GET: api/Work
+        // 首页和作品展厅使用，显示所有已发布作品，不限制权限
         [HttpGet]
+        [AllowAnonymous]
         public async Task<ActionResult> GetWorks(
+            [FromQuery] string? search = null,
+            [FromQuery] string? category = null,
+            [FromQuery] string? status = null,
+            [FromQuery] string? sortBy = null,
+            [FromQuery] int page = 1,
+            [FromQuery] int pageSize = 12)
+        {
+            try
+            {
+                // 首页和作品展厅显示所有已发布作品，不限制权限
+                IQueryable<Work> query = _context.Works.Where(w => w.Status == "已发布");
+
+                // 搜索筛选
+                if (!string.IsNullOrEmpty(search))
+                {
+                    query = query.Where(w => w.Title.Contains(search));
+                }
+
+                // 分类筛选
+                if (!string.IsNullOrEmpty(category))
+                {
+                    query = query.Where(w => w.Category == category);
+                }
+
+                // 状态筛选
+                if (!string.IsNullOrEmpty(status))
+                {
+                    query = query.Where(w => w.Status == status);
+                }
+
+                // 排序处理
+                switch (sortBy)
+                {
+                    case "latest":
+                        query = query.OrderByDescending(w => w.FileUploadTime);
+                        break;
+                    case "views":
+                        query = query.OrderByDescending(w => w.Views);
+                        break;
+                    case "favorites":
+                        query = query.OrderByDescending(w => w.Favorites);
+                        break;
+                    default:
+                        query = query.OrderByDescending(w => w.FileUploadTime);
+                        break;
+                }
+
+                // 计算总数
+                var total = await query.CountAsync();
+
+                // 分页并关联用户表
+                var worksWithUserInfo = await query
+                    .Join(
+                        _context.Users,
+                        w => w.UserId,
+                        u => u.Id,
+                        (w, u) => new {
+                            w.Id,
+                            w.Title,
+                            uploadUserName = u.Name,
+                            w.Category,
+                            w.Description,
+                            w.UploadDate,
+                            w.Status,
+                            w.FilePath,
+                            w.FileName,
+                            w.FileSize,
+                            w.FileMD5,
+                            w.FileUploadTime,
+                            w.PreviewImage,
+                            w.UserId,
+                            w.Views,
+                            w.Favorites,
+                            w.IsExcellent,
+                            uploadUserUsername = u.Username,
+                            uploadUserRole = u.Role,
+                            uploadUserProfilePublic = u.ProfilePublic,
+                            uploadUserAvatar = u.Avatar
+                        }
+                    )
+                    .Skip((page - 1) * pageSize)
+                    .Take(pageSize)
+                    .ToListAsync();
+
+                return Ok(new {
+                    items = worksWithUserInfo,
+                    total = total,
+                    isAdmin = false
+                });
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"获取作品列表失败: {ex.Message}");
+                return StatusCode(500, new { message = "获取作品列表失败" });
+            }
+        }
+
+        // GET: api/Work/my
+        // 用户中心使用，查看自己的作品（带权限验证）
+        [HttpGet("my")]
+        public async Task<ActionResult> GetMyWorks(
             [FromQuery] string? search = null,
             [FromQuery] string? category = null,
             [FromQuery] string? status = null,
@@ -43,26 +148,48 @@ namespace Backend.Controllers
         {
             try
             {
+                Console.WriteLine("=== GetMyWorks 请求开始 ===");
+                Console.WriteLine($"用户是否认证: {User.Identity?.IsAuthenticated ?? false}");
+                Console.WriteLine($"用户名: {User.Identity?.Name ?? "null"}");
+                
                 var userId = GetCurrentUserId();
+                Console.WriteLine($"获取到的用户ID: {(userId.HasValue ? userId.Value.ToString() : "null")}");
+                
                 if (userId == null)
                 {
+                    Console.WriteLine("用户ID为空，返回未授权");
                     return Unauthorized(new { message = "未授权" });
                 }
 
                 var isAdmin = User.IsInRole("Admin");
+                var isTeacher = User.IsInRole("Teacher");
+                Console.WriteLine($"是否管理员: {isAdmin}, 是否教师: {isTeacher}");
+                Console.WriteLine($"用户角色声明: {string.Join(", ", User.Claims.Where(c => c.Type.Contains("role", StringComparison.OrdinalIgnoreCase)).Select(c => $"{c.Type}: {c.Value}"))}");
                 IQueryable<Work> query;
-                
+
                 if (isAdmin)
                 {
                     // 管理员可以查看所有作品
                     query = _context.Works;
                 }
+                else if (isTeacher)
+                {
+                    // 教师可以查看：自己的作品 + 自己管理的学生的所有作品（包括草稿、待审核、已发布）
+                    var supervisedStudentIds = _context.StudentTeachers
+                        .Where(st => st.TeacherId == userId.Value)
+                        .Select(st => st.StudentId)
+                        .ToList();
+
+                    query = _context.Works.Where(w =>
+                        w.UserId == userId.Value ||
+                        supervisedStudentIds.Contains(w.UserId)
+                    );
+                }
                 else
                 {
-                    // 普通用户可以查看自己的所有作品（无论状态）和其他用户的已发布作品
-                    query = _context.Works.Where(w => 
-                        w.UserId == userId.Value || // 自己的作品
-                        w.Status == "已发布" // 其他用户的已发布作品
+                    // 学生只能查看自己的作品（包括草稿、待审核、已发布）
+                    query = _context.Works.Where(w =>
+                        w.UserId == userId.Value
                     );
                 }
 
@@ -111,7 +238,10 @@ namespace Backend.Controllers
                             w.Views,
                             w.Favorites,
                             w.IsExcellent,
-                            uploadUserUsername = u.Username // 上传用户账号
+                            uploadUserUsername = u.Username,
+                            uploadUserRole = u.Role,
+                            uploadUserProfilePublic = u.ProfilePublic,
+                            uploadUserAvatar = u.Avatar
                         }
                     )
                     .Skip((page - 1) * pageSize)
@@ -166,7 +296,10 @@ namespace Backend.Controllers
                             w.Views,
                             w.Favorites,
                             w.IsExcellent,
-                            uploadUserUsername = u.Username // 上传用户账号
+                            uploadUserUsername = u.Username,
+                            uploadUserRole = u.Role,
+                            uploadUserProfilePublic = u.ProfilePublic,
+                            uploadUserAvatar = u.Avatar
                         }
                     )
                     .OrderByDescending(w => w.FileUploadTime)
@@ -189,11 +322,7 @@ namespace Backend.Controllers
         [HttpGet("{id}")]
         public async Task<ActionResult<Work>> GetWork(int id)
         {
-            var userId = GetCurrentUserId();
-            if (userId == null)
-            {
-                return Unauthorized(new { message = "未授权" });
-            }
+            var currentUserId = GetCurrentUserId();
 
             var workWithUserInfo = await _context.Works
                 .Where(w => w.Id == id)
@@ -216,18 +345,48 @@ namespace Backend.Controllers
                         w.FileUploadTime,
                         w.PreviewImage,
                         w.UserId,
-                        uploadUserUsername = u.Username // 上传用户账号
+                        uploadUserUsername = u.Username,
+                        uploadUserRole = u.Role,
+                        uploadUserProfilePublic = u.ProfilePublic,
+                        uploadUserAvatar = u.Avatar
                     }
                 )
                 .FirstOrDefaultAsync();
 
             if (workWithUserInfo == null)
             {
-                return NotFound();
+                return NotFound(new { message = "作品不存在" });
             }
 
-            // 检查作品是否属于当前用户
-            if (workWithUserInfo.UserId != userId)
+            // 检查访问权限
+            bool isOwner = currentUserId.HasValue && workWithUserInfo.UserId == currentUserId.Value;
+            bool isPublic = workWithUserInfo.Status == "已发布";
+            
+            // 检查是否为管理员
+            bool isAdmin = User.IsInRole("Admin");
+            
+            // 检查是否为该作品作者的指导教师
+            bool isSupervisingTeacher = false;
+            if (currentUserId.HasValue && User.IsInRole("Teacher"))
+            {
+                isSupervisingTeacher = _context.StudentTeachers
+                    .Any(st => st.TeacherId == currentUserId.Value && st.StudentId == workWithUserInfo.UserId);
+            }
+            
+            // 检查作品作者是否为管理员（非管理员用户不能查看管理员的作品）
+            bool isWorkAuthorAdmin = false;
+            if (workWithUserInfo.UserId > 0)
+            {
+                isWorkAuthorAdmin = _context.Users.Any(u => u.Id == workWithUserInfo.UserId && u.Role == "Admin");
+            }
+            
+            // 如果作品作者是管理员，非管理员用户无权访问
+            if (isWorkAuthorAdmin && !isAdmin)
+            {
+                return Forbid("无权访问该作品");
+            }
+
+            if (!isOwner && !isPublic && !isAdmin && !isSupervisingTeacher)
             {
                 return Forbid("无权访问该作品");
             }
@@ -237,7 +396,7 @@ namespace Backend.Controllers
 
         // PUT: api/Work/5
         [HttpPut("{id}")]
-        public async Task<IActionResult> PutWork(int id, Work work)
+        public async Task<IActionResult> PutWork(int id, [FromBody] WorkUpdateRequest request)
         {
             try
             {
@@ -245,11 +404,6 @@ namespace Backend.Controllers
                 if (userId == null)
                 {
                     return Unauthorized(new { message = "未授权" });
-                }
-
-                if (id != work.Id)
-                {
-                    return BadRequest();
                 }
 
                 // 检查作品是否存在
@@ -262,20 +416,20 @@ namespace Backend.Controllers
                 // 检查作品是否属于当前用户
                 if (existingWork.UserId != userId)
                 {
-                    return Forbid("无权修改该作品");
+                    return Forbid();
                 }
 
                 // 更新字段
-                existingWork.Title = work.Title;
-                existingWork.Category = work.Category;
-                existingWork.Description = work.Description;
-                existingWork.UploadDate = work.UploadDate;
-                existingWork.Status = work.Status;
-                existingWork.FilePath = work.FilePath;
-                existingWork.FileName = work.FileName;
-                existingWork.FileSize = work.FileSize;
-                existingWork.FileMD5 = work.FileMD5;
-                existingWork.FileUploadTime = work.FileUploadTime;
+                existingWork.Title = request.Title;
+                existingWork.Category = request.Category;
+                existingWork.Description = request.Description;
+                existingWork.UploadDate = request.UploadDate ?? DateTime.Now;
+                existingWork.Status = request.Status;
+                existingWork.FilePath = request.FilePath;
+                existingWork.FileName = request.FileName;
+                existingWork.FileSize = request.FileSize;
+                existingWork.FileMD5 = request.FileMD5;
+                existingWork.FileUploadTime = request.FileUploadTime ?? DateTime.Now;
                 // 保持原始的UserId
                 // existingWork.UserId = work.UserId;
 
@@ -306,7 +460,7 @@ namespace Backend.Controllers
 
         // POST: api/Work
         [HttpPost]
-        public async Task<ActionResult<Work>> PostWork(Work work)
+        public async Task<ActionResult<Work>> PostWork([FromBody] WorkCreateRequest request)
         {
             var userId = GetCurrentUserId();
             if (userId == null)
@@ -314,21 +468,53 @@ namespace Backend.Controllers
                 return Unauthorized(new { message = "未授权" });
             }
 
-            if (work.UploadDate == default)
+            // 获取用户实体用于导航属性
+            var user = await _context.Users.FindAsync(userId.Value);
+            if (user == null)
             {
-                work.UploadDate = DateTime.Now;
+                return Unauthorized(new { message = "用户不存在" });
             }
 
-            // 设置文件上传时间
-            work.FileUploadTime = DateTime.Now;
-
-            // 设置作品的UserId为当前用户ID
-            work.UserId = userId.Value;
+            var work = new Work
+            {
+                Title = request.Title,
+                Category = request.Category,
+                Description = request.Description,
+                Status = request.Status,
+                FilePath = request.FilePath,
+                FileName = request.FileName,
+                FileSize = request.FileSize,
+                FileMD5 = request.FileMD5,
+                PreviewImage = request.PreviewImage,
+                UploadDate = request.UploadDate ?? DateTime.Now,
+                FileUploadTime = DateTime.Now,
+                UserId = userId.Value,
+                Uploader = user
+            };
 
             _context.Works.Add(work);
             await _context.SaveChangesAsync();
 
-            return CreatedAtAction(nameof(GetWork), new { id = work.Id }, work);
+            return Ok(new 
+            {
+                message = "作品提交成功",
+                data = new 
+                {
+                    Id = work.Id,
+                    Title = work.Title,
+                    Category = work.Category,
+                    Description = work.Description,
+                    Status = work.Status,
+                    FilePath = work.FilePath,
+                    FileName = work.FileName,
+                    FileSize = work.FileSize,
+                    FileMD5 = work.FileMD5,
+                    PreviewImage = work.PreviewImage,
+                    UploadDate = work.UploadDate,
+                    FileUploadTime = work.FileUploadTime,
+                    UserId = work.UserId
+                }
+            });
         }
 
         // DELETE: api/Work/5
@@ -348,10 +534,10 @@ namespace Backend.Controllers
             }
 
             // 检查作品是否属于当前用户
-            if (work.UserId != userId)
-            {
-                return Forbid("无权删除该作品");
-            }
+        if (work.UserId != userId)
+        {
+            return Forbid();
+        }
 
             _context.Works.Remove(work);
             await _context.SaveChangesAsync();
@@ -371,10 +557,10 @@ namespace Backend.Controllers
             try
             {
                 // 检查当前用户是否为管理员
-                if (!User.IsInRole("Admin"))
-                {
-                    return Forbid("只有管理员可以审核作品");
-                }
+            if (!User.IsInRole("Admin"))
+            {
+                return Forbid();
+            }
 
                 var work = await _context.Works.FindAsync(id);
                 if (work == null)
@@ -412,21 +598,49 @@ namespace Backend.Controllers
                 }
 
                 var isAdmin = User.IsInRole("Admin");
-                IQueryable<Work> query;
+            var isTeacher = User.IsInRole("Teacher");
+            IQueryable<Work> query;
+            
+            if (isAdmin)
+            {
+                // 管理员可以查看所有作品
+                query = _context.Works;
+            }
+            else if (isTeacher)
+            {
+                // 教师可以查看：自己的作品 + 自己管理的学生的所有作品 + 其他普通用户的已发布作品
+                // 获取教师管理的学生ID列表
+                var supervisedStudentIds = _context.StudentTeachers
+                    .Where(st => st.TeacherId == userId.Value)
+                    .Select(st => st.StudentId)
+                    .ToList();
                 
-                if (isAdmin)
-                {
-                    // 管理员可以查看所有作品
-                    query = _context.Works;
-                }
-                else
-                {
-                    // 普通用户可以查看自己的所有作品（无论状态）和其他用户的已发布作品
-                    query = _context.Works.Where(w => 
-                        w.UserId == userId.Value || // 自己的作品
-                        w.Status == "已发布" // 其他用户的已发布作品
-                    );
-                }
+                // 获取所有非管理员用户ID（排除管理员）
+                var nonAdminUserIds = _context.Users
+                    .Where(u => u.Role != "Admin")
+                    .Select(u => u.Id)
+                    .ToList();
+                
+                query = _context.Works.Where(w => 
+                    w.UserId == userId.Value || // 自己的作品
+                    supervisedStudentIds.Contains(w.UserId) || // 自己管理的学生的作品
+                    (w.Status == "已发布" && nonAdminUserIds.Contains(w.UserId)) // 其他非管理员用户的已发布作品
+                );
+            }
+            else
+            {
+                // 学生可以查看：自己的所有作品（无论状态）和其他非管理员用户的已发布作品
+                // 获取所有非管理员用户ID（排除管理员）
+                var nonAdminUserIds = _context.Users
+                    .Where(u => u.Role != "Admin")
+                    .Select(u => u.Id)
+                    .ToList();
+                
+                query = _context.Works.Where(w => 
+                    w.UserId == userId.Value || // 自己的作品
+                    (w.Status == "已发布" && nonAdminUserIds.Contains(w.UserId)) // 其他非管理员用户的已发布作品
+                );
+            }
 
                 // 筛选最近hours小时内上传的作品
                 var cutoffTime = DateTime.Now.AddHours(-hours);
