@@ -1,6 +1,6 @@
 {
   "Version": 1,
-  "Hash": "5UsoNUsQzoL3e39gV+CUNT05Tt12iUybrSDQPmKR8mE=",
+  "Hash": "ejgRKNXaBf8DS23QCxBjgx+tCdxZRV9g544tomPOw/o=",
   "Source": "Backend",
   "BasePath": "_content/Backend",
   "Mode": "Default",
@@ -10,7 +10,7 @@
     {
       "Name": "Backend\\wwwroot",
       "Source": "Backend",
-      "ContentRoot": "d:\\毕设\\web\\api\\Backend\\wwwroot\\",
+      "ContentRoot": "D:\\毕设\\web\\api\\Backend\\wwwroot\\",
       "BasePath": "_content/Backend",
       "Pattern": "**"
     }

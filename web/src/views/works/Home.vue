@@ -158,10 +158,10 @@
       :visible.sync="detailDialogVisible"
       :title="currentWork ? currentWork.title : '作品详情'"
       width="680px"
-      top="6vh"
       :close-on-click-modal="true"
       custom-class="detail-dialog"
       destroy-on-close
+      append-to-body
     >
       <div v-if="currentWork" class="detail-content">
         <!-- 顶部封面区 -->
@@ -245,6 +245,10 @@ export default {
       currentWork: null,
       refreshTimer: null
     }
+  },
+  beforeRouteLeave(to, from, next) {
+    this.detailDialogVisible = false
+    next()
   },
   mounted() {
     this.fetchOverviewData()

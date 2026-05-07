@@ -165,6 +165,7 @@
         width="800px"
         class="gallery-detail-dialog"
         :close-on-click-modal="true"
+        append-to-body
       >
         <div v-if="currentWork" class="detail-content">
           <div class="detail-preview">
@@ -238,6 +239,10 @@ export default {
         { label: '已发布', value: '已发布' }
       ]
     }
+  },
+  beforeRouteLeave(to, from, next) {
+    this.detailDialogVisible = false
+    next()
   },
   mounted() { this.loadWorks() },
   methods: {

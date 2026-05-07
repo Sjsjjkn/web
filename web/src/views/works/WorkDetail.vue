@@ -1,12 +1,8 @@
 <template>
   <div class="work-detail-page" v-loading="loading">
-    <!-- 环境光晕 -->
-    <div class="ambient-glow glow-green"></div>
-    <div class="ambient-glow glow-gold"></div>
-
     <div class="work-detail-container" v-if="work && !loading">
       <!-- 面包屑导航 -->
-      <div class="breadcrumb fade-in-up">
+      <div class="breadcrumb">
         <div class="back-btn" @click="$router.go(-1)">
           <i class="el-icon-arrow-left"></i>
           <span>返回</span>
@@ -18,8 +14,7 @@
       </div>
 
       <!-- Hero 区域 -->
-      <div class="hero-section fade-in-up">
-        <div class="hero-pattern"></div>
+      <div class="hero-section">
         <div class="hero-content">
           <div class="hero-badge">
             <el-tag size="small" effect="dark" class="status-tag">已发布</el-tag>
@@ -41,7 +36,7 @@
                 <i class="el-icon-view"></i>
               </div>
               <div class="stat-info">
-                <span class="stat-number">{{ work.viewCount || 0 }}</span>
+                <span class="stat-number">{{ work.views || 0 }}</span>
                 <span class="stat-unit">次浏览</span>
               </div>
             </div>
@@ -70,7 +65,7 @@
       </div>
 
       <!-- 主内容区：两栏布局 -->
-      <div class="detail-body fade-in-up" style="animation-delay: 0.15s">
+      <div class="detail-body">
         <!-- 左栏：预览 + 描述 -->
         <div class="detail-main">
           <!-- 作品预览 -->
@@ -211,7 +206,7 @@
             <div class="author-card-divider"></div>
             <div class="author-card-stats">
               <div class="author-stat">
-                <span class="author-stat-num">{{ work.viewCount || 0 }}</span>
+                <span class="author-stat-num">{{ work.views || 0 }}</span>
                 <span class="author-stat-label">作品浏览</span>
               </div>
               <div class="author-stat">
@@ -391,37 +386,7 @@ export default {
 }
 
 /* ── 环境光晕 ── */
-.ambient-glow {
-  position: fixed;
-  border-radius: 50%;
-  filter: blur(120px);
-  pointer-events: none;
-  z-index: 0;
-  opacity: 0.5;
-}
 
-.glow-green {
-  width: 500px;
-  height: 500px;
-  background: radial-gradient(circle, rgba(45, 138, 110, 0.12) 0%, transparent 70%);
-  top: -150px;
-  right: -100px;
-  animation: floatGlow 8s ease-in-out infinite alternate;
-}
-
-.glow-gold {
-  width: 400px;
-  height: 400px;
-  background: radial-gradient(circle, rgba(200, 170, 110, 0.1) 0%, transparent 70%);
-  bottom: -100px;
-  left: -80px;
-  animation: floatGlow 10s ease-in-out infinite alternate-reverse;
-}
-
-@keyframes floatGlow {
-  0% { transform: translate(0, 0) scale(1); }
-  100% { transform: translate(30px, -20px) scale(1.1); }
-}
 
 /* ================= 面包屑 ================= */
 .work-detail-container {
@@ -463,33 +428,11 @@ export default {
 
 /* ================= Hero 区域 ================= */
 .hero-section {
-  position: relative;
-  background: linear-gradient(135deg, var(--primary-bg) 0%, #F7F4F0 40%, #FCFAF5 100%);
+  background: var(--bg-card);
   border-radius: var(--radius-xl);
-  padding: 48px 48px 40px;
-  margin-bottom: 32px;
-  overflow: hidden;
+  padding: 32px;
+  margin-bottom: 24px;
   border: 1px solid var(--border-light);
-  box-shadow: var(--shadow-sm);
-}
-
-.hero-pattern {
-  position: absolute;
-  top: -60px;
-  right: -60px;
-  width: 360px;
-  height: 360px;
-  background:
-    radial-gradient(circle at 60% 40%, rgba(45, 138, 110, 0.06) 0%, transparent 60%),
-    radial-gradient(circle at 40% 60%, rgba(200, 170, 110, 0.05) 0%, transparent 60%);
-  border-radius: 50%;
-  pointer-events: none;
-  animation: pulseGlow 6s ease-in-out infinite alternate;
-}
-
-@keyframes pulseGlow {
-  0% { transform: scale(1); opacity: 0.6; }
-  100% { transform: scale(1.15); opacity: 1; }
 }
 
 .hero-content {

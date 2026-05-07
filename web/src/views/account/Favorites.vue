@@ -146,6 +146,7 @@
         width="800px"
         class="gallery-detail-dialog"
         :close-on-click-modal="true"
+        append-to-body
       >
         <div v-if="currentWork" class="detail-content">
           <div class="detail-preview">
@@ -207,6 +208,10 @@ export default {
         { label: '其他', value: '其他' }
       ]
     }
+  },
+  beforeRouteLeave(to, from, next) {
+    this.detailDialogVisible = false
+    next()
   },
   mounted() {
     this.loadCollections()
