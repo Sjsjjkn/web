@@ -54,14 +54,14 @@ namespace Backend.Controllers
                 var today = DateTime.Now.Date;
                 var todayWorks = await _context.Works.CountAsync(w => w.UploadDate.Date == today);
 
-                // 总浏览量（假设未来会有浏览量字段，暂时返回0）
-                var totalViews = 0;
+                // 优秀作品数
+                var excellentWorks = await _context.Works.CountAsync(w => w.IsExcellent == true);
 
                 return Ok(new {
                     totalWorks,
                     totalUsers,
                     todayWorks,
-                    totalViews
+                    excellentWorks
                 });
             }
             catch (Exception ex)
