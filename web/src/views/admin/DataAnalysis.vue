@@ -364,19 +364,19 @@ export default {
           showSymbol: false,
           lineStyle: { 
             width: 3,
-            color: '#0052D9',
-            shadowColor: 'rgba(0, 82, 217, 0.3)',
+            color: 'var(--primary)',
+            shadowColor: 'rgba(45, 138, 110, 0.3)',
             shadowBlur: 10
           },
           itemStyle: { 
-            color: '#0052D9',
+            color: 'var(--primary)',
             borderColor: '#fff',
             borderWidth: 2
           },
           areaStyle: { 
             color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
-              { offset: 0, color: 'rgba(0, 82, 217, 0.3)' },
-              { offset: 1, color: 'rgba(0, 82, 217, 0.05)' }
+              { offset: 0, color: 'rgba(45, 138, 110, 0.3)' },
+              { offset: 1, color: 'rgba(45, 138, 110, 0.08)' }
             ])
           },
           data: this.dailyUploads.uploads
@@ -392,7 +392,7 @@ export default {
       }
       this.pieChart = echarts.init(this.$refs.pieChart)
       const data = this.categoryDistribution.map(item => ({ value: item.count, name: item.category }))
-      const colors = ['#0052D9', '#1890FF', '#40A9FF', '#69C0FF', '#91D5FF', '#B37FEB', '#722ED1']
+      const colors = ['var(--primary)', '#1890FF', '#40A9FF', '#69C0FF', '#91D5FF', '#B37FEB', '#722ED1']
       const option = {
         tooltip: { 
           trigger: 'item', 
@@ -518,11 +518,11 @@ export default {
           barWidth: '60%',
           itemStyle: { 
             color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
-              { offset: 0, color: '#0052D9' },
+              { offset: 0, color: 'var(--primary)' },
               { offset: 1, color: '#85A5FF' }
             ]),
             borderRadius: [6, 6, 0, 0],
-            shadowColor: 'rgba(0, 82, 217, 0.3)',
+            shadowColor: 'rgba(45, 138, 110, 0.3)',
             shadowBlur: 10,
             shadowOffsetY: 4
           },
@@ -587,7 +587,7 @@ export default {
 }
 
 .logo-area { display: flex; align-items: center; gap: 12px; }
-.logo-icon { background: #0052D9; color: white; font-weight: bold; padding: 4px 8px; border-radius: 6px; }
+.logo-icon { background: var(--primary); color: white; font-weight: bold; padding: 4px 8px; border-radius: 6px; }
 .system-title { font-size: 20px; font-weight: 600; color: #1a1a1a; margin: 0; }
 
 .refresh-btn {
@@ -595,7 +595,7 @@ export default {
 }
 .refresh-btn:hover {
   transform: translateY(-2px);
-  box-shadow: 0 4px 12px rgba(0, 82, 217, 0.3);
+  box-shadow: 0 4px 12px rgba(45, 138, 110, 0.3);
 }
 
 .stats-section {
@@ -639,7 +639,7 @@ export default {
   align-items: center;
   justify-content: center;
   font-size: 28px;
-  color: #0052D9;
+  color: var(--primary);
   flex-shrink: 0;
 }
 

@@ -1,482 +1,420 @@
 <template>
-  <div class="gallery-container">
-    <!-- 顶部导航 -->
-    <header class="gallery-header slide-down">
-      <div class="logo-area">
-        <div class="logo-icon">BDU</div>
-        <h1 class="system-title">保定学院数字作品展厅</h1>
+  <div class="home-page">
+    <!-- ========== Hero ========== -->
+    <section class="hero">
+      <div class="hero-content">
+        <h1 class="hero-title">作品展示</h1>
+        <p class="hero-subtitle">浏览和欣赏保定学院师生的优秀数字作品</p>
       </div>
-      <div class="user-actions">
-        <el-button type="primary" round class="action-btn" @click="navigateToUpload">
-          <i class="el-icon-upload"></i> 上传作品
-        </el-button>
-        <el-button round class="action-btn secondary" @click="navigateToWorks">
-          <i class="el-icon-view"></i> 浏览作品
-        </el-button>
-      </div>
-    </header>
+    </section>
 
-    <!-- 页面头部 -->
-    <section class="page-header fade-in-up">
-      <h2>欢迎来到保定学院数字作品展厅</h2>
-      <p>探索和欣赏保定学院师生的优秀数字作品</p>
-    </section>
-    
-    <!-- 数据概览 -->
-    <section class="stats-section fade-in-up">
-      <el-row :gutter="24">
-        <el-col :xs="12" :sm="12" :md="6" v-for="(stat, index) in stats" :key="index">
-          <el-card class="stat-card stagger-fade-in" :style="{ animationDelay: `${index * 0.1 + 0.2}s` }">
-            <div class="stat-icon" :class="`icon-${index + 1}`">
-              <i :class="stat.icon"></i>
-            </div>
-            <div class="stat-value">{{ stat.value }}</div>
-            <div class="stat-label">{{ stat.label }}</div>
-            <div class="stat-trend" :class="stat.trend > 0 ? 'positive' : 'negative'">
-              <i :class="stat.trend > 0 ? 'el-icon-top' : 'el-icon-bottom'"></i>
-              {{ Math.abs(stat.trend) }}%
-            </div>
-          </el-card>
-        </el-col>
-      </el-row>
-    </section>
-    
-    <!-- 公告列表 -->
-    <section class="announcement-section fade-in-up">
-      <AnnouncementList @click="handleAnnouncementClick" />
-    </section>
-    
-    <!-- 最近上传作品 -->
-    <section class="works-section fade-in-up">
-      <div class="section-header">
-        <h2 class="section-title">最近上传作品</h2>
-        <el-button type="text" class="view-all-btn" @click="navigateToWorks">查看全部 <i class="el-icon-arrow-right"></i></el-button>
+    <!-- ========== Stats Banner ========== -->
+    <div class="stats-banner" v-loading="loading.overview">
+      <div class="stat-card" v-for="(s, i) in stats" :key="i">
+        <div class="stat-icon" :class="['icon-' + i]">{{ s.iconEmoji }}</div>
+        <div class="stat-info">
+          <h3>{{ s.value }}</h3>
+          <p>{{ s.label }}</p>
+        </div>
       </div>
-      
-      <el-row :gutter="24">
-        <el-col 
-          :xs="24" :sm="12" :md="8" :lg="6" 
-          v-for="(work, index) in recentWorks" 
-          :key="work.id"
-          class="stagger-fade-in"
-          :style="{ animationDelay: `${index * 0.1 + 0.3}s` }"
-        >
-          <div @click="handleViewWork(work)" style="cursor: pointer;">
-            <el-card class="work-card" shadow="never" :body-style="{ padding: '0px' }">
-            <div class="cover-image" :style="{ backgroundColor: getRandomColor(work.id) }">
-              <img v-if="getThumbnailUrl(work)" :src="getThumbnailUrl(work)" :alt="work.title" class="thumbnail-image">
-              <ModelThumbnail 
-                v-else-if="isModelFile(work)" 
-                :model-url="`/api/File/download?fileName=${encodeURIComponent(work.filePath)}`"
-                :background-color="getRandomColor(work.id)"
-                class="model-preview"
-              />
-              <div v-else class="thumbnail-placeholder" :style="{ backgroundColor: getRandomColor(work.id) }">
-                <i class="el-icon-document"></i>
-                <span>{{ getFileExtension(work) }}</span>
-              </div>
-              <span class="category-badge">{{ work.category }}</span>
-              <div class="hover-overlay">
-                <el-button type="primary" circle icon="el-icon-caret-right"></el-button>
-              </div>
-            </div>
-            
-            <div class="work-info">
-              <h3 class="work-title">{{ work.title }}</h3>
-              <div class="author-row">
-                <span class="work-author">作者: {{ work.uploadUserName || '未知作者' }}</span>
-                <el-button 
-                  v-if="work.uploadUserProfilePublic" 
-                  type="text" 
-                  size="small" 
-                  class="author-profile-btn"
-                  @click.stop="goToAuthorProfile(work.userId || work.UserId)"
-                >
-                  <i class="el-icon-user"></i> 主页
-                </el-button>
-              </div>
-              <p class="work-date">{{ work.fileUploadTime ? formatDate(work.fileUploadTime) : work.uploadDate }}</p>
-            </div>
-            </el-card>
+    </div>
+
+    <!-- ========== 最新上传 ========== -->
+    <section class="works-section">
+      <div class="section-header">
+        <h2 class="section-title">最新上传</h2>
+        <router-link to="/works/explore" class="view-all">查看全部 →</router-link>
+      </div>
+
+      <div v-if="loading.works" class="skeleton-grid">
+        <div class="skeleton-card" v-for="n in 4" :key="n">
+          <div class="skeleton-cover"></div>
+          <div class="skeleton-body">
+            <div class="skeleton-line w-80"></div>
+            <div class="skeleton-line w-50"></div>
+            <div class="skeleton-line w-60"></div>
           </div>
-        </el-col>
-      </el-row>
+        </div>
+      </div>
+
+      <div v-else-if="recentWorks.length === 0" class="empty-state">
+        <div class="empty-icon">📭</div>
+        <h3>暂无作品</h3>
+        <p>还没有任何作品上传，快来分享你的第一个作品吧</p>
+      </div>
+
+      <div v-else class="works-grid">
+        <div
+          class="work-card"
+          v-for="(work, idx) in recentWorks"
+          :key="work.id"
+          :style="{ animationDelay: idx * 0.08 + 's' }"
+        >
+          <div class="card-cover" @click="handleViewWork(work)">
+            <!-- 真实缩略图 -->
+            <img
+              v-if="getThumbnailUrl(work)"
+              :src="getThumbnailUrl(work)"
+              class="thumbnail-image"
+              :alt="work.title"
+            />
+            <!-- 无缩略图时：带渐变的占位符 -->
+            <div
+              v-else
+              class="cover-placeholder"
+              :style="{ background: getGradient(work.id, idx) }"
+            >
+              <span class="file-icon">{{ getFileEmoji(work) }}</span>
+              <span>{{ getFileExtension(work) }}</span>
+            </div>
+            <!-- 分类标签 -->
+            <span class="category-badge">{{ work.category || '未分类' }}</span>
+            <!-- 悬停遮罩 -->
+            <div class="card-overlay">
+              <button class="overlay-btn">▶</button>
+            </div>
+          </div>
+          <div class="card-body">
+            <div class="card-title" @click="handleViewWork(work)">{{ work.title }}</div>
+            <div class="card-author">
+              <span class="author-avatar">{{ (work.uploadUserName || '未')[0] }}</span>
+              {{ work.uploadUserName || '未知作者' }}
+              <span class="card-date" v-if="work.fileUploadTime || work.uploadDate">
+                · {{ formatDate(work.fileUploadTime || work.uploadDate) }}
+              </span>
+            </div>
+            <div class="card-actions">
+              <button class="btn btn-primary" @click="handleViewWork(work)">查看详情</button>
+              <button
+                class="btn btn-favorite"
+                @click="handleFavoriteWork(work)"
+                :class="{ active: work.isFavorited }"
+                :title="work.isFavorited ? '取消收藏' : '收藏'"
+              >{{ work.isFavorited ? '⭐' : '☆' }}</button>
+            </div>
+          </div>
+        </div>
+      </div>
     </section>
-    
-    <!-- 优秀作品推荐 -->
-    <section class="featured-section fade-in-up">
+
+    <!-- ========== 优秀作品推荐 =========茗 -->
+    <section class="featured-section" v-if="featuredWorks.length > 0">
       <div class="section-header">
         <h2 class="section-title">优秀作品推荐</h2>
-        <el-button type="text" class="view-all-btn" @click="navigateToWorks">查看全部 <i class="el-icon-arrow-right"></i></el-button>
       </div>
-      
-      <el-row :gutter="24">
-        <el-col 
-          :xs="24" :sm="12" :md="8" :lg="8"
-          v-for="(work, index) in featuredWorks" 
-          :key="work.id"
-          class="stagger-fade-in"
-          :style="{ animationDelay: `${index * 0.1 + 0.3}s` }"
+      <div class="works-grid">
+        <div
+          class="work-card featured"
+          v-for="(work, idx) in featuredWorks"
+          :key="'f-' + work.id"
+          :style="{ animationDelay: idx * 0.08 + 's' }"
         >
-          <div @click="handleViewWork(work)" style="cursor: pointer;">
-            <el-card class="featured-card" shadow="never" :body-style="{ padding: '0px' }">
-            <div class="featured-badge">
-              <i class="el-icon-star-on"></i> 推荐
+          <div class="card-cover" @click="handleViewWork(work)">
+            <img
+              v-if="getThumbnailUrl(work)"
+              :src="getThumbnailUrl(work)"
+              class="thumbnail-image"
+              :alt="work.title"
+            />
+            <div
+              v-else
+              class="cover-placeholder"
+              :style="{ background: getGradient(work.id, idx + 10) }"
+            >
+              <span class="file-icon">{{ getFileEmoji(work) }}</span>
+              <span>{{ getFileExtension(work) }}</span>
             </div>
-            <div class="cover-image" :style="{ backgroundColor: getRandomColor(work.id + 100) }">
-              <img v-if="getThumbnailUrl(work)" :src="getThumbnailUrl(work)" :alt="work.title" class="thumbnail-image">
-              <ModelThumbnail 
-                v-else-if="isModelFile(work)" 
-                :model-url="`/api/File/download?fileName=${encodeURIComponent(work.filePath)}`"
-                :background-color="getRandomColor(work.id + 100)"
-                class="model-preview"
-              />
-              <div v-else class="thumbnail-placeholder" :style="{ backgroundColor: getRandomColor(work.id + 100) }">
-                <i class="el-icon-document"></i>
-                <span>{{ getFileExtension(work) }}</span>
-              </div>
-              <span class="category-badge">{{ work.category }}</span>
-              <div class="hover-overlay">
-                <el-button type="primary" circle icon="el-icon-caret-right"></el-button>
-              </div>
+            <span class="category-badge">{{ work.category || '未分类' }}</span>
+            <span class="featured-badge">⭐ 优秀</span>
+            <div class="card-overlay">
+              <button class="overlay-btn">▶</button>
             </div>
-            
-            <div class="work-info">
-              <h3 class="work-title">{{ work.title }}</h3>
-              <div class="author-row">
-                <span class="work-author">作者: {{ work.uploadUserName || '未知作者' }}</span>
-                <el-button 
-                  v-if="work.uploadUserProfilePublic" 
-                  type="text" 
-                  size="small" 
-                  class="author-profile-btn"
-                  @click.stop="goToAuthorProfile(work.userId || work.UserId)"
-                >
-                  <i class="el-icon-user"></i> 主页
-                </el-button>
-              </div>
-              <p class="work-description">{{ work.description }}</p>
-              
-              <div class="work-stats">
-                <span><i class="el-icon-view"></i> {{ work.views || 0 }}</span>
-                <span><i class="el-icon-star-off"></i> {{ work.favorites || 0 }}</span>
-                <span><i class="el-icon-chat-line-round"></i> {{ work.comments || 0 }}</span>
-              </div>
+          </div>
+          <div class="card-body">
+            <div class="card-title" @click="handleViewWork(work)">{{ work.title }}</div>
+            <div class="card-author">
+              <span class="author-avatar">{{ (work.uploadUserName || '优')[0] }}</span>
+              {{ work.uploadUserName || '未知作者' }}
+              <span class="card-date" v-if="work.fileUploadTime || work.uploadDate">
+                · {{ formatDate(work.fileUploadTime || work.uploadDate) }}
+              </span>
             </div>
-            </el-card>
+            <div class="card-actions">
+              <button class="btn btn-primary" @click="handleViewWork(work)">查看详情</button>
+              <button
+                class="btn btn-favorite"
+                @click="handleFavoriteWork(work)"
+                :class="{ active: work.isFavorited }"
+                :title="work.isFavorited ? '取消收藏' : '收藏'"
+              >{{ work.isFavorited ? '⭐' : '☆' }}</button>
+            </div>
           </div>
-        </el-col>
-      </el-row>
-    </section>
-    
-    <!-- 3D模型预览测试入口 -->
-    <section class="test-section fade-in-up">
-      <el-card class="test-card" shadow="never">
-        <div class="test-content">
-          <div class="test-icon">
-            <svg width="64" height="64" viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
-              <path d="M32 6L6 14V50L32 58L58 50V14L32 6Z" fill="url(#test_linear)"/>
-              <path d="M32 14L14 20V44L32 50L50 44V20L32 14Z" fill="url(#test_linear2)"/>
-              <defs>
-                <linearGradient id="test_linear" x1="6" y1="14" x2="58" y2="50" gradientUnits="userSpaceOnUse">
-                  <stop stop-color="#0052D9"/>
-                  <stop offset="1" stop-color="#34C759"/>
-                </linearGradient>
-                <linearGradient id="test_linear2" x1="14" y1="20" x2="50" y2="44" gradientUnits="userSpaceOnUse">
-                  <stop stop-color="#64B5F6"/>
-                  <stop offset="1" stop-color="#81C784"/>
-                </linearGradient>
-              </defs>
-            </svg>
-          </div>
-          <div class="test-text">
-            <h3>3D模型预览测试</h3>
-            <p>体验Three.js的3D渲染效果</p>
-          </div>
-          <el-button type="primary" size="large" @click="navigateToModelTest" class="test-btn">
-            进入测试 <i class="el-icon-arrow-right"></i>
-          </el-button>
         </div>
-      </el-card>
+      </div>
     </section>
-    
-    <!-- 作品详情对话框 -->
+
+    <!-- ========== 详情对话框 ========== -->
     <el-dialog
-      :title="''"
       :visible.sync="detailDialogVisible"
-      width="900px"
-      :custom-class="'work-detail-dialog'"
-      :close-on-click-modal="false"
+      :title="currentWork ? currentWork.title : '作品详情'"
+      width="680px"
+      top="6vh"
+      :close-on-click-modal="true"
+      custom-class="detail-dialog"
+      destroy-on-close
     >
-      <div v-if="currentWork" class="work-detail-content">
-        <div class="work-header">
-          <div class="work-cover" :style="{ backgroundColor: getRandomColor(currentWork.id) }">
-            <img v-if="getThumbnailUrl(currentWork)" :src="getThumbnailUrl(currentWork)" :alt="currentWork.title" class="detail-cover-image">
-            <ModelThumbnail 
-                v-else-if="isModelFile(currentWork)" 
-                :model-url="`/api/File/download?fileName=${encodeURIComponent(currentWork.filePath)}`"
-                :background-color="getRandomColor(currentWork.id)"
-                class="detail-model-preview"
-              />
-            <div v-else class="detail-cover-placeholder" :style="{ backgroundColor: getRandomColor(currentWork.id) }">
-              <i class="el-icon-document"></i>
+      <div v-if="currentWork" class="detail-content">
+        <!-- 顶部封面区 -->
+        <div class="detail-header">
+          <div class="detail-cover">
+            <img
+              v-if="getThumbnailUrl(currentWork)"
+              :src="getThumbnailUrl(currentWork)"
+              class="detail-cover-img"
+            />
+            <div
+              v-else
+              class="detail-cover-placeholder"
+              :style="{ background: getGradient(currentWork.id, 0) }"
+            >
+              <span style="font-size: 48px; opacity: 0.5;">{{ getFileEmoji(currentWork) }}</span>
               <span>{{ getFileExtension(currentWork) }}</span>
             </div>
-            <span class="category-badge">{{ currentWork.category }}</span>
           </div>
-          <div class="work-info-header">
-            <h2 class="work-title-detail">{{ currentWork.title }}</h2>
-            <div class="work-author-info">
-              <span class="author-name">{{ currentWork.uploadUserName || '未知作者' }}</span>
-              <el-button 
-                v-if="currentWork.uploadUserProfilePublic" 
-                type="text" 
-                size="small" 
-                class="author-profile-btn"
-                @click="goToAuthorProfile(currentWork.userId || currentWork.UserId)"
-              >
-                <i class="el-icon-user"></i> 查看主页
-              </el-button>
-              <span class="upload-time">{{ currentWork.fileUploadTime ? formatDate(currentWork.fileUploadTime) : currentWork.uploadDate }}</span>
-              <el-tag :type="currentWork.status === '已发布' ? 'success' : 'info'" size="small">
-                {{ currentWork.status || '未知' }}
-              </el-tag>
+          <div class="detail-meta">
+            <div class="detail-author">
+              <span class="author-avatar-lg">{{ (currentWork.uploadUserName || '?')[0] }}</span>
+              <span class="detail-author-name">{{ currentWork.uploadUserName || '未知作者' }}</span>
             </div>
-            <div class="work-stats-detail">
-              <span class="stat-item">
-                <i class="el-icon-view"></i>
-                <span>{{ currentWork.views || 0 }}</span>
-                <span class="stat-label">浏览</span>
-              </span>
-              <span class="stat-item">
-                <i class="el-icon-star-off"></i>
-                <span>{{ currentWork.favorites || 0 }}</span>
-                <span class="stat-label">收藏</span>
-              </span>
-              <span class="stat-item">
-                <i class="el-icon-chat-line-round"></i>
-                <span>{{ currentWork.comments || 0 }}</span>
-                <span class="stat-label">评论</span>
-              </span>
+            <div class="detail-stats">
+              <span>👁 {{ currentWork.views || 0 }}</span>
+              <span>⭐ {{ currentWork.favorites || 0 }}</span>
+              <span>📁 {{ currentWork.category || '未分类' }}</span>
+            </div>
+            <div class="detail-date" v-if="currentWork.fileUploadTime || currentWork.uploadDate">
+              上传于 {{ formatDate(currentWork.fileUploadTime || currentWork.uploadDate) }}
             </div>
           </div>
         </div>
-        
-        <div class="work-description-detail">
-          <h3 class="section-title-detail">作品描述</h3>
-          <div class="description-content">
-            {{ currentWork.description || '该作品暂无描述' }}
-          </div>
+
+        <!-- 描述 -->
+        <div class="detail-description" v-if="currentWork.description">
+          <h4>作品描述</h4>
+          <p>{{ currentWork.description }}</p>
         </div>
-        
-        <div class="work-file-info">
-          <h3 class="section-title-detail">文件信息</h3>
-          <div class="file-details">
-            <span class="file-item">
-              <i class="el-icon-document"></i>
-              <span>{{ currentWork.fileName || '未知文件名' }}</span>
-            </span>
-            <span class="file-item">
-              <i class="el-icon-folder"></i>
-              <span>{{ currentWork.category || '未分类' }}</span>
-            </span>
+
+        <!-- 文件信息 -->
+        <div class="detail-file">
+          <h4>文件信息</h4>
+          <div class="file-tags">
+            <span class="file-tag">📄 {{ currentWork.fileName || currentWork.filePath || '未知' }}</span>
+            <span class="file-tag">🏷 {{ formatFileType(currentWork.filePath) }}</span>
           </div>
         </div>
       </div>
-      <div slot="footer" class="dialog-footer-detail">
-        <el-button @click="detailDialogVisible = false" class="close-btn">
-          <i class="el-icon-close"></i> 关闭
-        </el-button>
-        <el-button type="info" @click="handleFavoriteWork(currentWork)" class="favorite-btn">
-          <i class="el-icon-star-off"></i> 收藏
-        </el-button>
-        <el-button type="primary" @click="handleDownloadFile(currentWork)" class="download-btn">
-          <i class="el-icon-download"></i> 下载文件
-        </el-button>
-      </div>
+
+      <span slot="footer" class="dialog-footer">
+        <el-button @click="detailDialogVisible = false" class="btn-cancel">关闭</el-button>
+        <el-button
+          v-if="currentWork && currentWork.filePath"
+          type="primary"
+          @click="handleDownloadFile(currentWork)"
+          class="btn-download"
+        >⬇ 下载文件</el-button>
+      </span>
     </el-dialog>
   </div>
 </template>
 
 <script>
 import { getUser } from '../../utils/auth'
-import ModelThumbnail from '../../components/ModelThumbnail.vue'
-import AnnouncementList from '../../components/AnnouncementList.vue'
 
 export default {
-  components: {
-    ModelThumbnail,
-    AnnouncementList
-  },
   name: 'Home',
   data() {
     return {
-      // 数据概览
       stats: [],
-      // 最近上传作品数据
       recentWorks: [],
-      // 优秀作品推荐数据
       featuredWorks: [],
-      // 加载状态
       loading: {
         overview: false,
         works: false
       },
-      // 错误信息
       error: null,
-      // 详情对话框
       detailDialogVisible: false,
-      // 当前查看的作品
       currentWork: null,
-      // 自动刷新定时器
       refreshTimer: null
     }
   },
   mounted() {
-    // 组件加载时获取数据
-    this.fetchOverviewData();
-    this.fetchWorksData();
-
-    // 每30秒自动刷新数据
+    this.fetchOverviewData()
+    this.fetchWorksData()
     this.refreshTimer = setInterval(() => {
-      this.fetchWorksData();
-    }, 30000);
+      this.fetchWorksData()
+    }, 30000)
   },
   beforeDestroy() {
-    // 组件销毁时清除定时器
     if (this.refreshTimer) {
-      clearInterval(this.refreshTimer);
+      clearInterval(this.refreshTimer)
     }
   },
   methods: {
-    // 导航到模型预览测试页面
-    navigateToModelTest() {
-      this.$router.push('/lab/model-test')
-    },
-    // 获取文件类型
     getFileType(filePath) {
       if (!filePath) return 'other'
       const extension = filePath.toLowerCase().substring(filePath.lastIndexOf('.'))
       const imageExts = ['.jpg', '.jpeg', '.png', '.gif', '.bmp', '.webp']
       const videoExts = ['.mp4', '.avi', '.mov', '.wmv', '.flv', '.mkv']
       const modelExts = ['.json', '.obj', '.gltf', '.glb', '.fbx', '.dae']
-      
       if (imageExts.includes(extension)) return 'image'
       if (videoExts.includes(extension)) return 'video'
       if (modelExts.includes(extension)) return 'model'
       return 'other'
     },
-    // 获取文件URL
+
     getFileUrl(filePath) {
       if (!filePath) return ''
       return `http://localhost:5200/api/File/download?filePath=${encodeURIComponent(filePath)}`
     },
-    // 获取缩略图URL
+
     getThumbnailUrl(work) {
-      // 优先使用用户上传的预览图
       if (work.previewImage) {
         return `/api/File/download?fileName=${encodeURIComponent(work.previewImage)}`
       }
-      
-      // 如果没有预览图，尝试使用作品文件本身（仅图片格式）
       if (!work.filePath) return null
-      
       const fileName = work.filePath
       const extension = fileName.toLowerCase().substring(fileName.lastIndexOf('.'))
       const imageExtensions = ['.jpg', '.jpeg', '.png', '.gif', '.bmp', '.webp']
-      
       if (imageExtensions.includes(extension)) {
         return `/api/File/download?fileName=${encodeURIComponent(fileName)}`
       }
-      
       return null
     },
-    // 判断是否是模型文件
+
     isModelFile(work) {
       if (!work.filePath) return false
       const extension = work.filePath.toLowerCase().substring(work.filePath.lastIndexOf('.'))
       const modelExts = ['.json', '.obj', '.gltf', '.glb', '.fbx', '.dae', '.3ds']
       return modelExts.includes(extension)
     },
-    // 获取文件扩展名
+
     getFileExtension(work) {
       if (!work.filePath) return '文件'
-      
       const fileName = work.filePath
       const extension = fileName.toLowerCase().substring(fileName.lastIndexOf('.') + 1)
       return extension.toUpperCase()
     },
-    // 获取概览数据
+
+    getFileEmoji(work) {
+      const type = this.getFileType(work.filePath)
+      const map = {
+        image: '🖼',
+        video: '🎬',
+        model: '🧊',
+        other: '📄'
+      }
+      return map[type] || '📄'
+    },
+
+    formatFileType(filePath) {
+      if (!filePath) return '未知'
+      const ext = filePath.toLowerCase().substring(filePath.lastIndexOf('.') + 1)
+      return ext.toUpperCase() + ' 格式'
+    },
+
+    getGradient(id, idx) {
+      const gradients = [
+        'linear-gradient(135deg, #EDF5F0 0%, #D4EBE0 100%)',
+        'linear-gradient(135deg, #E5F0F5 0%, #CCE0EB 100%)',
+        'linear-gradient(135deg, #FDF2E4 0%, #F8E4C8 100%)',
+        'linear-gradient(135deg, #FDF0EB 0%, #F8D8CB 100%)',
+        'linear-gradient(135deg, #F3E5F5 0%, #E1CCE8 100%)',
+        'linear-gradient(135deg, #E8F5E9 0%, #C8E0CA 100%)',
+        'linear-gradient(135deg, #FFF9C4 0%, #FFECB3 100%)',
+        'linear-gradient(135deg, #E3F2FD 0%, #BBDEFB 100%)',
+        'linear-gradient(135deg, #FCE4EC 0%, #F8BBD0 100%)',
+        'linear-gradient(135deg, #E0F2F1 0%, #B2DFDB 100%)',
+        'linear-gradient(135deg, #FFF3E0 0%, #FFE0B2 100%)',
+        'linear-gradient(135deg, #F1F8E9 0%, #DCEDC8 100%)'
+      ]
+      return gradients[(id + idx) % gradients.length]
+    },
+
     async fetchOverviewData() {
-      this.loading.overview = true;
-      this.error = null;
+      this.loading.overview = true
+      this.error = null
       try {
-        const response = await this.$axios.get('/api/Data/overview');
-        const data = response.data;
-        // 转换数据格式以匹配前端需要的结构
+        const response = await this.$axios.get('/api/Data/overview')
+        const data = response.data
         this.stats = [
           {
             value: data.totalWorks.toString(),
-            label: '总作品数',
-            icon: 'el-icon-document',
-            trend: 12 // 暂时使用固定值，实际应该从API获取
+            label: '作品总数',
+            iconEmoji: '🖼'
           },
           {
             value: data.totalUsers.toString(),
             label: '活跃用户',
-            icon: 'el-icon-user',
-            trend: 8 // 暂时使用固定值，实际应该从API获取
+            iconEmoji: '👥'
           },
           {
             value: data.totalViews.toString(),
-            label: '收藏数',
-            icon: 'el-icon-star-on',
-            trend: 15 // 暂时使用固定值，实际应该从API获取
+            label: '总浏览量',
+            iconEmoji: '👁'
           },
           {
             value: data.todayWorks.toString(),
             label: '今日上传',
-            icon: 'el-icon-chat-line-round',
-            trend: 20 // 暂时使用固定值，实际应该从API获取
+            iconEmoji: '📤'
           }
-        ];
+        ]
       } catch (error) {
-        console.error('获取概览数据失败:', error);
-        this.error = '获取概览数据失败，请稍后重试';
-        // 清空数据，不使用默认数据
-        this.stats = [];
+        console.error('获取概览数据失败:', error)
+        this.error = '获取概览数据失败，请稍后重试'
+        this.stats = []
       } finally {
-        this.loading.overview = false;
+        this.loading.overview = false
       }
     },
-    // 获取作品数据
+
     async fetchWorksData() {
-      this.loading.works = true;
-      this.error = null;
+      this.loading.works = true
+      this.error = null
       try {
-        // 获取所有已发布作品（不需要认证）
-        console.log('开始获取作品列表');
-        const response = await this.$axios.get('/api/Work/public?limit=20');
-        console.log('获取作品列表成功:', response.data);
-        const allWorks = response.data.items || [];
-        console.log('作品总数:', allWorks.length);
-        console.log('原始作品数据示例:', JSON.stringify(allWorks[0], null, 2));
-        console.log('所有字段名:', allWorks[0] ? Object.keys(allWorks[0]) : []);
-        // 检查是否包含用户ID字段
-        if (allWorks[0]) {
-          console.log('userId字段值:', allWorks[0].userId);
-          console.log('UserId字段值:', allWorks[0].UserId);
-          console.log('userid字段值:', allWorks[0].userid);
-        }
+        const response = await this.$axios.get('/api/Work/public?limit=20')
+        const allWorks = response.data.items || []
 
-        // 最近上传作品 - 按上传时间倒序取前4个
         const sortedWorks = [...allWorks].sort((a, b) => {
-          const dateA = new Date(a.fileUploadTime || a.uploadDate || 0);
-          const dateB = new Date(b.fileUploadTime || b.uploadDate || 0);
-          return dateB - dateA;
-        });
+          const dateA = new Date(a.fileUploadTime || a.uploadDate || 0)
+          const dateB = new Date(b.fileUploadTime || b.uploadDate || 0)
+          return dateB - dateA
+        })
 
-        this.recentWorks = sortedWorks
+        this.recentWorks = sortedWorks.slice(0, 4).map(work => ({
+          id: work.id,
+          title: work.title || '未命名作品',
+          uploadUserName: work.uploadUserName || '未知作者',
+          category: work.category || '未分类',
+          uploadDate: work.uploadDate,
+          fileUploadTime: work.fileUploadTime,
+          filePath: work.filePath,
+          previewImage: work.previewImage,
+          description: work.description,
+          fileName: work.fileName,
+          views: work.views || 0,
+          favorites: work.favorites || 0,
+          isFavorited: !!work.isFavorited,
+          isExcellent: !!work.isExcellent,
+          userId: work.userId || work.UserId || work.userid,
+          uploadUserProfilePublic: work.uploadUserProfilePublic
+        }))
+
+        this.featuredWorks = sortedWorks
+          .filter(work => !!work.isExcellent)
+          .sort((a, b) => {
+            const scoreA = (a.favorites || 0) * 2 + (a.views || 0)
+            const scoreB = (b.favorites || 0) * 2 + (b.views || 0)
+            return scoreB - scoreA
+          })
           .slice(0, 4)
           .map(work => ({
             id: work.id,
@@ -491,146 +429,77 @@ export default {
             fileName: work.fileName,
             views: work.views || 0,
             favorites: work.favorites || 0,
-            isExcellent: !!work.isExcellent,
-            userId: work.userId || work.UserId || work.userid,
-            uploadUserProfilePublic: work.uploadUserProfilePublic
-          }));
-        
-        console.log('最近上传作品数据:', this.recentWorks);
-
-        this.featuredWorks = sortedWorks
-          .filter(work => !!work.isExcellent)
-          .sort((a, b) => {
-            const scoreA = (a.favorites || 0) * 2 + (a.views || 0)
-            const scoreB = (b.favorites || 0) * 2 + (b.views || 0)
-            return scoreB - scoreA
-          })
-          .slice(0, 3)
-          .map(work => ({
-            id: work.id,
-            title: work.title || '未命名作品',
-            uploadUserName: work.uploadUserName || '未知作者',
-            category: work.category || '未分类',
-            uploadDate: work.uploadDate,
-            fileUploadTime: work.fileUploadTime,
-            filePath: work.filePath,
-            previewImage: work.previewImage,
-            description: work.description,
-            fileName: work.fileName,
-            views: work.views || 0,
-            favorites: work.favorites || 0,
+            isFavorited: !!work.isFavorited,
             isExcellent: true,
             userId: work.userId || work.UserId || work.userid,
             uploadUserProfilePublic: work.uploadUserProfilePublic
-          }));
+          }))
       } catch (error) {
-        console.error('获取作品数据失败:', error);
-        this.error = '获取作品数据失败，请稍后重试';
-        this.recentWorks = [];
-        this.featuredWorks = [];
+        console.error('获取作品数据失败:', error)
+        this.error = '获取作品数据失败，请稍后重试'
+        this.recentWorks = []
+        this.featuredWorks = []
       } finally {
-        this.loading.works = false;
+        this.loading.works = false
       }
     },
-    // 导航到上传作品页面
+
     navigateToUpload() {
       const user = getUser()
       const target = user && ['Admin', 'Teacher'].includes(user.role)
         ? '/works/manage'
         : '/account/works'
-
       if (this.$route.path !== target) {
         this.$router.push(target)
       }
     },
-    // 导航到作品展示页面
+
     navigateToWorks() {
       this.$router.push('/works')
     },
-    // 查看作品详情
+
     async handleViewWork(work) {
-      console.log('点击作品卡片:', work);
       this.currentWork = work
       this.detailDialogVisible = true
-      console.log('对话框状态:', this.detailDialogVisible);
-      
-      // 增加浏览量
       try {
-        await this.$axios.get(`/api/Work/${work.id}/view`);
-        // 更新本地数据
-        work.views = (work.views || 0) + 1;
+        await this.$axios.get(`/api/Work/${work.id}/view`)
+        work.views = (work.views || 0) + 1
       } catch (error) {
-        console.error('增加浏览量失败:', error);
+        console.error('增加浏览量失败:', error)
       }
     },
-    // 跳转到作者主页
+
     goToAuthorProfile(userId) {
       this.$router.push(`/profile/${userId}`)
     },
-    // 处理公告点击
-    handleAnnouncementClick(announcement) {
-      console.log('点击公告:', announcement);
-      // 显示公告详情弹窗
-      this.$alert(announcement.content, announcement.title, {
-        confirmButtonText: '知道了',
-        dangerouslyUseHTMLString: true
-      });
-    },
-    // 收藏作品
+
     async handleFavoriteWork(work) {
       try {
-        // 收藏接口需要登录；token 由统一 http 实例自动注入
         if (!localStorage.getItem('token')) {
-          this.$message.error('请先登录');
-          return;
+          this.$message.error('请先登录')
+          return
         }
-        const response = await this.$axios.post(`/api/Work/${work.id}/favorite`, {});
-        this.$message.success('收藏成功');
-        // 更新本地数据
-        work.favorites = response.data.favorites;
+        if (work.isFavorited) {
+          const response = await this.$axios.delete(`/api/Work/${work.id}/favorite`)
+          this.$message.success('已取消收藏')
+          work.favorites = response.data.favorites
+          work.isFavorited = false
+        } else {
+          const response = await this.$axios.post(`/api/Work/${work.id}/favorite`, {})
+          this.$message.success('收藏成功')
+          work.favorites = response.data.favorites
+          work.isFavorited = true
+        }
       } catch (error) {
         if (error.response && error.response.data && error.response.data.message) {
-          this.$message.error(error.response.data.message);
+          this.$message.error(error.response.data.message)
         } else {
-          this.$message.error('收藏失败，请稍后重试');
+          this.$message.error('收藏操作失败，请稍后重试')
         }
-        console.error('收藏作品失败:', error);
+        console.error('收藏作品失败:', error)
       }
     },
-    // 取消收藏
-    async handleUnfavoriteWork(work) {
-      try {
-        if (!localStorage.getItem('token')) {
-          this.$message.error('请先登录');
-          return;
-        }
-        const response = await this.$axios.delete(`/api/Work/${work.id}/favorite`);
-        this.$message.success('取消收藏成功');
-        // 更新本地数据
-        work.favorites = response.data.favorites;
-      } catch (error) {
-        if (error.response && error.response.data && error.response.data.message) {
-          this.$message.error(error.response.data.message);
-        } else {
-          this.$message.error('取消收藏失败，请稍后重试');
-        }
-        console.error('取消收藏失败:', error);
-      }
-    },
-    // 检查收藏状态
-    async checkFavoriteStatus(workId) {
-      try {
-        if (!localStorage.getItem('token')) {
-          return false;
-        }
-        const response = await this.$axios.get(`/api/Work/${workId}/is-favorite`);
-        return response.data.isFavorite;
-      } catch (error) {
-        console.error('检查收藏状态失败:', error);
-        return false;
-      }
-    },
-    // 下载文件
+
     handleDownloadFile(work) {
       if (!work || !work.filePath) {
         this.$message.error('文件路径不存在，无法下载')
@@ -650,7 +519,7 @@ export default {
         this.$message.error('文件下载失败，请稍后重试')
       }
     },
-    // 格式化日期
+
     formatDate(date) {
       if (!date) return ''
       const d = new Date(date)
@@ -659,770 +528,656 @@ export default {
         month: '2-digit',
         day: '2-digit'
       })
-    },
-    // 生成随机颜色
-    getRandomColor(id) {
-      const colors = [
-        '#e6f7ff', '#f6ffed', '#fff7e6', '#fff0f6', '#f0f5ff',
-        '#e8f5e8', '#fff3e0', '#f3e5f5', '#e3f2fd', '#fffde7'
-      ]
-      return colors[id % colors.length]
     }
   }
 }
 </script>
 
 <style scoped>
-/* 基础设置 */
-.gallery-container {
+/* ========================================
+   HOME PAGE — BODA Design System
+   ======================================== */
+.home-page {
   min-height: 100vh;
-  background-color: #f8fafc;
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-  overflow-x: hidden;
+  background: var(--bg-page, #F8F9F5);
+  font-family: var(--font-main, 'Inter', 'Noto Sans SC', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif);
+  padding-bottom: 60px;
 }
 
-/* 1. 顶部导航 (滑入动画) */
-.gallery-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 0 40px;
-  height: 64px;
-  background-color: rgba(255, 255, 255, 0.9);
-  backdrop-filter: blur(10px);
-  border-bottom: 1px solid rgba(0,0,0,0.05);
-  position: sticky;
-  top: 0;
-  z-index: 100;
-}
-
-.slide-down {
-  animation: slideDown 0.5s ease-out;
-}
-
-.logo-area { display: flex; align-items: center; gap: 12px; }
-.logo-icon { background: #0052D9; color: white; font-weight: bold; padding: 4px 8px; border-radius: 6px; }
-.system-title { font-size: 20px; font-weight: 600; color: #1a1a1a; margin: 0; }
-
-.action-btn {
-  transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
-}
-.action-btn:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 4px 12px rgba(0, 82, 217, 0.3);
-}
-.action-btn.secondary {
-  background-color: white;
-  border: 1px solid #e4e7ed;
-  color: #666;
-}
-.action-btn.secondary:hover {
-  border-color: #0052D9;
-  color: #0052D9;
-}
-
-/* 2. 页面头部 */
-.page-header {
+/* ── Hero ── */
+.hero {
   text-align: center;
-  padding: 40px 0 20px;
-  background: linear-gradient(135deg, #f5f7fa 0%, #e4e7ed 100%);
-  margin-bottom: 0;
+  padding: 48px 24px 36px;
 }
 
-.page-header h2 {
+.hero-title {
   font-size: 32px;
-  font-weight: 600;
-  color: #1a1a1a;
-  margin: 0 0 8px;
+  font-weight: 700;
+  color: var(--text-main, #1A1A1A);
+  margin: 0 0 10px;
+  animation: fadeInUp .6s var(--ease-out-expo, cubic-bezier(0.16, 1, 0.3, 1)) both;
 }
 
-.page-header p {
+.hero-subtitle {
   font-size: 16px;
-  color: #666;
+  color: var(--text-light, #888888);
   margin: 0;
+  animation: fadeInUp .6s var(--ease-out-expo, cubic-bezier(0.16, 1, 0.3, 1)) .08s both;
 }
 
-.fade-in-up {
-  animation: fadeInUp 0.6s ease-out both;
-}
-
-/* 3. 数据概览 */
-.stats-section {
+/* ── Stats Banner ── */
+.stats-banner {
   max-width: 1200px;
-  margin: 40px auto;
+  margin: 0 auto 40px;
   padding: 0 24px;
+  display: flex;
+  gap: 16px;
+  animation: fadeInUp .6s var(--ease-out-expo) .12s both;
 }
 
 .stat-card {
-  margin-bottom: 24px;
-  border-radius: 12px;
-  overflow: hidden;
-  border: 1px solid rgba(0,0,0,0.05);
-  transition: all 0.4s cubic-bezier(0.165, 0.84, 0.44, 1);
-  background: white;
-  padding: 24px;
-  text-align: center;
+  flex: 1;
+  background: var(--bg-card, #FFFFFF);
+  border-radius: var(--radius-lg, 18px);
+  border: 1px solid var(--border-color, #E8E2D8);
+  padding: 20px;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  transition: all var(--duration-normal, .3s);
 }
 
 .stat-card:hover {
-  transform: translateY(-8px);
-  box-shadow: 0 16px 32px rgba(0, 0, 0, 0.1);
+  box-shadow: var(--shadow-md, 0 6px 20px rgba(0,0,0,.07));
+  transform: translateY(-2px);
 }
 
 .stat-icon {
-  width: 56px;
-  height: 56px;
-  border-radius: 50%;
+  width: 48px;
+  height: 48px;
+  border-radius: var(--radius-md, 14px);
   display: flex;
   align-items: center;
   justify-content: center;
-  margin: 0 auto 16px;
+  font-size: 22px;
+  flex-shrink: 0;
+}
+
+.stat-icon.icon-0 { background: var(--primary-bg, #EDF5F0); color: var(--primary, #2D8A6E); }
+.stat-icon.icon-1 { background: #E5F0F5; color: var(--info, #5B9BD5); }
+.stat-icon.icon-2 { background: #FDF2E4; color: var(--warning, #F09342); }
+.stat-icon.icon-3 { background: #FDF0EB; color: var(--accent, #C8AA6E); }
+
+.stat-info h3 {
   font-size: 24px;
-  color: white;
-}
-
-.icon-1 { background: linear-gradient(135deg, #0052D9, #64B5F6); }
-.icon-2 { background: linear-gradient(135deg, #34C759, #81C784); }
-.icon-3 { background: linear-gradient(135deg, #FF9500, #FFB84D); }
-.icon-4 { background: linear-gradient(135deg, #FF2D55, #FF6B8A); }
-
-.stat-value {
-  font-size: 32px;
   font-weight: 700;
-  color: #1a1a1a;
-  margin-bottom: 4px;
+  color: var(--text-main, #1A1A1A);
+  margin: 0;
+  line-height: 1;
 }
 
-.stat-label {
-  font-size: 14px;
-  color: #666;
-  margin-bottom: 8px;
+.stat-info p {
+  font-size: 13px;
+  color: var(--text-light, #888888);
+  margin: 4px 0 0;
 }
 
-.stat-trend {
-  font-size: 12px;
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  padding: 2px 8px;
-  border-radius: 12px;
-}
-.stat-trend.positive { background: rgba(52, 199, 89, 0.1); color: #34C759; }
-.stat-trend.negative { background: rgba(255, 45, 85, 0.1); color: #FF2D55; }
-
-/* 4. 区块样式 */
+/* ── Section ── */
 .works-section,
-.featured-section,
-.test-section {
+.featured-section {
   max-width: 1200px;
-  margin: 0 auto 40px;
+  margin: 0 auto 48px;
   padding: 0 24px;
 }
 
 .section-header {
   display: flex;
   justify-content: space-between;
-  align-items: center;
-  margin-bottom: 24px;
+  align-items: baseline;
+  margin-bottom: 20px;
 }
 
 .section-title {
-  font-size: 24px;
-  font-weight: 600;
-  color: #1a1a1a;
+  font-size: 22px;
+  font-weight: 700;
+  color: var(--text-main, #1A1A1A);
   margin: 0;
   position: relative;
-  display: inline-block;
+  padding-left: 14px;
 }
 
-.section-title::after {
+.section-title::before {
   content: '';
   position: absolute;
-  bottom: -8px;
   left: 0;
-  width: 60px;
-  height: 4px;
-  background: linear-gradient(90deg, #0052D9, #34C759);
+  top: 50%;
+  transform: translateY(-50%);
+  width: 4px;
+  height: 22px;
+  background: var(--primary, #2D8A6E);
   border-radius: 2px;
 }
 
-.view-all-btn {
-  color: #0052D9;
+.view-all {
   font-size: 14px;
-  transition: all 0.3s;
+  color: var(--primary, #2D8A6E);
+  text-decoration: none;
+  font-weight: 500;
+  transition: all var(--duration-fast, .18s);
 }
-.view-all-btn:hover {
-  color: #003d8f;
+
+.view-all:hover {
+  color: var(--primary-hover, #25755C);
   transform: translateX(4px);
 }
 
-/* 5. 作品卡片 */
-.stagger-fade-in {
-  opacity: 0;
-  animation: fadeInUp 0.6s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+/* ── Works Grid ── */
+.works-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 20px;
 }
 
-.work-card,
-.featured-card {
-  margin-bottom: 24px;
-  border-radius: 12px;
+/* ── Work Card ── */
+.work-card {
+  background: var(--bg-card, #FFFFFF);
+  border-radius: var(--radius-lg, 18px);
+  border: 1px solid var(--border-color, #E8E2D8);
   overflow: hidden;
-  border: 1px solid rgba(0,0,0,0.05);
-  transition: all 0.4s cubic-bezier(0.165, 0.84, 0.44, 1);
-  background: white;
-  cursor: pointer;
+  transition: all var(--duration-normal, .3s) var(--ease-out-expo, cubic-bezier(0.16, 1, 0.3, 1));
+  animation: fadeInUp .5s var(--ease-out-expo) both;
+  cursor: default;
 }
 
-.work-card:hover,
-.featured-card:hover {
-  transform: translateY(-8px);
-  box-shadow: 0 16px 32px rgba(0, 0, 0, 0.1);
+.work-card:hover {
+  box-shadow: var(--shadow-card-hover, 0 16px 40px rgba(0,0,0,.12));
+  transform: translateY(-4px);
 }
 
-.featured-badge {
-  position: absolute;
-  top: 12px;
-  left: 12px;
-  background: linear-gradient(135deg, #FF9500, #FF2D55);
-  color: white;
-  font-size: 12px;
-  padding: 4px 12px;
-  border-radius: 12px;
-  z-index: 2;
-  display: flex;
-  align-items: center;
-  gap: 4px;
+.featured {
+  border-color: var(--accent-light, #F0E6D0);
 }
 
-.cover-image {
+/* Card Cover */
+.card-cover {
   height: 180px;
-  width: 100%;
   position: relative;
-  display: flex;
-  align-items: flex-start;
-  justify-content: flex-start;
-  padding: 12px;
   overflow: hidden;
+  cursor: pointer;
+  background: var(--border-light, #F2EDE6);
 }
 
 .thumbnail-image {
-  position: absolute;
-  top: 0;
-  left: 0;
   width: 100%;
   height: 100%;
-  object-fit: contain;
-  background-color: #f5f5f5;
-  transition: transform 0.5s ease;
+  object-fit: cover;
+  transition: transform var(--duration-slow, .5s) var(--ease-out-expo);
 }
 
 .work-card:hover .thumbnail-image {
-  transform: scale(1.05);
+  transform: scale(1.06);
 }
 
-.thumbnail-placeholder {
-  position: absolute;
-  top: 0;
-  left: 0;
+.cover-placeholder {
   width: 100%;
   height: 100%;
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  color: rgba(0, 0, 0, 0.6);
-  transition: transform 0.5s ease;
+  gap: 8px;
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--primary, #2D8A6E);
+  transition: transform var(--duration-slow, .5s) var(--ease-out-expo);
 }
 
-.work-card:hover .thumbnail-placeholder {
-  transform: scale(1.05);
+.work-card:hover .cover-placeholder {
+  transform: scale(1.06);
 }
 
-.thumbnail-placeholder i {
+.cover-placeholder .file-icon {
   font-size: 48px;
-  margin-bottom: 10px;
+  opacity: .5;
 }
 
-.model-preview {
-  position: absolute;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  transition: transform 0.5s ease;
-}
-
-.work-card:hover .model-preview {
-  transform: scale(1.05);
-}
-
-.featured-card:hover .model-preview {
-  transform: scale(1.05);
-}
-
-.detail-model-preview {
-  position: absolute;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-}
-
-.featured-card:hover .thumbnail-image {
-  transform: scale(1.05);
-}
-
-.featured-card:hover .thumbnail-placeholder {
-  transform: scale(1.05);
-}
-
+/* Category Badge */
 .category-badge {
   position: absolute;
   top: 12px;
   left: 12px;
-  background: rgba(0, 0, 0, 0.5);
-  color: white;
-  font-size: 12px;
-  padding: 4px 10px;
-  border-radius: 12px;
-  backdrop-filter: blur(4px);
+  padding: 4px 12px;
+  border-radius: var(--radius-full, 9999px);
+  background: rgba(255, 255, 255, .85);
+  backdrop-filter: blur(8px);
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--primary, #2D8A6E);
   z-index: 2;
 }
 
-.featured-card .category-badge {
-  left: auto;
-  right: 60px;
+/* Featured Badge */
+.featured-badge {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  padding: 4px 12px;
+  border-radius: var(--radius-full, 9999px);
+  background: var(--accent-light, #F0E6D0);
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--accent-strong, #B8943F);
+  z-index: 2;
 }
 
-.hover-overlay {
+/* Hover Overlay */
+.card-overlay {
   position: absolute;
-  top: 0; left: 0; width: 100%; height: 100%;
-  background: rgba(0, 82, 217, 0.2);
+  inset: 0;
+  background: rgba(45, 138, 110, .12);
+  backdrop-filter: blur(2px);
   display: flex;
   align-items: center;
   justify-content: center;
   opacity: 0;
-  transition: all 0.3s ease;
-  backdrop-filter: blur(2px);
+  transition: opacity var(--duration-normal, .3s);
+  z-index: 3;
 }
 
-.hover-overlay .el-button {
-  transform: scale(0.5);
-  transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+.work-card:hover .card-overlay {
+  opacity: 1;
 }
 
-.work-card:hover .hover-overlay,
-.featured-card:hover .hover-overlay { opacity: 1; }
-.work-card:hover .hover-overlay .el-button,
-.featured-card:hover .hover-overlay .el-button { transform: scale(1); }
-
-.work-info { padding: 16px; }
-.work-title { 
-  font-size: 16px; 
-  font-weight: 600; 
-  margin: 0 0 8px 0; 
-  color: #333; 
-  white-space: nowrap; 
-  overflow: hidden; 
-  text-overflow: ellipsis; 
-  transition: color 0.3s; 
-}
-.work-card:hover .work-title,
-.featured-card:hover .work-title { color: #0052D9; }
-.work-author, .work-date {
-  font-size: 13px; 
-  color: #888; 
-  margin: 0 0 8px 0; 
+.overlay-btn {
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  background: var(--primary, #2D8A6E);
+  color: #fff;
+  border: none;
+  font-size: 18px;
+  cursor: pointer;
+  box-shadow: 0 8px 24px var(--primary-glow, rgba(45,138,110,.2));
+  transform: scale(.8);
+  transition: transform var(--duration-normal, .3s) var(--ease-out-back, cubic-bezier(0.34, 1.56, 0.64, 1));
 }
 
-.author-row {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
+.work-card:hover .overlay-btn {
+  transform: scale(1);
 }
 
-.author-profile-btn {
-  padding: 0;
+/* Card Body */
+.card-body {
+  padding: 16px;
+}
+
+.card-title {
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--text-main, #1A1A1A);
+  margin-bottom: 6px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  cursor: pointer;
+  transition: color var(--duration-fast, .18s);
+}
+
+.work-card:hover .card-title {
+  color: var(--primary, #2D8A6E);
+}
+
+.card-author {
   font-size: 12px;
-  color: #165dff;
-}
-.work-description {
-  font-size: 13px;
-  color: #666;
-  margin: 0 0 12px 0;
-  display: -webkit-box;
-  -webkit-line-clamp: 2;
-  -webkit-box-orient: vertical;
-  overflow: hidden;
-}
-.work-stats {
-  display: flex;
-  gap: 16px;
-  font-size: 13px;
-  color: #999;
-  border-top: 1px solid #f0f0f0;
-  padding-top: 12px;
-  margin-top: 12px;
-}
-.work-stats span { display: flex; align-items: center; gap: 4px; }
-
-/* 6. 测试卡片 */
-.test-card {
-  border-radius: 16px;
-  overflow: hidden;
-  border: 1px solid rgba(0,0,0,0.05);
-  background: linear-gradient(135deg, #f5f7fa 0%, #e4e7ed 100%);
-}
-
-.test-content {
+  color: var(--text-light, #888888);
+  margin-bottom: 12px;
   display: flex;
   align-items: center;
-  padding: 32px;
-  gap: 24px;
+  gap: 6px;
 }
 
-.test-icon {
-  flex-shrink: 0;
-}
-
-.test-text {
-  flex: 1;
-}
-.test-text h3 {
-  font-size: 20px;
+.author-avatar {
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: var(--primary-bg, #EDF5F0);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 10px;
   font-weight: 600;
-  color: #1a1a1a;
-  margin: 0 0 4px;
-}
-.test-text p {
-  font-size: 14px;
-  color: #666;
-  margin: 0;
+  color: var(--primary, #2D8A6E);
 }
 
-.test-btn {
-  flex-shrink: 0;
+.card-date {
+  color: var(--text-placeholder, #B0B0B0);
 }
 
-/* 7. 作品详情 */
-.work-detail {
-  padding: 20px 0;
-}
-
-.work-detail h3 {
-  margin-bottom: 24px;
-  color: #303133;
-  font-size: 20px;
-  font-weight: 600;
-}
-
-.work-meta {
+/* Card Actions */
+.card-actions {
   display: flex;
-  flex-wrap: wrap;
-  margin-bottom: 24px;
-  padding-bottom: 16px;
-  border-bottom: 1px solid #e4e7ed;
-  gap: 16px;
+  gap: 8px;
 }
 
-.work-meta span {
-  color: #606266;
-  font-size: 14px;
-}
-
-.work-description h4 {
-  margin-bottom: 12px;
-  color: #303133;
-  font-size: 16px;
+.btn {
+  padding: 7px 14px;
+  border-radius: var(--radius-sm, 10px);
+  font-size: 13px;
   font-weight: 500;
+  cursor: pointer;
+  border: none;
+  transition: all var(--duration-fast, .18s);
+  font-family: inherit;
+  display: flex;
+  align-items: center;
+  gap: 6px;
 }
 
-.work-description p {
-  line-height: 1.6;
-  color: #606266;
-  font-size: 14px;
+.btn-primary {
+  background: var(--primary, #2D8A6E);
+  color: #fff;
+  flex: 1;
+  justify-content: center;
 }
 
-/* 8. 关键帧定义 */
-@keyframes slideDown {
-  from { transform: translateY(-100%); opacity: 0; }
-  to { transform: translateY(0); opacity: 1; }
+.btn-primary:hover {
+  background: var(--primary-hover, #25755C);
+  box-shadow: 0 4px 12px var(--primary-glow, rgba(45,138,110,.2));
 }
 
-@keyframes fadeInUp {
-  from { transform: translateY(30px); opacity: 0; }
-  to { transform: translateY(0); opacity: 1; }
+/* ── Favorite Button ── */
+.btn-favorite {
+  background: transparent;
+  border: 1px solid var(--border-color, #E8E2D8);
+  color: var(--text-light, #888888);
+  padding: 7px 10px;
+  min-width: 36px;
+  justify-content: center;
+  font-size: 15px;
 }
 
-/* 9. 响应式设计 */
-@media (max-width: 768px) {
-  .gallery-header {
-    padding: 0 20px;
-  }
-  
-  .system-title {
-    font-size: 16px;
-  }
-  
-  .action-btn span {
-    display: none;
-  }
-  
-  .page-header {
-    padding: 30px 0 15px;
-  }
-  
-  .page-header h2 {
-    font-size: 24px;
-  }
-  
-  .stats-section,
-  .works-section,
-  .featured-section,
-  .test-section {
-    padding: 0 16px;
-  }
-  
-  .test-content {
-    flex-direction: column;
-    text-align: center;
-    padding: 24px;
-  }
-  
-  .work-meta {
-    flex-direction: column;
-    gap: 8px;
-  }
+.btn-favorite:hover {
+  background: #FDF0EB;
+  border-color: var(--accent, #C8AA6E);
+  color: var(--accent, #C8AA6E);
 }
 
-/* 作品详情对话框样式 */
-.work-detail-dialog {
-  border-radius: 16px;
+/* 已收藏状态：金色实心星 */
+.btn-favorite.active {
+  background: #FFF8E1;
+  border-color: #F5A623;
+  color: #F5A623;
+}
+
+/* ── Skeleton ── */
+.skeleton-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 20px;
+}
+
+.skeleton-card {
+  background: var(--bg-card, #FFFFFF);
+  border-radius: var(--radius-lg, 18px);
   overflow: hidden;
 }
 
-.work-detail-content {
-  padding: 0;
-}
-
-.work-header {
-  display: flex;
-  padding: 32px;
-  background: linear-gradient(135deg, #f5f7fa 0%, #e4e7ed 100%);
-  border-bottom: 1px solid #e4e7ed;
-}
-
-.work-cover {
-  width: 180px;
+.skeleton-cover {
   height: 180px;
-  border-radius: 12px;
-  display: flex;
-  align-items: flex-start;
-  justify-content: flex-end;
-  padding: 12px;
-  margin-right: 24px;
-  flex-shrink: 0;
-  position: relative;
+  background: linear-gradient(90deg, var(--border-light, #F2EDE6) 25%, var(--bg-hover, #F5F2EC) 50%, var(--border-light, #F2EDE6) 75%);
+  background-size: 200% 100%;
+  animation: shimmer 1.5s infinite;
+}
+
+.skeleton-body {
+  padding: 16px;
+}
+
+.skeleton-line {
+  height: 12px;
+  border-radius: 6px;
+  background: var(--border-light, #F2EDE6);
+  margin-bottom: 10px;
+}
+
+.skeleton-line.w-80 { width: 80%; }
+.skeleton-line.w-60 { width: 60%; }
+.skeleton-line.w-50 { width: 50%; }
+
+/* ── Empty State ── */
+.empty-state {
+  text-align: center;
+  padding: 64px 40px;
+  grid-column: 1 / -1;
+}
+
+.empty-icon {
+  font-size: 56px;
+  margin-bottom: 16px;
+  opacity: .3;
+}
+
+.empty-state h3 {
+  font-size: 18px;
+  font-weight: 600;
+  color: var(--text-main, #1A1A1A);
+  margin: 0 0 8px;
+}
+
+.empty-state p {
+  font-size: 14px;
+  color: var(--text-light, #888888);
+  max-width: 400px;
+  margin: 0 auto;
+}
+
+/* ── Detail Dialog ── */
+::v-deep .detail-dialog {
+  border-radius: var(--radius-lg, 18px);
   overflow: hidden;
 }
 
-.detail-cover-image {
-  position: absolute;
-  top: 0;
-  left: 0;
+::v-deep .detail-dialog .el-dialog__header {
+  padding: 20px 24px 0;
+  font-size: 20px;
+  font-weight: 700;
+}
+
+::v-deep .detail-dialog .el-dialog__body {
+  padding: 20px 24px;
+}
+
+.detail-header {
+  display: flex;
+  gap: 20px;
+  padding-bottom: 20px;
+  border-bottom: 1px solid var(--border-color, #E8E2D8);
+}
+
+.detail-cover {
+  width: 160px;
+  height: 160px;
+  border-radius: var(--radius-md, 14px);
+  overflow: hidden;
+  flex-shrink: 0;
+  background: var(--border-light, #F2EDE6);
+}
+
+.detail-cover-img {
   width: 100%;
   height: 100%;
   object-fit: cover;
 }
 
 .detail-cover-placeholder {
-  position: absolute;
-  top: 0;
-  left: 0;
   width: 100%;
   height: 100%;
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  color: white;
+  gap: 6px;
+  font-size: 13px;
+  color: var(--text-light, #888888);
 }
 
-.detail-cover-placeholder i {
-  font-size: 48px;
-  margin-bottom: 10px;
-}
-
-.detail-cover-placeholder span {
-  font-size: 14px;
-}
-
-.work-info-header {
+.detail-meta {
   flex: 1;
-}
-
-.work-title-detail {
-  font-size: 24px;
-  font-weight: 700;
-  color: #1a1a1a;
-  margin: 0 0 16px 0;
-  line-height: 1.3;
-}
-
-.work-author-info {
-  display: flex;
-  align-items: center;
-  gap: 16px;
-  margin-bottom: 20px;
-  flex-wrap: wrap;
-}
-
-.author-name {
-  font-size: 16px;
-  color: #333;
-  font-weight: 500;
-}
-
-.upload-time {
-  font-size: 14px;
-  color: #888;
-}
-
-.work-stats-detail {
-  display: flex;
-  gap: 32px;
-}
-
-.stat-item {
   display: flex;
   flex-direction: column;
+  gap: 12px;
+}
+
+.detail-author {
+  display: flex;
   align-items: center;
-  gap: 4px;
+  gap: 10px;
 }
 
-.stat-item i {
-  font-size: 20px;
-  color: #0052D9;
-}
-
-.stat-item span:first-of-type {
-  font-size: 18px;
+.author-avatar-lg {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: var(--primary-bg, #EDF5F0);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 14px;
   font-weight: 600;
-  color: #333;
+  color: var(--primary, #2D8A6E);
 }
 
-.stat-label {
+.detail-author-name {
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--text-main, #1A1A1A);
+}
+
+.detail-stats {
+  display: flex;
+  gap: 16px;
+  font-size: 13px;
+  color: var(--text-secondary, #555555);
+}
+
+.detail-date {
   font-size: 12px;
-  color: #888;
+  color: var(--text-light, #888888);
 }
 
-.work-description-detail,
-.work-file-info {
-  padding: 32px;
-  border-bottom: 1px solid #f0f0f0;
+.detail-description {
+  padding: 20px 0;
+  border-bottom: 1px solid var(--border-color, #E8E2D8);
 }
 
-.work-description-detail:last-child {
-  border-bottom: none;
-}
-
-.section-title-detail {
-  font-size: 18px;
-  font-weight: 600;
-  color: #333;
-  margin: 0 0 16px 0;
-  position: relative;
-  display: inline-block;
-}
-
-.section-title-detail::after {
-  content: '';
-  position: absolute;
-  bottom: -6px;
-  left: 0;
-  width: 40px;
-  height: 3px;
-  background: #0052D9;
-  border-radius: 2px;
-}
-
-.description-content {
+.detail-description h4,
+.detail-file h4 {
   font-size: 15px;
-  line-height: 1.6;
-  color: #666;
+  font-weight: 600;
+  color: var(--text-main, #1A1A1A);
+  margin: 0 0 12px;
+}
+
+.detail-description p {
+  font-size: 14px;
+  line-height: 1.7;
+  color: var(--text-secondary, #555555);
   white-space: pre-wrap;
 }
 
-.file-details {
+.detail-file {
+  padding-top: 20px;
+}
+
+.file-tags {
   display: flex;
   flex-wrap: wrap;
-  gap: 24px;
-}
-
-.file-item {
-  display: flex;
-  align-items: center;
   gap: 8px;
-  font-size: 14px;
-  color: #666;
 }
 
-.file-item i {
-  color: #0052D9;
+.file-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 6px 12px;
+  border-radius: var(--radius-full, 9999px);
+  background: var(--primary-bg, #EDF5F0);
+  font-size: 12px;
+  color: var(--primary, #2D8A6E);
 }
 
-.dialog-footer-detail {
+.dialog-footer {
   display: flex;
   justify-content: flex-end;
   gap: 12px;
-  padding: 24px 32px;
-  background: #f8fafc;
-  border-top: 1px solid #f0f0f0;
 }
 
-.close-btn,
-.download-btn {
-  transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+.btn-cancel {
+  border-color: var(--border-color, #E8E2D8);
+  color: var(--text-secondary, #555555);
 }
 
-.close-btn:hover {
-  color: #0052D9;
-  border-color: #0052D9;
+.btn-cancel:hover {
+  border-color: var(--primary, #2D8A6E);
+  color: var(--primary, #2D8A6E);
 }
 
-.download-btn:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 4px 12px rgba(0, 82, 217, 0.3);
+.btn-download {
+  background: var(--primary, #2D8A6E);
+  border-color: var(--primary, #2D8A6E);
 }
 
-/* 响应式设计 */
+.btn-download:hover {
+  background: var(--primary-hover, #25755C);
+}
+
+/* ── Animations ── */
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes shimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+
+/* ── Responsive ── */
 @media (max-width: 768px) {
-  .work-header {
+  .hero { padding: 36px 16px 24px; }
+  .hero-title { font-size: 24px; }
+
+  .stats-banner {
+    flex-direction: column;
+    padding: 0 16px;
+    gap: 10px;
+  }
+
+  .works-section,
+  .featured-section {
+    padding: 0 16px;
+  }
+
+  .works-grid,
+  .skeleton-grid {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 14px;
+  }
+
+  .detail-header {
     flex-direction: column;
     align-items: center;
     text-align: center;
   }
-  
-  .work-cover {
-    margin-right: 0;
-    margin-bottom: 20px;
-  }
-  
-  .work-author-info {
+
+  .detail-stats {
     justify-content: center;
-  }
-  
-  .work-stats-detail {
-    justify-content: center;
-  }
-  
-  .work-description-detail,
-  .work-file-info {
-    padding: 20px;
-  }
-  
-  .dialog-footer-detail {
-    padding: 16px 20px;
   }
 }
 </style>

@@ -1,26 +1,97 @@
-/* 设计令牌：统一颜色/间距/圆角/阴影，便于全站风格一致化 */
+/* ===== 数字作品管理系统 — 暖绿 · 现代有机设计系统 ===== */
 
 :root {
-  /* 品牌色 */
-  --brand-600: #165dff;
-  --brand-500: #2b6dff;
-  --brand-100: #e8f3ff;
+  /* ── 品牌色 · 森林绿系 ── */
+  --primary: #2D8A6E;
+  --primary-hover: #25755C;
+  --primary-light: #45A884;
+  --primary-bg: #EDF5F0;
+  --primary-glow: rgba(45, 138, 110, 0.2);
 
-  /* 中性色 */
-  --bg: #f5f7fa;
-  --surface: #ffffff;
-  --text-1: #1d2129;
-  --text-2: #4e5969;
-  --text-3: #86909c;
-  --border: #e5e6eb;
+  /* ── 强调色 · 暖金 ── */
+  --accent: #C8AA6E;
+  --accent-light: #F0E6D0;
+  --accent-strong: #B8943F;
 
-  /* 圆角与阴影 */
-  --radius-lg: 16px;
-  --radius-md: 12px;
-  --shadow-sm: 0 2px 5px rgba(0, 0, 0, 0.04);
-  --shadow-md: 0 10px 30px rgba(0, 0, 0, 0.08);
+  /* ── 功能色 ── */
+  --success: #34C759;
+  --warning: #F09342;
+  --danger: #E05555;
+  --info: #5B9BD5;
 
-  /* 动画 */
-  --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+  /* ── 中性色 · 暖米色系统 ── */
+  --bg: #F8F9F5;
+  --bg-page: #F8F9F5;
+  --surface: #FFFFFF;
+  --bg-card: #FFFFFF;
+  --bg-hover: #F5F2EC;
+  --bg-glass: rgba(255, 255, 255, 0.82);
+  --text-main: #1A1A1A;
+  --text-regular: #333333;
+  --text-secondary: #555555;
+  --text-light: #888888;
+  --text-placeholder: #B0B0B0;
+  --border-color: #E8E2D8;
+  --border-light: #F2EDE6;
+  --input-bg: #F8F9F5;
+
+  /* ── 圆角 ── */
+  --radius-xs: 6px;
+  --radius-sm: 10px;
+  --radius-md: 14px;
+  --radius-lg: 18px;
+  --radius-xl: 24px;
+  --radius-full: 9999px;
+
+  /* ── 阴影 ── */
+  --shadow-xs: 0 1px 2px rgba(0, 0, 0, .03);
+  --shadow-sm: 0 2px 8px rgba(0, 0, 0, .05);
+  --shadow-card: 0 2px 12px rgba(0, 0, 0, .04), 0 1px 3px rgba(0, 0, 0, .03);
+  --shadow-card-hover: 0 16px 40px rgba(0, 0, 0, .12);
+  --shadow-popup: 0 20px 48px rgba(0, 0, 0, .14);
+  --shadow-md: 0 6px 20px rgba(0, 0, 0, .07);
+  --shadow-lg: 0 12px 36px rgba(0, 0, 0, .10);
+  --shadow-xl: 0 20px 48px rgba(0, 0, 0, .14);
+
+  /* ── 动画时长 ── */
+  --duration-fast: .18s;
+  --duration-normal: .3s;
+  --duration-slow: .5s;
+
+  /* ── 缓动曲线 ── */
+  --ease-out-expo: cubic-bezier(0.16, 1, 0.3, 1);
+  --ease-out-back: cubic-bezier(0.34, 1.56, 0.64, 1);
+
+  /* ── 字体 ── */
+  --font-main: 'Inter', 'Noto Sans SC', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC',
+    'Microsoft YaHei', 'Hiragino Sans GB', sans-serif;
+  --font-mono: 'SF Mono', 'Cascadia Code', 'Consolas', monospace;
+
+  /* ── 向后兼容 Element UI 变量 ── */
+  --el-color-primary: var(--primary);
+  --el-color-primary-light-3: #5DB89E;
+  --el-color-primary-light-5: #8CD1BB;
+  --el-color-primary-light-7: #B6E5D5;
+  --el-color-primary-light-8: #D0F0E5;
+  --el-color-primary-light-9: #EAF8F2;
+  --el-color-success: var(--success);
+  --el-color-warning: var(--warning);
+  --el-color-danger: var(--danger);
+  --el-color-info: var(--info);
+
+  /* ── 旧版兼容变量 ── */
+  --brand-600: var(--primary);
+  --brand-500: var(--primary);
+  --brand-100: var(--primary-bg);
+  --text-1: var(--text-main);
+  --text-2: var(--text-regular);
+  --text-3: var(--text-light);
+  --border: var(--border-color);
+  --radius-lg: var(--radius-lg);
+  --radius-md: var(--radius-md);
+  --shadow-sm: var(--shadow-sm);
+  --shadow-md: var(--shadow-card);
+  --ease-out: var(--ease-out-expo);
+  --card-bg: var(--bg-card);
+  --input-bg: var(--bg-page);
 }
-

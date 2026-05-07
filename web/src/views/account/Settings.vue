@@ -10,11 +10,11 @@
       <h3 class="section-title">通知设置</h3>
       <el-form label-width="160px" class="settings-form">
         <el-form-item label="消息通知">
-          <el-switch v-model="prefs.notificationEnabled" active-color="#165dff" @change="autoSavePrefs"></el-switch>
+          <el-switch v-model="prefs.notificationEnabled" active-color="var(--primary)" @change="autoSavePrefs"></el-switch>
           <span class="form-item-tip">关闭后将不再接收系统内部消息通知</span>
         </el-form-item>
         <el-form-item label="邮件通知">
-          <el-switch v-model="prefs.emailNotification" active-color="#165dff" @change="autoSavePrefs"></el-switch>
+          <el-switch v-model="prefs.emailNotification" active-color="var(--primary)" @change="autoSavePrefs"></el-switch>
           <span class="form-item-tip">接收作品审核结果、系统公告等邮件通知</span>
         </el-form-item>
       </el-form>
@@ -25,11 +25,11 @@
       <h3 class="section-title">隐私设置</h3>
       <el-form label-width="160px" class="settings-form">
         <el-form-item label="个人主页公开">
-          <el-switch v-model="prefs.profilePublic" active-color="#165dff" @change="autoSavePrefs"></el-switch>
+          <el-switch v-model="prefs.profilePublic" active-color="var(--primary)" @change="autoSavePrefs"></el-switch>
           <span class="form-item-tip">关闭后其他用户将无法查看您的个人主页</span>
         </el-form-item>
         <el-form-item label="展示联系方式">
-          <el-switch v-model="prefs.showContactInfo" active-color="#165dff" @change="autoSavePrefs"></el-switch>
+          <el-switch v-model="prefs.showContactInfo" active-color="var(--primary)" @change="autoSavePrefs"></el-switch>
           <span class="form-item-tip">开启后其他用户可在您的主页看到联系方式</span>
         </el-form-item>
         <el-form-item label="收藏可见性">
@@ -320,34 +320,52 @@ export default {
 }
 
 .page-title {
-  font-size: 26px;
-  font-weight: 600;
-  color: #1d2129;
+  font-size: 28px;
+  font-weight: 700;
+  color: var(--text-main);
   margin: 0 0 8px 0;
+  letter-spacing: -0.3px;
 }
 
 .page-desc {
   font-size: 14px;
-  color: #86909c;
+  color: var(--text-light);
   margin: 0;
 }
 
 .settings-card {
-  background: #ffffff;
-  border-radius: 12px;
+  background: var(--card-bg);
+  border-radius: var(--radius-lg);
   padding: 28px 32px;
   margin-bottom: 20px;
-  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.04);
-  border: 1px solid #e5e6eb;
+  box-shadow: var(--shadow-sm);
+  border: 1px solid var(--border-color);
+  transition: box-shadow var(--duration-normal) var(--ease-out-expo);
+}
+
+.settings-card:hover {
+  box-shadow: var(--shadow-card);
 }
 
 .section-title {
   font-size: 16px;
-  font-weight: 600;
-  color: #1d2129;
+  font-weight: 700;
+  color: var(--text-main);
   margin: 0 0 20px 0;
   padding-bottom: 12px;
-  border-bottom: 1px solid #f0f0f0;
+  border-bottom: 1px solid var(--border-light);
+  position: relative;
+}
+
+.section-title::after {
+  content: '';
+  position: absolute;
+  bottom: -1px;
+  left: 0;
+  width: 40px;
+  height: 3px;
+  background: linear-gradient(90deg, var(--primary), var(--accent));
+  border-radius: var(--radius-full);
 }
 
 .settings-form {
@@ -358,7 +376,7 @@ export default {
   display: inline-block;
   margin-left: 12px;
   font-size: 12px;
-  color: #86909c;
+  color: var(--text-light);
 }
 
 .settings-actions {
@@ -369,6 +387,6 @@ export default {
 }
 
 ::v-deep .modern-dialog .el-dialog {
-  border-radius: 12px;
+  border-radius: var(--radius-lg);
 }
 </style>

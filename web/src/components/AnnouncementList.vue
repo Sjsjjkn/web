@@ -130,12 +130,12 @@ export default {
 .title-icon {
   width: 20px;
   height: 20px;
-  color: #165dff;
+  color: var(--primary);
 }
 
 .view-more {
   font-size: 13px;
-  color: #165dff;
+  color: var(--primary);
   text-decoration: none;
   transition: color 0.2s;
 }

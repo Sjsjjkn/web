@@ -673,23 +673,23 @@ export default {
 
 /* ================= 顶部卡片 & 背景 ================= */
 .profile-header-card, .profile-content-card {
-  border-radius: 20px;
-  border: 1px solid #d8e2ef;
-  background: #ffffff;
-  box-shadow: 0 18px 50px rgba(25, 58, 100, 0.08);
-  transition: box-shadow 0.3s ease;
+  border-radius: var(--radius-xl);
+  border: 1px solid var(--border-color);
+  background: var(--card-bg);
+  box-shadow: var(--shadow-card);
+  transition: box-shadow var(--duration-normal) var(--ease-out-expo);
   overflow: visible;
 }
 
 .profile-header-card:hover, .profile-content-card:hover {
-  box-shadow: 0 24px 56px rgba(25, 58, 100, 0.12);
+  box-shadow: var(--shadow-card-hover);
 }
 
 .profile-banner {
   height: 140px;
   background: 
-    radial-gradient(circle at top right, rgba(227, 112, 54, 0.18), transparent 24%),
-    linear-gradient(135deg, #fff8ee 0%, #eef6ff 52%, #ffffff 100%);
+    radial-gradient(circle at top right, var(--accent-light), transparent 24%),
+    linear-gradient(135deg, var(--primary-bg) 0%, #eef6ff 52%, var(--card-bg) 100%);
   position: relative;
   overflow: hidden;
 }
@@ -739,12 +739,12 @@ export default {
 }
 
 .avatar-wrapper:hover .user-avatar {
-  box-shadow: 0 8px 20px rgba(0, 82, 217, 0.2);
+  box-shadow: 0 8px 20px rgba(45, 138, 110, 0.2);
 }
 
 .avatar-wrapper:hover .avatar-upload-btn {
   transform: scale(1.15);
-  box-shadow: 0 6px 16px rgba(0, 82, 217, 0.4);
+  box-shadow: 0 6px 16px rgba(45, 138, 110, 0.4);
 }
 
 .user-avatar { 
@@ -763,16 +763,16 @@ export default {
   width: 32px;
   height: 32px;
   border-radius: 50%;
-  background: linear-gradient(135deg, #0052D9 0%, #00B3FF 100%);
-  border: 3px solid white;
+  background: linear-gradient(135deg, var(--primary) 0%, var(--accent) 100%);
+  border: 3px solid var(--card-bg);
   display: flex;
   align-items: center;
   justify-content: center;
   color: white;
   font-size: 14px;
   cursor: pointer;
-  transition: all 0.3s ease;
-  box-shadow: 0 4px 10px rgba(0, 82, 217, 0.3);
+  transition: all var(--duration-normal) ease;
+  box-shadow: 0 4px 10px rgba(22, 93, 255, 0.3);
 }
 
 .user-main-info { flex: 1; padding-bottom: 8px; }
@@ -780,20 +780,20 @@ export default {
 .user-name {
   margin: 0 0 12px 0;
   font-size: 26px;
-  font-weight: 600;
-  color: #1d2129;
+  font-weight: 700;
+  color: var(--text-main);
   display: flex;
   align-items: center;
   gap: 12px;
 }
 
 .gradient-tag {
-  background: linear-gradient(90deg, #0052D9, #0080FF);
+  background: linear-gradient(90deg, var(--primary), var(--accent));
   border: none;
   font-weight: 500;
 }
 
-.user-meta { display: flex; align-items: center; gap: 16px; color: #86909c; font-size: 14px; }
+.user-meta { display: flex; align-items: center; gap: 16px; color: var(--text-light); font-size: 14px; }
 .user-meta span { display: flex; align-items: center; gap: 6px; }
 
 /* ================= 标签页与内容区 ================= */
@@ -808,7 +808,7 @@ export default {
   font-weight: 600;
   font-size: 17px;
 }
-::v-deep .custom-tabs .el-tabs__nav-wrap::after { height: 1px; background-color: #f0f2f5; }
+::v-deep .custom-tabs .el-tabs__nav-wrap::after { height: 1px; background-color: var(--border-light); }
 
 .tab-content { padding: 32px; }
 
@@ -822,8 +822,8 @@ export default {
 .section-title {
   margin: 0;
   font-size: 18px;
-  font-weight: 600;
-  color: #1d2129;
+  font-weight: 700;
+  color: var(--text-main);
   position: relative;
   padding-left: 12px;
 }
@@ -832,7 +832,7 @@ export default {
   content: '';
   position: absolute;
   left: 0; top: 10%; height: 80%; width: 4px;
-  background: #0052D9;
+  background: var(--primary);
   border-radius: 2px;
 }
 
@@ -846,29 +846,29 @@ export default {
 
 .primary-btn-glow {
   border: none;
-  background: #0052D9;
-  box-shadow: 0 4px 12px rgba(0, 82, 217, 0.2);
+  background: var(--primary);
+  box-shadow: 0 4px 12px rgba(22, 93, 255, 0.2);
 }
 .primary-btn-glow:hover {
-  background: #0060FF;
-  box-shadow: 0 8px 20px rgba(0, 82, 217, 0.4);
+  background: var(--primary-hover);
+  box-shadow: 0 8px 20px rgba(22, 93, 255, 0.35);
 }
 
 ::v-deep .animated-input .el-input__wrapper,
 ::v-deep .animated-input .el-textarea__inner {
-  border-radius: 8px;
-  background-color: #f7f8fa;
+  border-radius: var(--radius-md);
+  background-color: var(--input-bg);
   box-shadow: none !important;
   border: 1px solid transparent;
-  transition: all 0.3s ease;
+  transition: all var(--duration-normal) ease;
 }
 
 ::v-deep .animated-input .el-input__wrapper:focus-within,
 ::v-deep .animated-input .el-textarea__inner:focus {
-  background-color: #ffffff;
-  border-color: #0052D9;
-  box-shadow: 0 0 0 3px rgba(0, 82, 217, 0.1) !important;
-  transform: scale(1.01); /* 聚焦时微微放大 */
+  background-color: var(--card-bg);
+  border-color: var(--primary);
+  box-shadow: 0 0 0 3px rgba(22, 93, 255, 0.1) !important;
+  transform: scale(1.01);
 }
 
 /* ================= 查看模式 (Descriptions) ================= */
@@ -878,11 +878,11 @@ export default {
 }
 ::v-deep .custom-descriptions .el-descriptions__label {
   width: 140px;
-  background-color: #f4f6fb; /* 极淡的冷蓝色，比灰色更显高级 */
-  color: #4e5969;
+  background-color: var(--primary-bg);
+  color: var(--text-regular);
   font-weight: 500;
 }
-.desc-text, .bio-text { color: #1d2129; font-size: 14px; line-height: 1.6; }
+.desc-text, .bio-text { color: var(--text-main); font-size: 14px; line-height: 1.6; }
 
 /* ================= 安全列表 (交错动画) ================= */
 .security-list { display: flex; flex-direction: column; gap: 16px; margin-top: 24px; }
@@ -892,10 +892,10 @@ export default {
   justify-content: space-between;
   align-items: center;
   padding: 24px;
-  border-radius: 12px;
-  background: #fcfcfd;
-  border: 1px solid #f0f2f5;
-  transition: all 0.3s ease;
+  border-radius: var(--radius-lg);
+  background: var(--card-bg);
+  border: 1px solid var(--border-light);
+  transition: all var(--duration-normal) ease;
 
   /* 初始不可见，等待动画执行 */
   opacity: 0;
@@ -913,15 +913,15 @@ export default {
 }
 
 .hover-card-lift:hover {
-  background: #ffffff;
-  border-color: #e5e6eb;
+  background: var(--card-bg);
+  border-color: var(--border-color);
   transform: translateY(-4px);
-  box-shadow: 0 12px 24px rgba(0, 0, 0, 0.04);
+  box-shadow: var(--shadow-card);
 }
 
 .sec-info { display: flex; flex-direction: column; gap: 8px; }
-.sec-title { font-size: 16px; font-weight: 500; color: #1d2129; }
-.sec-desc { font-size: 13px; color: #86909c; }
+.sec-title { font-size: 16px; font-weight: 500; color: var(--text-main); }
+.sec-desc { font-size: 13px; color: var(--text-light); }
 .text-danger { color: var(--el-color-danger); }
 
 .action-btn { transition: all 0.3s; border-radius: 6px; }
@@ -935,7 +935,7 @@ export default {
 
 /* ================= 头像上传对话框样式 ================= */
 ::v-deep .avatar-upload-dialog .el-dialog__header {
-  background: linear-gradient(135deg, #fff8ee 0%, #eef6ff 52%, #ffffff 100%);
+  background: linear-gradient(135deg, var(--primary-bg) 0%, #eef6ff 52%, var(--card-bg) 100%);
   border-bottom: none;
   padding: 20px 24px;
 }
@@ -943,7 +943,7 @@ export default {
 ::v-deep .avatar-upload-dialog .el-dialog__title {
   font-size: 18px;
   font-weight: 600;
-  color: #1d2a3a;
+  color: var(--text-main);
 }
 
 ::v-deep .avatar-upload-dialog .el-dialog__body {
@@ -956,7 +956,6 @@ export default {
   gap: 24px;
 }
 
-/* 预览区域 */
 .preview-section {
   text-align: center;
 }
@@ -965,7 +964,7 @@ export default {
   margin: 0 0 16px 0;
   font-size: 14px;
   font-weight: 600;
-  color: #4e5969;
+  color: var(--text-regular);
 }
 
 .preview-container {
@@ -988,13 +987,13 @@ export default {
   border-radius: 50%;
   background-size: cover;
   background-position: center;
-  border: 3px solid #e5e6eb;
+  border: 3px solid var(--border-color);
   box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1);
 }
 
 .preview-size {
   font-size: 12px;
-  color: #86909c;
+  color: var(--text-light);
 }
 
 .preview-sizes {
@@ -1016,7 +1015,7 @@ export default {
   border-radius: 50%;
   background-size: cover;
   background-position: center;
-  border: 2px solid #e5e6eb;
+  border: 2px solid var(--border-color);
 }
 
 .preview-circle-small {
@@ -1025,7 +1024,7 @@ export default {
   border-radius: 50%;
   background-size: cover;
   background-position: center;
-  border: 2px solid #e5e6eb;
+  border: 2px solid var(--border-color);
 }
 
 .preview-circle-tiny {
@@ -1034,12 +1033,12 @@ export default {
   border-radius: 50%;
   background-size: cover;
   background-position: center;
-  border: 2px solid #e5e6eb;
+  border: 2px solid var(--border-color);
 }
 
 .preview-item span {
   font-size: 11px;
-  color: #86909c;
+  color: var(--text-light);
 }
 
 /* 上传区域 */
@@ -1053,11 +1052,11 @@ export default {
 .upload-area {
   width: 100%;
   padding: 16px;
-  border: 2px dashed #d8e2ef;
-  border-radius: 8px;
-  background: #fafbfc;
+  border: 2px dashed var(--border-color);
+  border-radius: var(--radius-md);
+  background: var(--card-bg);
   cursor: pointer;
-  transition: all 0.3s ease;
+  transition: all var(--duration-normal) ease;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -1065,23 +1064,23 @@ export default {
 }
 
 .upload-area:hover {
-  border-color: #0052D9;
-  background: #f0f7ff;
+  border-color: var(--primary);
+  background: var(--primary-bg);
 }
 
 .upload-icon-small {
   font-size: 20px;
-  color: #0052D9;
+  color: var(--primary);
 }
 
 .upload-area span {
   font-size: 14px;
-  color: #4e5969;
+  color: var(--text-regular);
 }
 
 .upload-hint {
   font-size: 12px;
-  color: #86909c;
+  color: var(--text-light);
 }
 
 .hidden-file-input {

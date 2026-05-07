@@ -145,47 +145,51 @@ export default {
 .announcement-container {
   max-width: 800px;
   margin: 0 auto;
-  padding: 20px;
+  padding: 32px;
 }
 
 .page-header {
-  margin-bottom: 24px;
+  margin-bottom: 28px;
+  animation: fadeInUp 0.6s var(--ease-out-expo) both;
 }
 
 .page-title {
-  font-size: 24px;
-  font-weight: 600;
-  color: #1d2129;
-  margin: 0 0 8px 0;
+  font-size: 28px;
+  font-weight: 700;
+  color: var(--text-main);
+  margin: 0 0 6px 0;
+  letter-spacing: -0.3px;
 }
 
 .page-subtitle {
   font-size: 14px;
-  color: #8f959e;
+  color: var(--text-light);
   margin: 0;
 }
 
 .announcement-card {
-  background: #fff;
-  border-radius: 8px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+  background: var(--card-bg);
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--border-color);
+  box-shadow: var(--shadow-sm);
+  animation: fadeInUp 0.6s var(--ease-out-expo) 0.1s both;
 }
 
 .card-body {
-  padding: 20px;
+  padding: 24px;
 }
 
 .empty-state {
   text-align: center;
-  padding: 60px 0;
-  color: #8f959e;
+  padding: 64px 0;
+  color: var(--text-light);
 }
 
 .empty-icon {
   width: 64px;
   height: 64px;
   margin: 0 auto 16px;
-  color: #c0c4cc;
+  color: var(--text-placeholder);
 }
 
 .empty-icon svg {
@@ -196,54 +200,58 @@ export default {
 .announcement-list {
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  gap: 12px;
 }
 
 .announcement-item {
-  padding: 20px;
-  border-radius: 8px;
-  background: #fafafa;
+  padding: 20px 24px;
+  border-radius: var(--radius-md);
+  background: var(--app-bg);
+  border: 1px solid var(--border-light);
   cursor: pointer;
-  transition: all 0.2s;
+  transition: all var(--duration-normal) var(--ease-out-expo);
 }
 
 .announcement-item:hover {
-  background: #f0f0f0;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.08);
+  background: var(--bg-hover);
+  border-color: var(--primary);
+  box-shadow: var(--shadow-sm);
+  transform: translateY(-1px);
 }
 
 .item-header {
   display: flex;
-  gap: 12px;
+  gap: 14px;
   margin-bottom: 12px;
 }
 
 .item-icon {
-  width: 40px;
-  height: 40px;
-  border-radius: 8px;
-  background: #e6f7ff;
+  width: 44px;
+  height: 44px;
+  border-radius: var(--radius-md);
+  background: var(--primary-bg);
   display: flex;
   align-items: center;
   justify-content: center;
-  color: #1890ff;
+  color: var(--primary);
   flex-shrink: 0;
 }
 
 .item-icon svg {
-  width: 20px;
-  height: 20px;
+  width: 22px;
+  height: 22px;
 }
 
 .item-info {
   flex: 1;
+  min-width: 0;
 }
 
 .item-title {
   font-size: 16px;
-  font-weight: 500;
-  color: #1d2129;
-  margin: 0 0 8px 0;
+  font-weight: 600;
+  color: var(--text-main);
+  margin: 0 0 6px 0;
 }
 
 .item-meta {
@@ -254,37 +262,37 @@ export default {
 
 .meta-item {
   font-size: 13px;
-  color: #8f959e;
+  color: var(--text-light);
 }
 
 .priority-tag {
-  padding: 2px 8px;
-  border-radius: 4px;
-  font-size: 12px;
-  font-weight: 500;
+  padding: 2px 10px;
+  border-radius: var(--radius-full);
+  font-size: 11px;
+  font-weight: 600;
 }
 
 .priority-tag.high {
-  background: #fff2f0;
-  color: #ff4d4f;
+  background: #FDF0EB;
+  color: var(--accent);
 }
 
 .item-content {
   font-size: 14px;
-  color: #4e5969;
+  color: var(--text-regular);
   line-height: 1.6;
   margin: 0;
 }
 
 .card-footer {
-  padding: 16px 20px;
-  border-top: 1px solid #f0f0f0;
+  padding: 16px 24px;
+  border-top: 1px solid var(--border-color);
   display: flex;
   justify-content: center;
 }
 
 .detail-content {
-  padding: 10px 0;
+  padding: 12px 0;
 }
 
 .detail-header {
@@ -293,8 +301,8 @@ export default {
 
 .detail-title {
   font-size: 18px;
-  font-weight: 600;
-  color: #1d2129;
+  font-weight: 700;
+  color: var(--text-main);
   margin: 0 0 12px 0;
 }
 
@@ -303,16 +311,21 @@ export default {
   align-items: center;
   gap: 12px;
   font-size: 13px;
-  color: #8f959e;
+  color: var(--text-light);
 }
 
 .detail-body {
   font-size: 15px;
-  color: #4e5969;
+  color: var(--text-regular);
   line-height: 1.8;
 }
 
 .detail-body p {
   margin: 0;
+}
+
+@keyframes fadeInUp {
+  from { opacity: 0; transform: translateY(20px); }
+  to { opacity: 1; transform: translateY(0); }
 }
 </style>

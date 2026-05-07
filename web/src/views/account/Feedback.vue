@@ -232,81 +232,106 @@ export default {
 .feedback-container {
   max-width: 900px;
   margin: 0 auto;
-  padding: 24px;
+  padding: 32px;
 }
 
 .page-header {
-  margin-bottom: 24px;
+  margin-bottom: 28px;
+  animation: fadeInUp 0.6s var(--ease-out-expo) both;
 }
 
 .page-title {
-  font-size: 24px;
-  font-weight: 600;
-  color: #1a1a2e;
-  margin: 0 0 8px 0;
+  font-size: 28px;
+  font-weight: 700;
+  color: var(--text-main);
+  margin: 0 0 6px 0;
+  letter-spacing: -0.3px;
 }
 
 .page-subtitle {
-  color: #666;
+  font-size: 14px;
+  color: var(--text-light);
   margin: 0;
 }
 
 .feedback-form-card,
 .feedback-list-card {
-  background: #fff;
-  border-radius: 12px;
-  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.08);
+  background: var(--card-bg);
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--border-color);
+  box-shadow: var(--shadow-sm);
   margin-bottom: 24px;
+  overflow: hidden;
+}
+
+.feedback-form-card {
+  animation: fadeInUp 0.6s var(--ease-out-expo) 0.1s both;
+}
+
+.feedback-list-card {
+  animation: fadeInUp 0.6s var(--ease-out-expo) 0.2s both;
 }
 
 .card-header {
-  padding: 16px 20px;
-  border-bottom: 1px solid #eee;
+  padding: 18px 24px;
+  border-bottom: 1px solid var(--border-color);
+  background: var(--app-bg);
 }
 
 .card-header h3 {
   margin: 0;
   font-size: 16px;
   font-weight: 600;
-  color: #333;
+  color: var(--text-main);
 }
 
 .card-body {
-  padding: 20px;
+  padding: 24px;
 }
 
 .custom-textarea {
   width: 100%;
-  min-height: 120px;
-  padding: 12px;
-  border: 1px solid #e6e6e6;
-  border-radius: 8px;
+  min-height: 130px;
+  padding: 14px;
+  border: 2px solid var(--border-color);
+  border-radius: var(--radius-md);
   resize: vertical;
   font-size: 14px;
-  line-height: 1.5;
+  line-height: 1.6;
   box-sizing: border-box;
+  color: var(--text-main);
+  background: var(--app-bg);
+  transition: border-color var(--duration-fast), box-shadow var(--duration-fast);
+  font-family: inherit;
 }
 
 .custom-textarea:focus {
   outline: none;
-  border-color: #409eff;
+  border-color: var(--primary);
+  box-shadow: 0 0 0 4px var(--primary-bg);
 }
 
 .form-actions {
   margin-bottom: 0;
 }
 
+.form-actions .el-button {
+  border-radius: var(--radius-full);
+  padding: 12px 32px;
+  font-weight: 600;
+}
+
 .empty-state {
   text-align: center;
-  padding: 40px 0;
-  color: #999;
+  padding: 48px 0;
+  color: var(--text-light);
 }
 
 .empty-icon {
   width: 64px;
   height: 64px;
   margin: 0 auto 16px;
-  color: #ccc;
+  color: var(--text-placeholder);
 }
 
 .empty-icon svg {
@@ -321,16 +346,19 @@ export default {
 }
 
 .feedback-item {
-  padding: 16px;
-  border: 1px solid #eee;
-  border-radius: 8px;
+  padding: 18px 20px;
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
   cursor: pointer;
-  transition: all 0.2s;
+  transition: all var(--duration-normal) var(--ease-out-expo);
+  background: var(--app-bg);
 }
 
 .feedback-item:hover {
-  border-color: #409eff;
-  box-shadow: 0 2px 8px rgba(64, 158, 255, 0.15);
+  border-color: var(--primary);
+  box-shadow: var(--shadow-sm);
+  transform: translateY(-1px);
+  background: var(--card-bg);
 }
 
 .feedback-item-header {
@@ -341,109 +369,118 @@ export default {
 }
 
 .feedback-title {
-  font-weight: 500;
-  color: #333;
+  font-weight: 600;
+  color: var(--text-main);
+  font-size: 15px;
 }
 
 .status-badge {
   font-size: 12px;
-  padding: 2px 8px;
-  border-radius: 4px;
+  padding: 3px 12px;
+  border-radius: var(--radius-full);
+  font-weight: 600;
 }
 
 .status-badge.pending {
-  background: #fff7e6;
-  color: #d48806;
+  background: #FFF8EC;
+  color: #B8700A;
 }
 
 .status-badge.processing {
-  background: #e6f7ff;
-  color: #1890ff;
+  background: #E8F4FD;
+  color: #1E7EC8;
 }
 
 .status-badge.resolved {
-  background: #f6ffed;
-  color: #52c41a;
+  background: #EAF7EA;
+  color: #3A8C3D;
 }
 
 .status-badge.rejected {
-  background: #fff2f0;
-  color: #ff4d4f;
+  background: #FDECEC;
+  color: #CC3D3D;
 }
 
 .feedback-item-body {
   display: flex;
   gap: 16px;
-  color: #999;
+  color: var(--text-light);
   font-size: 13px;
 }
 
 .feedback-reply {
-  margin-top: 12px;
-  padding-top: 12px;
-  border-top: 1px dashed #eee;
+  margin-top: 14px;
+  padding-top: 14px;
+  border-top: 1px solid var(--border-color);
 }
 
 .reply-label {
   font-size: 12px;
-  color: #999;
-  margin-bottom: 4px;
+  font-weight: 600;
+  color: var(--text-light);
+  margin-bottom: 6px;
 }
 
 .reply-content {
-  padding: 8px 12px;
-  background: #f6ffed;
-  border-radius: 4px;
-  color: #52c41a;
+  padding: 12px 16px;
+  background: #EAF7EA;
+  border-radius: var(--radius-sm);
+  color: var(--primary-dark);
   font-size: 13px;
+  line-height: 1.6;
 }
 
-/* 弹窗样式 */
 .modal-overlay {
   position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background: rgba(0, 0, 0, 0.5);
+  top: 0; left: 0; right: 0; bottom: 0;
+  background: rgba(0, 0, 0, 0.4);
+  backdrop-filter: blur(4px);
   display: flex;
   align-items: center;
   justify-content: center;
   z-index: 1000;
+  animation: fadeIn 0.2s ease;
 }
 
 .modal-content {
-  background: #fff;
-  border-radius: 12px;
+  background: var(--card-bg);
+  border-radius: var(--radius-lg);
   width: 90%;
-  max-width: 500px;
+  max-width: 520px;
   max-height: 80vh;
   overflow: hidden;
+  box-shadow: var(--shadow-card-hover);
+  animation: scaleIn 0.25s var(--ease-out-expo);
 }
 
 .modal-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 16px 20px;
-  border-bottom: 1px solid #eee;
+  padding: 18px 24px;
+  border-bottom: 1px solid var(--border-color);
 }
 
 .modal-header h3 {
   margin: 0;
-  font-size: 16px;
+  font-size: 17px;
+  font-weight: 700;
+  color: var(--text-main);
 }
 
 .close-btn {
   background: none;
   border: none;
   cursor: pointer;
-  color: #999;
-  padding: 4px;
+  color: var(--text-light);
+  padding: 6px;
+  border-radius: var(--radius-sm);
+  transition: all var(--duration-fast);
 }
 
 .close-btn:hover {
-  color: #666;
+  color: var(--text-main);
+  background: var(--bg-hover);
 }
 
 .close-btn svg {
@@ -452,13 +489,13 @@ export default {
 }
 
 .modal-body {
-  padding: 20px;
-  max-height: 400px;
+  padding: 24px;
+  max-height: 420px;
   overflow-y: auto;
 }
 
 .detail-row {
-  margin-bottom: 12px;
+  margin-bottom: 14px;
   display: flex;
   align-items: flex-start;
 }
@@ -469,68 +506,70 @@ export default {
 
 .detail-label {
   font-size: 13px;
-  color: #999;
+  font-weight: 600;
+  color: var(--text-light);
   min-width: 80px;
   flex-shrink: 0;
 }
 
 .detail-value {
-  font-size: 13px;
-  color: #333;
-}
-
-.detail-value.status.pending {
-  color: #d48806;
-}
-
-.detail-value.status.processing {
-  color: #1890ff;
-}
-
-.detail-value.status.resolved {
-  color: #52c41a;
-}
-
-.detail-value.status.rejected {
-  color: #ff4d4f;
+  font-size: 14px;
+  color: var(--text-main);
 }
 
 .detail-content {
-  margin-top: 4px;
-  padding: 12px;
-  background: #f9f9f9;
-  border-radius: 8px;
+  margin-top: 6px;
+  padding: 14px;
+  background: var(--app-bg);
+  border-radius: var(--radius-md);
   font-size: 14px;
-  line-height: 1.6;
-  color: #333;
+  line-height: 1.7;
+  color: var(--text-regular);
 }
 
 .detail-content.reply {
-  background: #f6ffed;
-  color: #52c41a;
+  background: #EAF7EA;
+  color: var(--primary-dark);
 }
 
 .modal-footer {
-  padding: 16px 20px;
-  border-top: 1px solid #eee;
+  padding: 16px 24px;
+  border-top: 1px solid var(--border-color);
   display: flex;
   justify-content: flex-end;
 }
 
 .btn {
-  padding: 8px 16px;
-  border-radius: 6px;
+  padding: 8px 20px;
+  border-radius: var(--radius-full);
   border: none;
   cursor: pointer;
   font-size: 14px;
+  font-weight: 500;
+  transition: all var(--duration-fast);
 }
 
 .btn-secondary {
-  background: #f5f5f5;
-  color: #666;
+  background: var(--bg-hover);
+  color: var(--text-regular);
 }
 
 .btn-secondary:hover {
-  background: #eee;
+  background: var(--border-color);
+}
+
+@keyframes fadeInUp {
+  from { opacity: 0; transform: translateY(20px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes scaleIn {
+  from { opacity: 0; transform: scale(0.95); }
+  to { opacity: 1; transform: scale(1); }
 }
 </style>

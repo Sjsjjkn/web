@@ -1,149 +1,180 @@
 <template>
-  <div class="favorites-container">
-    <header class="favorites-header slide-down">
-      <div class="header-content">
-        <div class="logo-area">
-          <div class="logo-icon">BDU</div>
-          <h1 class="system-title">我的收藏</h1>
+  <div class="favorites-page">
+    <!-- 环境光晕 -->
+    <div class="ambient-glow glow-top"></div>
+    <div class="ambient-glow glow-bottom"></div>
+
+    <div class="favorites-container">
+      <!-- Hero 区域 -->
+      <section class="favorites-hero">
+        <div class="hero-pattern"></div>
+        <div class="hero-content fade-in-up">
+          <div class="hero-badge">
+            <span class="badge-dot"></span>
+            BODA · 个人收藏
+          </div>
+          <h1 class="hero-title">我的<span class="hero-accent">收藏</span></h1>
+          <p class="hero-desc">你收藏的每一件作品，都是灵感的火花</p>
+          <div class="hero-stats">
+            <div class="hstat">
+              <div class="hstat-icon-ring">
+                <i class="el-icon-star-on"></i>
+              </div>
+              <span class="hstat-num">{{ total || 0 }}</span>
+              <span class="hstat-label">收藏总数</span>
+            </div>
+            <div class="hstat-divider"></div>
+            <el-button class="hero-action" round @click="loadCollections">
+              <i class="el-icon-refresh"></i>
+              刷新列表
+            </el-button>
+          </div>
         </div>
-        <div class="header-actions">
-          <el-button 
-            type="primary" 
-            round 
-            class="refresh-btn"
-            icon="el-icon-refresh"
-            @click="loadCollections"
+      </section>
+
+      <!-- 筛选栏 -->
+      <section class="filter-section fade-in-up" style="animation-delay: 0.15s">
+        <div class="filter-bar glass-card">
+          <div class="search-bar">
+            <el-input
+              v-model="searchQuery"
+              placeholder="搜索作品标题或作者..."
+              prefix-icon="el-icon-search"
+              clearable
+              class="modern-search"
+              @keyup.enter="loadCollections"
+            ></el-input>
+          </div>
+          <div class="filter-divider"></div>
+          <div class="category-filters">
+            <span
+              v-for="(cat, index) in categories"
+              :key="cat.value"
+              :class="['filter-chip', { active: activeCategory === cat.value }]"
+              @click="activeCategory = cat.value; loadCollections()"
+            >
+              {{ cat.label }}
+            </span>
+          </div>
+        </div>
+      </section>
+
+      <!-- 作品区域 -->
+      <section class="works-section">
+        <el-empty v-if="collections.length === 0 && !loading" description="暂无收藏作品" class="empty-state"></el-empty>
+
+        <el-row :gutter="24">
+          <el-col
+            :xs="24" :sm="12" :md="8" :lg="6"
+            v-for="(collection, index) in collections"
+            :key="collection.id"
+            class="stagger-fade-in"
+            :style="{ animationDelay: `${index * 0.08 + 0.2}s` }"
           >
-            刷新列表
-          </el-button>
+            <div class="work-card glass-card" @click="handleViewWork(collection.work)">
+              <div class="cover-image">
+                <img v-if="getThumbnailUrl(collection.work)" :src="getThumbnailUrl(collection.work)" :alt="collection.work.title" class="thumbnail-image">
+                <ModelThumbnail
+                  v-else-if="isModelFile(collection.work)"
+                  :model-url="`/api/File/download?fileName=${encodeURIComponent(collection.work.filePath)}`"
+                  :background-color="getCategoryColor(collection.work.category)"
+                  class="model-preview"
+                />
+                <div v-else class="thumbnail-placeholder" :style="{ backgroundColor: getCategoryColor(collection.work.category) }">
+                  <div class="placeholder-circle">
+                    <i class="el-icon-document"></i>
+                  </div>
+                  <span>{{ getFileExtension(collection.work) }}</span>
+                </div>
+                <span class="category-badge">{{ collection.work.category }}</span>
+                <div class="hover-overlay">
+                  <div class="overlay-bg"></div>
+                  <div class="overlay-actions">
+                    <button class="overlay-btn view-btn" @click.stop="handleViewWork(collection.work)" title="查看详情">
+                      <i class="el-icon-view"></i>
+                    </button>
+                    <button class="overlay-btn download-btn" @click.stop="handleDownloadFile(collection.work)" title="下载文件">
+                      <i class="el-icon-download"></i>
+                    </button>
+                  </div>
+                </div>
+              </div>
+
+              <div class="work-info">
+                <h3 class="work-title" :title="collection.work.title">{{ collection.work.title }}</h3>
+                <p class="work-author">{{ collection.work.uploadUserName || '未知作者' }}</p>
+                <div class="work-meta">
+                  <span class="meta-item"><i class="el-icon-date"></i> {{ formatDate(collection.collectionDate) }}</span>
+                  <span class="meta-item"><i class="el-icon-folder-opened"></i> {{ collection.work.category }}</span>
+                </div>
+                <div class="work-actions">
+                  <button class="card-action-btn detail-action" @click.stop="handleViewWork(collection.work)">
+                    <span>详情</span>
+                    <i class="el-icon-arrow-right"></i>
+                  </button>
+                </div>
+              </div>
+            </div>
+          </el-col>
+        </el-row>
+
+        <div v-if="loading" class="loading-container">
+          <div class="loading-spinner">
+            <div class="spinner-ring"></div>
+          </div>
+          <p>加载中...</p>
         </div>
-      </div>
-    </header>
+      </section>
 
-    <section class="filter-section fade-in-up">
-      <div class="search-bar">
-        <el-input 
-          placeholder="搜索作品标题或作者..." 
-          v-model="searchQuery"
-          prefix-icon="el-icon-search"
-          clearable
-          class="animated-input"
-          @keyup.enter="loadCollections"
-        >
-        </el-input>
+      <!-- 分页 -->
+      <div class="pagination-section">
+        <el-pagination
+          :current-page="currentPage"
+          :page-size="pageSize"
+          :total="total"
+          @size-change="handleSizeChange"
+          @current-change="handleCurrentChange"
+          layout="total, sizes, prev, pager, next, jumper"
+          background
+        />
       </div>
-      
-      <div class="category-filters">
-        <span 
-          v-for="(cat, index) in categories" 
-          :key="cat.value"
-          :class="['filter-tag', { active: activeCategory === cat.value }]"
-          @click="activeCategory = cat.value; loadCollections()"
-          :style="{ animationDelay: `${index * 0.05 + 0.2}s` }"
-          class="stagger-fade-in"
-        >
-          {{ cat.label }}
-        </span>
-      </div>
-    </section>
 
-    <section class="works-section">
-      <el-empty v-if="collections.length === 0 && !loading" description="暂无收藏作品"></el-empty>
-      
-      <el-row :gutter="24">
-        <el-col 
-          :xs="24" :sm="12" :md="8" :lg="6" 
-          v-for="(collection, index) in collections" 
-          :key="collection.id"
-          class="stagger-fade-in"
-          :style="{ animationDelay: `${index * 0.1 + 0.3}s` }"
-        >
-          <el-card class="work-card" shadow="never" :body-style="{ padding: '0px' }">
-            <div class="cover-image" :style="{ backgroundColor: getCategoryColor(collection.work.category) }">
-              <img v-if="getThumbnailUrl(collection.work)" :src="getThumbnailUrl(collection.work)" :alt="collection.work.title" class="thumbnail-image">
-              <ModelThumbnail 
-                v-else-if="isModelFile(collection.work)" 
-                :model-url="`/api/File/download?fileName=${encodeURIComponent(collection.work.filePath)}`"
-                :background-color="getCategoryColor(collection.work.category)"
-                class="model-preview"
-              />
-              <div v-else class="thumbnail-placeholder">
-                <i class="el-icon-document"></i>
-                <span>{{ getFileExtension(collection.work) }}</span>
-              </div>
-              <span class="category-badge">{{ collection.work.category }}</span>
-              <div class="hover-overlay">
-                <el-button 
-                  type="primary" 
-                  circle 
-                  icon="el-icon-view"
-                  @click="handleViewWork(collection.work)"
-                ></el-button>
-              </div>
+      <!-- 详情对话框 -->
+      <el-dialog
+        title="作品详情"
+        :visible.sync="detailDialogVisible"
+        width="800px"
+        class="gallery-detail-dialog"
+        :close-on-click-modal="true"
+      >
+        <div v-if="currentWork" class="detail-content">
+          <div class="detail-preview">
+            <img v-if="getThumbnailUrl(currentWork)" :src="getThumbnailUrl(currentWork)" :alt="currentWork.title" class="detail-image">
+            <div v-else class="detail-placeholder" :style="{ backgroundColor: getCategoryColor(currentWork.category) }">
+              <i class="el-icon-document"></i>
+              <span>{{ getFileExtension(currentWork) }}</span>
             </div>
-            
-            <div class="work-info">
-              <h3 class="work-title">{{ collection.work.title }}</h3>
-              <p class="work-author">作者: {{ collection.work.uploadUserName || '未知作者' }}</p>
-              
-              <div class="work-stats">
-                <span><i class="el-icon-time"></i> {{ formatDate(collection.collectionDate) }}</span>
-                <span><i class="el-icon-folder-opened"></i> {{ collection.work.category }}</span>
-              </div>
+          </div>
+          <div class="detail-info">
+            <h2 class="detail-title">{{ currentWork.title }}</h2>
+            <div class="detail-author">
+              <i class="el-icon-user-solid"></i>
+              {{ currentWork.uploadUserName || '未知作者' }}
             </div>
-          </el-card>
-        </el-col>
-      </el-row>
-
-      <div v-if="loading" class="loading-container">
-        <el-spinner type="el-icon-loading" size="50px"></el-spinner>
-        <p>加载中...</p>
-      </div>
-    </section>
-
-    <div class="pagination-section">
-      <el-pagination
-        :current-page="currentPage"
-        :page-size="pageSize"
-        :total="total"
-        @size-change="handleSizeChange"
-        @current-change="handleCurrentChange"
-        layout="total, sizes, prev, pager, next, jumper"
-        background
-      />
+            <p class="detail-desc" v-if="currentWork.description">{{ currentWork.description }}</p>
+            <div class="detail-meta-row">
+              <span class="detail-meta"><i class="el-icon-date"></i> {{ formatDate(currentWork.uploadDate) }}</span>
+              <span class="detail-meta"><i class="el-icon-folder-opened"></i> {{ currentWork.category }}</span>
+            </div>
+            <div class="detail-actions">
+              <el-button type="primary" round @click="handleDownloadFile(currentWork)">
+                <i class="el-icon-download"></i> 下载文件
+              </el-button>
+            </div>
+          </div>
+        </div>
+      </el-dialog>
     </div>
-
-    <el-dialog
-      title="作品详情"
-      :visible.sync="detailDialogVisible"
-      width="800px"
-      class="modern-dialog"
-    >
-      <div v-if="currentWork" class="work-detail">
-        <h3>{{ currentWork.title }}</h3>
-        <div class="work-meta">
-          <span>作者：{{ currentWork.uploadUserName || '未知作者' }}</span>
-          <span>分类：{{ currentWork.category }}</span>
-          <span>上传时间：{{ formatDate(currentWork.uploadDate) }}</span>
-          <span>状态：
-            <el-tag :type="currentWork.status === '已发布' ? 'success' : 'info'">
-              {{ currentWork.status }}
-            </el-tag>
-          </span>
-        </div>
-        <div class="work-description">
-          <h4>作品描述</h4>
-          <p>{{ currentWork.description }}</p>
-        </div>
-        <div class="work-files">
-          <h4>作品文件</h4>
-          <el-button type="primary" size="small" @click="handleDownloadFile(currentWork)">下载文件</el-button>
-        </div>
-      </div>
-      <div slot="footer" class="dialog-footer">
-        <el-button @click="detailDialogVisible = false" round>关闭</el-button>
-      </div>
-    </el-dialog>
   </div>
 </template>
 
@@ -184,7 +215,6 @@ export default {
     async loadCollections() {
       this.loading = true
       try {
-        // 收藏列表接口需要登录；token 会由统一的 http 实例自动注入
         const response = await http.get('/api/Collection', {
           params: {
             search: this.searchQuery,
@@ -196,7 +226,6 @@ export default {
         this.collections = response.data.items || response.data
         this.total = response.data.total || this.collections.length
       } catch (error) {
-        // 统一提示：避免把技术细节暴露给用户
         this.$message.error(error.response?.data?.message || '加载收藏失败')
         console.error('加载收藏失败:', error)
       } finally {
@@ -213,7 +242,6 @@ export default {
         return
       }
       try {
-        // 通过后端下载接口获取文件流（相对路径 /api，由开发代理转发）
         http.get('/api/File/download', { params: { fileName: work.filePath }, responseType: 'blob' })
           .then(res => {
             const blob = res.data
@@ -258,36 +286,27 @@ export default {
       const date = new Date(dateStr)
       return date.toLocaleDateString('zh-CN')
     },
-    // 获取缩略图URL
     getThumbnailUrl(work) {
-      // 优先使用用户上传的预览图
       if (work.previewImage) {
         return `/api/File/download?fileName=${encodeURIComponent(work.previewImage)}`
       }
-      
       if (!work.filePath) return null
-      
       const fileName = work.filePath
       const extension = fileName.toLowerCase().substring(fileName.lastIndexOf('.'))
       const imageExtensions = ['.jpg', '.jpeg', '.png', '.gif', '.bmp', '.webp']
-      
       if (imageExtensions.includes(extension)) {
         return `/api/File/download?fileName=${encodeURIComponent(fileName)}`
       }
-      
       return null
     },
-    // 判断是否是模型文件
     isModelFile(work) {
       if (!work.filePath) return false
       const extension = work.filePath.toLowerCase().substring(work.filePath.lastIndexOf('.'))
       const modelExts = ['.json', '.obj', '.gltf', '.glb', '.fbx', '.dae']
       return modelExts.includes(extension)
     },
-    // 获取文件扩展名
     getFileExtension(work) {
       if (!work.filePath) return '文件'
-      
       const fileName = work.filePath
       const extension = fileName.toLowerCase().substring(fileName.lastIndexOf('.') + 1)
       return extension.toUpperCase()
@@ -297,311 +316,604 @@ export default {
 </script>
 
 <style scoped>
-/* 基础设置 */
-.favorites-container {
+/* ===== 全局容器 ===== */
+.favorites-page {
   min-height: 100vh;
-  background-color: #f8fafc;
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-  overflow-x: hidden;
+  background: var(--bg-page);
+  position: relative;
+  overflow: hidden;
 }
 
-/* 1. 顶部导航 (滑入动画) */
-.favorites-header {
-  display: flex;
-  justify-content: center;
-  padding: 0 40px;
-  height: 64px;
-  background-color: rgba(255,255,255,0.9);
-  backdrop-filter: blur(10px);
-  border-bottom: 1px solid rgba(0,0,0,0.05);
-  position: sticky;
-  top: 0;
-  z-index: 100;
+.ambient-glow {
+  position: fixed;
+  border-radius: 50%;
+  filter: blur(140px);
+  pointer-events: none;
+  z-index: 0;
+  opacity: 0.5;
 }
 
-.slide-down {
-  animation: slideDown 0.5s ease-out;
+.glow-top {
+  width: 500px;
+  height: 500px;
+  background: radial-gradient(circle, rgba(45, 138, 110, 0.1) 0%, transparent 70%);
+  top: -180px;
+  right: -120px;
+  animation: floatGlow 8s ease-in-out infinite alternate;
 }
 
-.header-content {
-  width: 100%;
+.glow-bottom {
+  width: 400px;
+  height: 400px;
+  background: radial-gradient(circle, rgba(200, 170, 110, 0.08) 0%, transparent 70%);
+  bottom: -120px;
+  left: -80px;
+  animation: floatGlow 10s ease-in-out infinite alternate-reverse;
+}
+
+@keyframes floatGlow {
+  0% { transform: translate(0, 0) scale(1); }
+  100% { transform: translate(30px, -20px) scale(1.1); }
+}
+
+.favorites-container {
+  position: relative;
+  z-index: 1;
   max-width: 1200px;
-  display: flex;
-  justify-content: space-between;
+  margin: 0 auto;
+  padding: 28px 24px 80px;
+}
+
+/* ===== Hero 区域 ===== */
+.favorites-hero {
+  position: relative;
+  background: linear-gradient(135deg, var(--primary-bg) 0%, #F7F4F0 40%, #FCFAF5 100%);
+  border-radius: var(--radius-xl);
+  padding: 48px 48px 40px;
+  margin-bottom: 28px;
+  overflow: hidden;
+  border: 1px solid var(--border-light);
+  box-shadow: var(--shadow-sm);
+}
+
+.hero-pattern {
+  position: absolute;
+  top: -80px;
+  right: -80px;
+  width: 400px;
+  height: 400px;
+  background:
+    radial-gradient(circle at 50% 40%, rgba(45, 138, 110, 0.05) 0%, transparent 60%),
+    radial-gradient(circle at 40% 60%, rgba(200, 170, 110, 0.04) 0%, transparent 60%);
+  border-radius: 50%;
+  pointer-events: none;
+  animation: pulseGlow 6s ease-in-out infinite alternate;
+}
+
+@keyframes pulseGlow {
+  0% { transform: scale(1); opacity: 0.6; }
+  100% { transform: scale(1.15); opacity: 1; }
+}
+
+.hero-content { position: relative; z-index: 1; }
+
+.hero-badge {
+  display: inline-flex;
   align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--primary);
+  background: rgba(45, 138, 110, 0.08);
+  padding: 6px 16px;
+  border-radius: var(--radius-full);
+  margin-bottom: 16px;
+  letter-spacing: 0.5px;
 }
 
-.logo-area { display: flex; align-items: center; gap: 12px; }
-.logo-icon { background: #0052D9; color: white; font-weight: bold; padding: 4px 8px; border-radius: 6px; }
-.system-title { font-size: 20px; font-weight: 600; color: #1a1a1a; margin: 0; }
-
-/* 2. 按钮悬停动画 */
-.refresh-btn {
-  transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
-}
-.refresh-btn:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 4px 12px rgba(0, 82, 217, 0.3);
+.badge-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--primary);
+  animation: dotPulse 2s ease-in-out infinite;
 }
 
-/* 3. 搜索与筛选 (上滑淡入) */
-.filter-section {
-  max-width: 1200px;
-  margin: 40px auto 32px;
-  padding: 0 24px;
+@keyframes dotPulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.4; }
+}
+
+.hero-title {
+  font-size: 40px;
+  font-weight: 800;
+  color: var(--text-main);
+  margin: 0 0 12px;
+  letter-spacing: -0.5px;
+}
+
+.hero-accent { color: var(--primary); }
+
+.hero-desc {
+  font-size: 15px;
+  color: var(--text-secondary);
+  margin: 0 0 28px;
+  line-height: 1.6;
+}
+
+.hero-stats {
   display: flex;
-  flex-direction: column;
   align-items: center;
   gap: 24px;
+  padding-top: 20px;
+  border-top: 1px solid rgba(0, 0, 0, 0.05);
 }
 
-.fade-in-up {
-  animation: fadeInUp 0.6s ease-out both;
+.hstat { display: flex; align-items: center; gap: 12px; }
+
+.hstat-icon-ring {
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  background: rgba(45, 138, 110, 0.08);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--primary);
+  font-size: 18px;
+  flex-shrink: 0;
 }
 
-/* 4. 输入框聚焦动画 */
-.search-bar { width: 100%; max-width: 600px; }
-::v-deep .animated-input .el-input__inner {
-  border-radius: 24px;
-  transition: all 0.3s ease;
-  box-shadow: 0 2px 8px rgba(0,0,0,0.02);
-}
-::v-deep .animated-input .el-input__inner:focus {
-  box-shadow: 0 4px 16px rgba(0, 82, 217, 0.15);
-  border-color: #0052D9;
-  transform: scale(1.02);
+.hstat-num { font-size: 18px; font-weight: 700; color: var(--text-main); }
+.hstat-label { font-size: 13px; color: var(--text-light); }
+
+.hstat-divider {
+  width: 1px;
+  height: 28px;
+  background: rgba(0, 0, 0, 0.06);
+  flex-shrink: 0;
 }
 
-/* 5. 分类标签 (交错加载 & 悬停) */
-.category-filters { display: flex; gap: 12px; flex-wrap: wrap; justify-content: center; }
-.filter-tag {
-  padding: 8px 20px;
-  border-radius: 20px;
-  background: #ffffff;
-  color: #666;
-  font-size: 14px;
+.hero-action {
+  margin-left: auto;
+  font-weight: 500;
+  border: 1px solid var(--border-color);
+  transition: all var(--duration-normal) var(--ease-out-expo);
+}
+
+.hero-action:hover {
+  border-color: var(--primary);
+  color: var(--primary);
+  background: var(--primary-bg);
+}
+
+/* ===== 筛选栏 ===== */
+.filter-bar {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 16px 20px;
+  margin-bottom: 28px;
+  flex-wrap: wrap;
+}
+
+.glass-card {
+  background: rgba(255, 255, 255, 0.82);
+  backdrop-filter: blur(16px) saturate(180%);
+  -webkit-backdrop-filter: blur(16px) saturate(180%);
+  border-radius: var(--radius-xl);
+  border: 1px solid rgba(232, 226, 216, 0.6);
+  box-shadow: var(--shadow-sm);
+}
+
+.search-bar { width: 240px; flex-shrink: 0; }
+
+.modern-search ::v-deep .el-input__inner {
+  border-radius: var(--radius-full);
+  border-color: transparent;
+  background: var(--bg-page);
+  font-size: 13px;
+  height: 38px;
+  transition: all var(--duration-normal) var(--ease-out-expo);
+}
+
+.modern-search ::v-deep .el-input__inner:focus {
+  background: white;
+  border-color: var(--primary);
+  box-shadow: 0 0 0 3px var(--primary-glow);
+}
+
+.filter-divider {
+  width: 1px;
+  height: 24px;
+  background: var(--border-light);
+  flex-shrink: 0;
+}
+
+.category-filters { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+
+.filter-chip {
+  font-size: 13px;
+  font-weight: 500;
+  padding: 7px 16px;
+  border-radius: var(--radius-full);
+  background: var(--bg-page);
+  color: var(--text-secondary);
   cursor: pointer;
-  transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
-  border: 1px solid #e4e7ed;
-  box-shadow: 0 2px 4px rgba(0,0,0,0.02);
-}
-.filter-tag:hover {
-  color: #0052D9;
-  border-color: #0052D9;
-  transform: translateY(-2px);
-  box-shadow: 0 4px 8px rgba(0,0,0,0.05);
-}
-.filter-tag.active {
-  background: #0052D9;
-  color: #ffffff;
-  border-color: #0052D9;
-  transform: scale(1.05);
+  transition: all var(--duration-normal) var(--ease-out-expo);
+  white-space: nowrap;
+  border: 1px solid transparent;
 }
 
-/* 6. 作品卡片 (交错上滑淡入 & 高级悬停) */
-.works-section { max-width: 1200px; margin: 0 auto; padding: 0 24px 60px; }
-
-.stagger-fade-in {
-  opacity: 0;
-  animation: fadeInUp 0.6s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+.filter-chip:hover {
+  color: var(--primary);
+  background: var(--primary-bg);
+  border-color: rgba(45, 138, 110, 0.15);
 }
+
+.filter-chip.active {
+  background: linear-gradient(135deg, var(--primary), var(--primary-light));
+  color: white;
+  border-color: transparent;
+  box-shadow: 0 4px 12px rgba(45, 138, 110, 0.3);
+}
+
+/* ===== 作品区域 ===== */
+.works-section { min-height: 400px; }
+
+.empty-state { padding: 80px 0; }
 
 .work-card {
-  margin-bottom: 24px;
-  border-radius: 12px;
+  border-radius: var(--radius-xl);
   overflow: hidden;
-  border: 1px solid rgba(0,0,0,0.05);
-  transition: all 0.4s cubic-bezier(0.165, 0.84, 0.44, 1);
-  background: white;
   cursor: pointer;
+  transition: all 0.4s var(--ease-out-expo);
+  padding: 0;
+  margin-bottom: 24px;
+  background: white;
 }
 
-/* 卡片整体悬停效果 */
 .work-card:hover {
-  transform: translateY(-8px);
-  box-shadow: 0 16px 32px rgba(0, 0, 0, 0.1);
+  transform: translateY(-6px);
+  box-shadow: var(--shadow-card-hover);
+  border-color: rgba(45, 138, 110, 0.2);
 }
 
 .cover-image {
-  height: 180px;
-  width: 100%;
   position: relative;
-  display: flex;
-  align-items: flex-start;
-  justify-content: flex-end;
-  padding: 12px;
+  width: 100%;
+  height: 200px;
   overflow: hidden;
+  background: linear-gradient(135deg, #F5F2EC, #EDE8DD);
 }
-
-.category-badge {
-  background: rgba(0, 0, 0, 0.5);
-  color: white;
-  font-size: 12px;
-  padding: 4px 10px;
-  border-radius: 12px;
-  backdrop-filter: blur(4px);
-  z-index: 2;
-}
-
-/* 卡片内部遮罩悬停动画 */
-.hover-overlay {
-  position: absolute;
-  top: 0; left: 0; width: 100%; height: 100%;
-  background: rgba(0, 82, 217, 0.2);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  opacity: 0;
-  transition: all 0.3s ease;
-  backdrop-filter: blur(2px);
-}
-
-.hover-overlay .el-button {
-  transform: scale(0.5);
-  transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-}
-
-.work-card:hover .hover-overlay { opacity: 1; }
-.work-card:hover .hover-overlay .el-button { transform: scale(1); }
 
 .thumbnail-image {
-  position: absolute;
-  top: 0;
-  left: 0;
   width: 100%;
   height: 100%;
   object-fit: cover;
-  transition: transform 0.5s ease;
+  transition: transform 0.5s var(--ease-out-expo);
 }
 
-.work-card:hover .thumbnail-image {
-  transform: scale(1.05);
-}
+.work-card:hover .thumbnail-image { transform: scale(1.06); }
+
+.model-preview { width: 100%; height: 100%; }
 
 .thumbnail-placeholder {
-  position: absolute;
-  top: 0;
-  left: 0;
   width: 100%;
   height: 100%;
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  color: rgba(0, 0, 0, 0.6);
-  transition: transform 0.5s ease;
+  gap: 10px;
+  color: rgba(255, 255, 255, 0.9);
+  font-size: 14px;
+  font-weight: 600;
+  transition: transform 0.5s var(--ease-out-expo);
 }
 
-.work-card:hover .thumbnail-placeholder {
-  transform: scale(1.05);
+.work-card:hover .thumbnail-placeholder { transform: scale(1.06); }
+
+.placeholder-circle {
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.25);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 26px;
 }
 
-.thumbnail-placeholder i {
-  font-size: 48px;
-  margin-bottom: 10px;
-}
-
-.model-preview {
+.category-badge {
   position: absolute;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  transition: transform 0.5s ease;
+  top: 12px;
+  left: 12px;
+  background: rgba(0, 0, 0, 0.55);
+  backdrop-filter: blur(8px);
+  color: white;
+  font-size: 11px;
+  font-weight: 600;
+  padding: 4px 12px;
+  border-radius: var(--radius-full);
+  letter-spacing: 0.5px;
+  z-index: 2;
 }
 
-.work-card:hover .model-preview {
-  transform: scale(1.05);
+.hover-overlay {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0;
+  transition: opacity 0.35s var(--ease-out-expo);
+  z-index: 3;
 }
 
-.work-info { padding: 16px; }
-.work-title { font-size: 16px; font-weight: 600; margin: 0 0 8px 0; color: #333; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; transition: color 0.3s; }
-.work-card:hover .work-title { color: #0052D9; }
-.work-author { font-size: 13px; color: #888; margin: 0 0 16px 0; }
-.work-stats { display: flex; gap: 16px; font-size: 13px; color: #999; }
-.work-stats span { display: flex; align-items: center; gap: 4px; }
+.work-card:hover .hover-overlay { opacity: 1; }
 
-/* 加载状态 */
+.overlay-bg {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(180deg, rgba(45, 138, 110, 0.15) 0%, rgba(0, 0, 0, 0.55) 100%);
+}
+
+.overlay-actions {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  gap: 14px;
+  transform: translateY(12px);
+  transition: transform 0.35s var(--ease-out-expo);
+}
+
+.work-card:hover .overlay-actions { transform: translateY(0); }
+
+.overlay-btn {
+  width: 46px;
+  height: 46px;
+  border-radius: 50%;
+  border: none;
+  cursor: pointer;
+  font-size: 18px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.25s var(--ease-out-expo);
+  color: white;
+}
+
+.view-btn { background: rgba(255, 255, 255, 0.2); backdrop-filter: blur(8px); }
+.view-btn:hover { background: var(--primary); transform: scale(1.1); }
+.download-btn { background: rgba(255, 255, 255, 0.2); backdrop-filter: blur(8px); }
+.download-btn:hover { background: var(--accent-strong); transform: scale(1.1); }
+
+.work-info { padding: 16px 18px 18px; }
+
+.work-title {
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--text-main);
+  margin: 0 0 6px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  line-height: 1.4;
+}
+
+.work-author { font-size: 13px; color: var(--text-light); margin: 0 0 11px; }
+
+.work-meta {
+  display: flex;
+  gap: 14px;
+  margin-bottom: 14px;
+}
+
+.meta-item {
+  font-size: 12px;
+  color: var(--text-light);
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.meta-item i { font-size: 13px; }
+
+.work-actions {
+  display: flex;
+  gap: 8px;
+  padding-top: 12px;
+  border-top: 1px solid var(--border-light);
+}
+
+.card-action-btn {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  padding: 8px 0;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border-color);
+  background: var(--surface);
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 500;
+  transition: all 0.25s var(--ease-out-expo);
+  color: var(--text-secondary);
+  font-family: var(--font-main);
+}
+
+.card-action-btn:hover {
+  border-color: var(--primary);
+  color: var(--primary);
+  background: var(--primary-bg);
+}
+
+.detail-action {
+  background: linear-gradient(135deg, var(--primary), var(--primary-light));
+  border-color: transparent;
+  color: white;
+  font-weight: 600;
+}
+
+.detail-action:hover {
+  box-shadow: 0 4px 12px rgba(45, 138, 110, 0.35);
+  color: white;
+  transform: translateY(-1px);
+}
+
+/* ===== 加载中 ===== */
 .loading-container {
   display: flex;
   flex-direction: column;
   align-items: center;
-  padding: 40px 0;
+  padding: 60px 0;
   gap: 16px;
+  color: var(--text-light);
+  font-size: 14px;
 }
 
-/* 分页区域 */
+.loading-spinner {
+  width: 44px;
+  height: 44px;
+}
+
+.spinner-ring {
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  border: 3px solid var(--border-light);
+  border-top-color: var(--primary);
+  animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* ===== 分页 ===== */
 .pagination-section {
-  max-width: 1200px;
-  margin: 0 auto 40px;
-  padding: 0 24px;
   display: flex;
   justify-content: center;
+  margin-top: 20px;
 }
 
-/* 对话框样式 */
-::v-deep .modern-dialog .el-dialog {
-  border-radius: 12px;
+/* ===== 详情对话框 ===== */
+::v-deep .gallery-detail-dialog {
+  border-radius: var(--radius-xl) !important;
   overflow: hidden;
 }
 
-::v-deep .modern-dialog .el-dialog__header {
-  background: #f8fafc;
+::v-deep .gallery-detail-dialog .el-dialog__header {
   padding: 20px 24px;
-  border-bottom: 1px solid #e4e7ed;
+  border-bottom: 1px solid var(--border-light);
 }
 
-::v-deep .modern-dialog .el-dialog__body {
-  padding: 24px;
+::v-deep .gallery-detail-dialog .el-dialog__body { padding: 0; }
+
+.detail-content {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  min-height: 300px;
 }
 
-.work-detail h3 {
-  margin: 0 0 16px 0;
-  color: #333;
+.detail-preview {
+  background: linear-gradient(135deg, #F5F2EC, #EDE8DD);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 300px;
+}
+
+.detail-image { width: 100%; height: 100%; object-fit: cover; }
+
+.detail-placeholder {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  color: rgba(255, 255, 255, 0.9);
+  font-size: 16px;
+  font-weight: 600;
+}
+
+.detail-placeholder i { font-size: 40px; }
+
+.detail-info { padding: 28px 24px; display: flex; flex-direction: column; }
+
+.detail-title {
   font-size: 20px;
+  font-weight: 700;
+  color: var(--text-main);
+  margin: 0 0 10px;
 }
 
-.work-meta {
+.detail-author {
+  font-size: 14px;
+  color: var(--text-secondary);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 14px;
+}
+
+.detail-desc {
+  font-size: 14px;
+  color: var(--text-regular);
+  line-height: 1.7;
+  margin: 0 0 auto;
+  flex: 1;
+  overflow-y: auto;
+}
+
+.detail-meta-row {
   display: flex;
   gap: 16px;
-  margin-bottom: 20px;
-  font-size: 14px;
-  color: #666;
+  padding: 14px 0;
+  border-top: 1px solid var(--border-light);
+  margin-top: 14px;
 }
 
-.work-description {
-  margin-bottom: 20px;
+.detail-meta {
+  font-size: 12px;
+  color: var(--text-light);
+  display: flex;
+  align-items: center;
+  gap: 4px;
 }
 
-.work-description h4 {
-  margin: 0 0 12px 0;
-  color: #333;
-  font-size: 16px;
-}
+.detail-actions { display: flex; gap: 10px; margin-top: 14px; }
 
-.work-description p {
-  color: #666;
-  line-height: 1.6;
-}
+/* ===== 动画 ===== */
+.fade-in-up { animation: fadeInUp 0.6s var(--ease-out-expo) both; }
 
-.work-files h4 {
-  margin: 0 0 12px 0;
-  color: #333;
-  font-size: 16px;
-}
-
-.dialog-footer {
-  text-align: right;
-}
-
-/* 关键帧定义 */
-@keyframes slideDown {
-  from { transform: translateY(-100%); opacity: 0; }
-  to { transform: translateY(0); opacity: 1; }
+.stagger-fade-in {
+  animation: fadeInUp 0.6s var(--ease-out-expo) both;
 }
 
 @keyframes fadeInUp {
-  from { transform: translateY(30px); opacity: 0; }
-  to { transform: translateY(0); opacity: 1; }
+  from { opacity: 0; transform: translateY(24px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* ===== 响应式 ===== */
+@media (max-width: 900px) {
+  .favorites-hero { padding: 32px 24px 28px; }
+  .hero-title { font-size: 28px; }
+  .hero-stats { flex-wrap: wrap; gap: 14px; }
+  .hero-action { margin-left: 0; }
+  .hstat-divider { display: none; }
+  .filter-bar { flex-direction: column; align-items: stretch; }
+  .search-bar { width: 100%; }
+  .filter-divider { display: none; }
+  .detail-content { grid-template-columns: 1fr; }
+  .detail-preview { min-height: 200px; }
+}
+
+@media (max-width: 480px) {
+  .favorites-container { padding: 16px 12px 60px; }
+  .favorites-hero { padding: 24px 16px 20px; border-radius: var(--radius-lg); }
+  .hero-title { font-size: 24px; }
+  .work-card { margin-bottom: 16px; }
 }
 </style>

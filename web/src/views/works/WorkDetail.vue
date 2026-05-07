@@ -1,140 +1,278 @@
 <template>
-  <div class="work-detail-container" v-loading="loading">
-    <template v-if="!loading && work">
-      <div class="back-link">
-        <el-button type="text" @click="$router.go(-1)" class="go-back-btn">
-          <i class="el-icon-arrow-left"></i> 返回
-        </el-button>
+  <div class="work-detail-page" v-loading="loading">
+    <!-- 环境光晕 -->
+    <div class="ambient-glow glow-green"></div>
+    <div class="ambient-glow glow-gold"></div>
+
+    <div class="work-detail-container" v-if="work && !loading">
+      <!-- 面包屑导航 -->
+      <div class="breadcrumb fade-in-up">
+        <div class="back-btn" @click="$router.go(-1)">
+          <i class="el-icon-arrow-left"></i>
+          <span>返回</span>
+        </div>
+        <el-breadcrumb separator-class="el-icon-arrow-right">
+          <el-breadcrumb-item :to="{ path: '/works/explore' }">作品展示</el-breadcrumb-item>
+          <el-breadcrumb-item>{{ work.title }}</el-breadcrumb-item>
+        </el-breadcrumb>
       </div>
 
-      <div class="detail-grid">
+      <!-- Hero 区域 -->
+      <div class="hero-section fade-in-up">
+        <div class="hero-pattern"></div>
+        <div class="hero-content">
+          <div class="hero-badge">
+            <el-tag size="small" effect="dark" class="status-tag">已发布</el-tag>
+            <span class="hero-category" v-if="work.category">{{ work.category }}</span>
+          </div>
+          <h1 class="hero-title">{{ work.title }}</h1>
+          <div class="hero-author">
+            <el-avatar :size="48" :src="work.authorAvatar ? `/api/File/download?fileName=${encodeURIComponent(work.authorAvatar)}` : ''" class="hero-avatar">
+              <i class="el-icon-user-solid"></i>
+            </el-avatar>
+            <div class="hero-author-info">
+              <span class="hero-author-name">{{ work.author || '匿名用户' }}</span>
+              <span class="hero-author-role">{{ translateRole(work.authorRole) }}</span>
+            </div>
+          </div>
+          <div class="hero-stats">
+            <div class="hero-stat-item">
+              <div class="stat-icon-ring">
+                <i class="el-icon-view"></i>
+              </div>
+              <div class="stat-info">
+                <span class="stat-number">{{ work.viewCount || 0 }}</span>
+                <span class="stat-unit">次浏览</span>
+              </div>
+            </div>
+            <div class="hero-stat-divider"></div>
+            <div class="hero-stat-item">
+              <div class="stat-icon-ring">
+                <i class="el-icon-star-off"></i>
+              </div>
+              <div class="stat-info">
+                <span class="stat-number">{{ work.favoriteCount || 0 }}</span>
+                <span class="stat-unit">人收藏</span>
+              </div>
+            </div>
+            <div class="hero-stat-divider"></div>
+            <div class="hero-stat-item">
+              <div class="stat-icon-ring">
+                <i class="el-icon-date"></i>
+              </div>
+              <div class="stat-info">
+                <span class="stat-number">{{ formatDate(work.createdAt) }}</span>
+                <span class="stat-unit">发布</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 主内容区：两栏布局 -->
+      <div class="detail-body fade-in-up" style="animation-delay: 0.15s">
+        <!-- 左栏：预览 + 描述 -->
         <div class="detail-main">
-          <div class="work-preview">
-            <el-image
-              :src="work.coverImage ? `/api/File/download?fileName=${encodeURIComponent(work.coverImage)}` : ''"
-              fit="cover"
-              class="cover-image"
-              v-if="work.coverImage"
-            >
-              <div slot="error" class="image-slot">
+          <!-- 作品预览 -->
+          <div class="preview-card glass-card">
+            <div class="card-header">
+              <div class="card-header-icon">
                 <i class="el-icon-picture-outline"></i>
               </div>
-            </el-image>
-            <div class="file-actions">
-              <el-button type="primary" size="small" @click="downloadWork">
-                <i class="el-icon-download"></i> 下载源文件
+              <span>作品预览</span>
+            </div>
+            <div class="preview-container">
+              <el-image
+                :src="work.coverImage ? `/api/File/download?fileName=${encodeURIComponent(work.coverImage)}` : ''"
+                fit="cover"
+                class="preview-image"
+                v-if="work.coverImage"
+              >
+                <div slot="error" class="preview-placeholder">
+                  <div class="placeholder-icon">
+                    <i class="el-icon-picture-outline"></i>
+                  </div>
+                  <span>暂无预览图</span>
+                </div>
+              </el-image>
+              <div v-else class="preview-placeholder">
+                <div class="placeholder-icon">
+                  <i class="el-icon-picture-outline"></i>
+                </div>
+                <span>暂无预览图</span>
+              </div>
+            </div>
+            <div class="file-action-bar">
+              <div class="file-meta-info">
+                <span class="file-meta-item" v-if="work.fileName">
+                  <i class="el-icon-document"></i>
+                  {{ work.fileName }}
+                </span>
+                <span class="file-meta-item" v-if="work.fileSize">
+                  <i class="el-icon-s-data"></i>
+                  {{ formatFileSize(work.fileSize) }}
+                </span>
+              </div>
+              <el-button
+                type="primary"
+                size="small"
+                round
+                icon="el-icon-download"
+                @click="downloadWork"
+                class="download-btn"
+              >
+                下载源文件
               </el-button>
             </div>
           </div>
 
-          <div class="work-meta">
-            <h1 class="work-title">{{ work.title }}</h1>
-            <div class="work-tags">
-              <el-tag size="small" type="info" v-if="work.category">{{ work.category }}</el-tag>
-              <el-tag size="small" v-for="tag in work.tags" :key="tag" class="tag-item">{{ tag }}</el-tag>
+          <!-- 操作按钮 -->
+          <div class="action-bar">
+            <el-button
+              :type="isFavorited ? 'warning' : 'default'"
+              :icon="isFavorited ? 'el-icon-star-on' : 'el-icon-star-off'"
+              @click="toggleFavorite"
+              :loading="favLoading"
+              round
+              :class="['fav-btn', { 'is-fav': isFavorited }]"
+            >
+              {{ isFavorited ? '已收藏' : '收藏作品' }}
+            </el-button>
+            <el-button
+              v-if="!isOwner"
+              type="danger"
+              plain
+              round
+              icon="el-icon-warning-outline"
+              @click="showReportDialog = true"
+              class="report-btn"
+            >
+              举报作品
+            </el-button>
+            <el-button
+              v-if="work.authorProfilePublic"
+              type="primary"
+              plain
+              round
+              icon="el-icon-user"
+              @click="goToAuthorProfile"
+              class="profile-btn"
+            >
+              查看作者主页
+            </el-button>
+          </div>
+
+          <!-- 作品描述 -->
+          <div class="description-card glass-card">
+            <div class="card-header">
+              <div class="card-header-icon">
+                <i class="el-icon-document-copy"></i>
+              </div>
+              <span>作品描述</span>
             </div>
-            <p class="work-description">{{ work.description }}</p>
+            <div class="description-content">
+              <p v-if="work.description">{{ work.description }}</p>
+              <div v-else class="description-empty">
+                <i class="el-icon-edit-outline"></i>
+                <span>作者还没有添加作品描述</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- 标签 -->
+          <div class="tags-card glass-card" v-if="work.tags && work.tags.length > 0">
+            <div class="card-header">
+              <div class="card-header-icon">
+                <i class="el-icon-collection-tag"></i>
+              </div>
+              <span>作品标签</span>
+            </div>
+            <div class="tags-list">
+              <el-tag
+                v-for="tag in work.tags"
+                :key="tag"
+                size="small"
+                class="work-tag"
+                effect="plain"
+              >{{ tag }}</el-tag>
+            </div>
           </div>
         </div>
 
+        <!-- 右栏：作者信息 -->
         <div class="detail-sidebar">
-          <div class="author-card">
-            <el-avatar :size="48" :src="work.authorAvatar ? `/api/File/download?fileName=${encodeURIComponent(work.authorAvatar)}` : ''" class="author-avatar">
+          <div class="author-card glass-card">
+            <div class="author-card-bg"></div>
+            <el-avatar :size="72" :src="work.authorAvatar ? `/api/File/download?fileName=${encodeURIComponent(work.authorAvatar)}` : ''" class="author-avatar-large">
               <i class="el-icon-user-solid"></i>
             </el-avatar>
-            <div class="author-info">
-              <div class="author-name">{{ work.author }}</div>
-              <div class="author-role">{{ translateRole(work.authorRole) }}</div>
+            <h3 class="author-card-name">{{ work.author || '匿名用户' }}</h3>
+            <span class="author-card-role">{{ translateRole(work.authorRole) }}</span>
+            <div class="author-card-divider"></div>
+            <div class="author-card-stats">
+              <div class="author-stat">
+                <span class="author-stat-num">{{ work.viewCount || 0 }}</span>
+                <span class="author-stat-label">作品浏览</span>
+              </div>
+              <div class="author-stat">
+                <span class="author-stat-num">{{ work.favoriteCount || 0 }}</span>
+                <span class="author-stat-label">被收藏</span>
+              </div>
             </div>
-            <el-button 
-              v-if="work.authorProfilePublic" 
-              type="primary" 
-              size="small" 
-              @click="goToAuthorProfile"
-              class="view-profile-btn"
-            >
-              <i class="el-icon-user"></i> 查看主页
-            </el-button>
-          </div>
-
-          <div class="stat-card">
-            <div class="stat-item">
-              <i class="el-icon-view"></i>
-              <span>{{ work.viewCount || 0 }} 次浏览</span>
-            </div>
-            <div class="stat-item">
-              <i class="el-icon-star-off"></i>
-              <span>{{ work.favoriteCount || 0 }} 人收藏</span>
-            </div>
-            <div class="stat-item">
-              <i class="el-icon-date"></i>
-              <span>{{ formatDate(work.createdAt) }}</span>
-            </div>
-          </div>
-
-          <div class="action-card">
-            <el-button
-              :type="isFavorited ? 'warning' : 'default'"
-              @click="toggleFavorite"
-              :loading="favLoading"
-              class="fav-btn"
-            >
-              <i :class="isFavorited ? 'el-icon-star-on' : 'el-icon-star-off'"></i>
-              {{ isFavorited ? '已收藏' : '收藏作品' }}
-            </el-button>
-            <el-button type="danger" plain size="small" @click="showReportDialog = true" v-if="!isOwner">
-              举报作品
-            </el-button>
           </div>
         </div>
       </div>
 
+      <!-- 举报对话框 -->
       <el-dialog
         title="举报作品"
         :visible.sync="showReportDialog"
-        width="420px"
-        class="modern-dialog"
+        width="440px"
+        class="report-dialog"
+        :close-on-click-modal="false"
       >
-        <el-form label-width="80px">
-          <el-form-item label="举报原因">
-            <el-input
-              type="textarea"
-              v-model="reportReason"
-              :rows="3"
-              placeholder="请描述举报原因..."
-            ></el-input>
-          </el-form-item>
-        </el-form>
+        <div class="report-form">
+          <div class="report-icon">
+            <i class="el-icon-warning-outline"></i>
+          </div>
+          <p class="report-desc">请描述您举报该作品的原因，我们会尽快审核处理。</p>
+          <el-form label-width="0">
+            <el-form-item>
+              <el-input
+                v-model="reportReason"
+                type="textarea"
+                :rows="4"
+                placeholder="请详细描述举报原因..."
+                class="report-textarea"
+              ></el-input>
+            </el-form-item>
+          </el-form>
+        </div>
         <span slot="footer" class="dialog-footer">
-          <el-button @click="showReportDialog = false">取消</el-button>
-          <el-button type="primary" @click="submitReport" :loading="reportLoading">提交举报</el-button>
+          <el-button @click="showReportDialog = false" round>取消</el-button>
+          <el-button type="primary" @click="submitReport" round>提交举报</el-button>
         </span>
       </el-dialog>
-    </template>
+    </div>
 
-    <template v-if="!loading && error">
-      <div class="error-state">
-        <i class="el-icon-warning-outline"></i>
-        <p>{{ error }}</p>
-        <el-button type="primary" @click="$router.push('/works/explore')">返回作品探索</el-button>
-      </div>
-    </template>
+    <el-empty v-else-if="!loading" description="作品不存在" class="empty-state"></el-empty>
   </div>
 </template>
 
 <script>
+import http from '../../utils/http'
+import { getUser } from '../../utils/auth'
+
 export default {
   name: 'WorkDetail',
   data() {
     return {
       work: null,
-      loading: true,
-      error: '',
+      loading: false,
       isFavorited: false,
       favLoading: false,
       showReportDialog: false,
       reportReason: '',
-      reportLoading: false
     }
   },
   computed: {
@@ -142,280 +280,796 @@ export default {
       return this.$route.params.id
     },
     isOwner() {
-      const userInfo = JSON.parse(localStorage.getItem('userInfo') || '{}')
-      return userInfo.username === this.work?.author
+      const user = getUser()
+      return user && this.work && user.id === this.work.userId
     }
   },
+  mounted() {
+    this.loadDetail()
+  },
   methods: {
-    async fetchWorkDetail() {
+    async loadDetail() {
       this.loading = true
-      this.error = ''
       try {
-        const res = await this.$http.get(`/api/Work/${this.workId}`)
-        const data = res.data
-        // 映射后端返回的字段
-        this.work = {
-          ...data,
-          author: data.uploadUserName || data.author,
-          authorRole: data.uploadUserRole || data.authorRole,
-          authorProfilePublic: data.uploadUserProfilePublic || data.authorProfilePublic,
-          authorAvatar: data.uploadUserAvatar || data.authorAvatar,
-          userId: data.UserId || data.userId,
-          coverImage: data.PreviewImage || data.coverImage,
-          createdAt: data.UploadDate || data.createdAt,
-          fileName: data.FileName || data.fileName
-        }
-
-        // 增加浏览量
-        await this.$http.post(`/api/Work/${this.workId}/view`).catch(() => {})
-
-        // 检查收藏状态
-        this.checkFavoriteStatus()
-      } catch (err) {
-        this.error = '作品不存在或已被删除'
+        const { data } = await http.get(`/api/Work/${this.workId}`)
+        this.work = data
+        await this.checkFavorite()
+      } catch (e) {
+        this.$message.error('加载失败')
       } finally {
         this.loading = false
       }
     },
-    goToAuthorProfile() {
-      this.$router.push(`/profile/${this.work.userId}`)
-    },
-    async checkFavoriteStatus() {
+    async checkFavorite() {
       try {
-        const res = await this.$http.get(`/api/Collection/check/${this.workId}`)
-        this.isFavorited = res.data?.isFavorited || false
-      } catch {
-        // ignore
-      }
+        const { data } = await http.get(`/api/Work/${this.workId}/is-favorite`)
+        this.isFavorited = data.isFavorite
+      } catch (e) { /* silent */ }
     },
     async toggleFavorite() {
       this.favLoading = true
       try {
-        const res = await this.$http.post(`/api/Collection/toggle/${this.workId}`)
-        this.isFavorited = res.data?.isFavorited || !this.isFavorited
-        this.$message.success(this.isFavorited ? '已收藏' : '已取消收藏')
-      } catch {
-        this.$message.error('操作失败，请重试')
+        if (this.isFavorited) {
+          await http.delete(`/api/Work/${this.workId}/favorite`)
+          this.isFavorited = false
+          this.work.favoriteCount = Math.max(0, (this.work.favoriteCount || 0) - 1)
+          this.$message.success('已取消收藏')
+        } else {
+          await http.post(`/api/Work/${this.workId}/favorite`)
+          this.isFavorited = true
+          this.work.favoriteCount = (this.work.favoriteCount || 0) + 1
+          this.$message.success('已收藏')
+        }
+      } catch (e) {
+        this.$message.error('操作失败')
       } finally {
         this.favLoading = false
       }
     },
     downloadWork() {
-      if (this.work.fileName) {
-        window.open(`/api/File/download?fileName=${encodeURIComponent(this.work.fileName)}`, '_blank')
-      } else {
-        this.$message.warning('该作品暂无源文件')
+      if (!this.work.filePath) {
+        this.$message.error('无文件可下载')
+        return
       }
+      http.get('/api/File/download', { params: { fileName: this.work.filePath }, responseType: 'blob' })
+        .then(res => {
+          const url = URL.createObjectURL(res.data)
+          const a = document.createElement('a')
+          a.href = url
+          a.download = this.work.fileName || 'work'
+          a.click()
+          URL.revokeObjectURL(url)
+        })
+        .catch(() => {
+          this.$message.error('下载失败')
+        })
+    },
+    goToAuthorProfile() {
+      this.$router.push(`/profile/${this.work.userId}`)
+    },
+    formatDate(date) {
+      if (!date) return ''
+      return new Date(date).toLocaleDateString('zh-CN', { year: 'numeric', month: '2-digit', day: '2-digit' })
+    },
+    formatFileSize(bytes) {
+      if (!bytes) return ''
+      const units = ['B', 'KB', 'MB', 'GB']
+      let i = 0
+      let size = bytes
+      while (size >= 1024 && i < units.length - 1) { size /= 1024; i++ }
+      return size.toFixed(i === 0 ? 0 : 1) + ' ' + units[i]
+    },
+    translateRole(role) {
+      const map = { Student: '学生', Teacher: '教师', Admin: '管理员' }
+      return map[role] || role || ''
     },
     async submitReport() {
       if (!this.reportReason.trim()) {
-        this.$message.warning('请填写举报原因')
+        this.$message.warning('请输入举报原因')
         return
       }
-      this.reportLoading = true
       try {
-        await this.$http.post('/api/ContentModeration/report', {
-          workId: this.workId,
-          reason: this.reportReason
-        })
-        this.$message.success('举报已提交，我们会尽快处理')
+        await http.post(`/api/Work/${this.workId}/report`, { reason: this.reportReason })
+        this.$message.success('举报已提交')
         this.showReportDialog = false
         this.reportReason = ''
-      } catch {
-        this.$message.error('举报提交失败，请重试')
-      } finally {
-        this.reportLoading = false
+      } catch (e) {
+        this.$message.error('举报失败')
       }
-    },
-    translateRole(role) {
-      const map = { Admin: '管理员', Teacher: '教师', Student: '学生' }
-      return map[role] || role
-    },
-    formatDate(dateStr) {
-      if (!dateStr) return ''
-      const d = new Date(dateStr)
-      return d.toLocaleDateString('zh-CN', { year: 'numeric', month: '2-digit', day: '2-digit' })
-    }
-  },
-  mounted() {
-    this.fetchWorkDetail()
-  },
-  watch: {
-    '$route.params.id'() {
-      this.fetchWorkDetail()
     }
   }
 }
 </script>
 
 <style scoped>
-.work-detail-container {
-  max-width: 1100px;
-  margin: 0 auto;
-  padding: 0 16px;
-}
-
-.back-link {
-  margin-bottom: 20px;
-}
-
-.go-back-btn {
-  font-size: 14px;
-  color: #4e5969;
-}
-
-.detail-grid {
-  display: grid;
-  grid-template-columns: 1fr 320px;
-  gap: 24px;
-}
-
-.detail-main {
-  background: #ffffff;
-  border-radius: 12px;
+/* ================= 全局容器 ================= */
+.work-detail-page {
+  min-height: 100vh;
+  background: var(--bg-page);
+  position: relative;
   overflow: hidden;
-  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.04);
-  border: 1px solid #e5e6eb;
 }
 
-.cover-image {
-  width: 100%;
-  height: 400px;
-  display: block;
+/* ── 环境光晕 ── */
+.ambient-glow {
+  position: fixed;
+  border-radius: 50%;
+  filter: blur(120px);
+  pointer-events: none;
+  z-index: 0;
+  opacity: 0.5;
 }
 
-.image-slot {
-  width: 100%;
+.glow-green {
+  width: 500px;
+  height: 500px;
+  background: radial-gradient(circle, rgba(45, 138, 110, 0.12) 0%, transparent 70%);
+  top: -150px;
+  right: -100px;
+  animation: floatGlow 8s ease-in-out infinite alternate;
+}
+
+.glow-gold {
+  width: 400px;
   height: 400px;
+  background: radial-gradient(circle, rgba(200, 170, 110, 0.1) 0%, transparent 70%);
+  bottom: -100px;
+  left: -80px;
+  animation: floatGlow 10s ease-in-out infinite alternate-reverse;
+}
+
+@keyframes floatGlow {
+  0% { transform: translate(0, 0) scale(1); }
+  100% { transform: translate(30px, -20px) scale(1.1); }
+}
+
+/* ================= 面包屑 ================= */
+.work-detail-container {
+  position: relative;
+  z-index: 1;
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 28px 24px 80px;
+}
+
+.breadcrumb {
   display: flex;
   align-items: center;
-  justify-content: center;
-  background: #f5f7fa;
-  font-size: 48px;
-  color: #c0c4cc;
+  gap: 16px;
+  margin-bottom: 24px;
 }
 
-.file-actions {
-  padding: 16px 24px;
-  border-bottom: 1px solid #f0f0f0;
-}
-
-.work-meta {
-  padding: 24px;
-}
-
-.work-title {
-  font-size: 24px;
-  font-weight: 600;
-  color: #1d2129;
-  margin: 0 0 16px 0;
-}
-
-.work-tags {
+.back-btn {
   display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
+  align-items: center;
+  gap: 6px;
+  font-size: 14px;
+  color: var(--text-light);
+  cursor: pointer;
+  padding: 6px 14px;
+  border-radius: var(--radius-full);
+  background: var(--bg-card);
+  border: 1px solid var(--border-light);
+  transition: all var(--duration-normal) var(--ease-out-expo);
+  font-weight: 500;
+}
+
+.back-btn:hover {
+  color: var(--primary);
+  border-color: var(--primary);
+  background: var(--primary-bg);
+  transform: translateX(-2px);
+}
+
+/* ================= Hero 区域 ================= */
+.hero-section {
+  position: relative;
+  background: linear-gradient(135deg, var(--primary-bg) 0%, #F7F4F0 40%, #FCFAF5 100%);
+  border-radius: var(--radius-xl);
+  padding: 48px 48px 40px;
+  margin-bottom: 32px;
+  overflow: hidden;
+  border: 1px solid var(--border-light);
+  box-shadow: var(--shadow-sm);
+}
+
+.hero-pattern {
+  position: absolute;
+  top: -60px;
+  right: -60px;
+  width: 360px;
+  height: 360px;
+  background:
+    radial-gradient(circle at 60% 40%, rgba(45, 138, 110, 0.06) 0%, transparent 60%),
+    radial-gradient(circle at 40% 60%, rgba(200, 170, 110, 0.05) 0%, transparent 60%);
+  border-radius: 50%;
+  pointer-events: none;
+  animation: pulseGlow 6s ease-in-out infinite alternate;
+}
+
+@keyframes pulseGlow {
+  0% { transform: scale(1); opacity: 0.6; }
+  100% { transform: scale(1.15); opacity: 1; }
+}
+
+.hero-content {
+  position: relative;
+  z-index: 1;
+}
+
+.hero-badge {
+  display: flex;
+  align-items: center;
+  gap: 12px;
   margin-bottom: 20px;
 }
 
-.tag-item {
-  margin-left: 0;
+.status-tag {
+  background: var(--primary) !important;
+  border-color: var(--primary) !important;
+  font-weight: 600;
+  letter-spacing: 0.5px;
+  border-radius: var(--radius-xs);
 }
 
-.work-description {
-  font-size: 14px;
-  color: #4e5969;
-  line-height: 1.8;
-  white-space: pre-wrap;
-  margin: 0;
+.hero-category {
+  font-size: 13px;
+  color: var(--primary);
+  background: rgba(45, 138, 110, 0.08);
+  padding: 4px 14px;
+  border-radius: var(--radius-full);
+  font-weight: 600;
 }
 
-.detail-sidebar {
-  display: flex;
-  flex-direction: column;
-  gap: 16px;
+.hero-title {
+  font-size: 36px;
+  font-weight: 800;
+  color: var(--text-main);
+  margin: 0 0 28px;
+  line-height: 1.25;
+  letter-spacing: -0.5px;
 }
 
-.author-card,
-.stat-card,
-.action-card {
-  background: #ffffff;
-  border-radius: 12px;
-  padding: 20px;
-  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.04);
-  border: 1px solid #e5e6eb;
-}
-
-.author-card {
+.hero-author {
   display: flex;
   align-items: center;
-  gap: 14px;
+  gap: 16px;
+  margin-bottom: 28px;
 }
 
-.author-avatar {
-  background-color: #165dff;
+.hero-avatar {
+  border: 3px solid rgba(45, 138, 110, 0.2);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.06);
 }
 
-.author-info {
-  flex: 1;
-}
-
-.author-name {
-  font-size: 15px;
-  font-weight: 600;
-  color: #1d2129;
-}
-
-.author-role {
-  font-size: 12px;
-  color: #86909c;
-  margin-top: 4px;
-}
-
-.view-profile-btn {
-  margin-left: auto;
-}
-
-.stat-card {
+.hero-author-info {
   display: flex;
   flex-direction: column;
+  gap: 4px;
+}
+
+.hero-author-name {
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--text-main);
+}
+
+.hero-author-role {
+  font-size: 13px;
+  color: var(--text-light);
+}
+
+.hero-stats {
+  display: flex;
+  align-items: center;
+  gap: 24px;
+  padding: 20px 0 0;
+  border-top: 1px solid rgba(0, 0, 0, 0.05);
+}
+
+.hero-stat-item {
+  display: flex;
+  align-items: center;
   gap: 12px;
 }
 
-.stat-item {
+.stat-icon-ring {
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  background: rgba(45, 138, 110, 0.08);
   display: flex;
   align-items: center;
-  gap: 8px;
-  font-size: 13px;
-  color: #4e5969;
+  justify-content: center;
+  color: var(--primary);
+  font-size: 18px;
+  flex-shrink: 0;
 }
 
-.stat-item i {
-  color: #165dff;
-  font-size: 16px;
-}
-
-.action-card {
+.stat-info {
   display: flex;
   flex-direction: column;
+}
+
+.stat-number {
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--text-main);
+  line-height: 1.2;
+}
+
+.stat-unit {
+  font-size: 12px;
+  color: var(--text-light);
+}
+
+.hero-stat-divider {
+  width: 1px;
+  height: 32px;
+  background: rgba(0, 0, 0, 0.06);
+  flex-shrink: 0;
+}
+
+/* ================= 主内容两栏 ================= */
+.detail-body {
+  display: grid;
+  grid-template-columns: 1fr 320px;
+  gap: 28px;
+  align-items: start;
+}
+
+.detail-main {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+/* ── 玻璃卡片 ── */
+.glass-card {
+  background: var(--bg-glass);
+  backdrop-filter: blur(16px) saturate(180%);
+  -webkit-backdrop-filter: blur(16px) saturate(180%);
+  border-radius: var(--radius-xl);
+  border: 1px solid rgba(232, 226, 216, 0.6);
+  box-shadow: var(--shadow-sm);
+  padding: 24px;
+  transition: all var(--duration-normal) var(--ease-out-expo);
+}
+
+.glass-card:hover {
+  box-shadow: var(--shadow-card);
+  border-color: rgba(45, 138, 110, 0.15);
+}
+
+.card-header {
+  display: flex;
+  align-items: center;
   gap: 10px;
+  margin-bottom: 20px;
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--text-main);
+}
+
+.card-header-icon {
+  width: 32px;
+  height: 32px;
+  border-radius: var(--radius-sm);
+  background: linear-gradient(135deg, var(--primary-bg), rgba(45, 138, 110, 0.1));
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--primary);
+  font-size: 14px;
+}
+
+/* ── 预览卡片 ── */
+.preview-card {
+  padding: 0;
+  overflow: hidden;
+}
+
+.preview-card .card-header {
+  padding: 20px 24px 0;
+}
+
+.preview-container {
+  padding: 0 24px;
+}
+
+.preview-image {
+  width: 100%;
+  height: 360px;
+  border-radius: var(--radius-md);
+  overflow: hidden;
+  background: var(--bg-hover);
+}
+
+.preview-image ::v-deep .el-image__inner {
+  object-fit: cover;
+}
+
+.preview-placeholder {
+  width: 100%;
+  height: 360px;
+  background: linear-gradient(135deg, #F5F2EC 0%, #EDE8DD 100%);
+  border-radius: var(--radius-md);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  color: var(--text-placeholder);
+}
+
+.placeholder-icon {
+  width: 72px;
+  height: 72px;
+  border-radius: 50%;
+  background: rgba(0, 0, 0, 0.04);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 32px;
+}
+
+.file-action-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 24px 20px;
+  border-top: 1px solid var(--border-light);
+  margin-top: 16px;
+}
+
+.file-meta-info {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  flex: 1;
+  min-width: 0;
+}
+
+.file-meta-item {
+  font-size: 13px;
+  color: var(--text-secondary);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.file-meta-item i {
+  color: var(--primary);
+  font-size: 14px;
+}
+
+.download-btn {
+  flex-shrink: 0;
+  font-weight: 600;
+  background: linear-gradient(135deg, var(--primary) 0%, var(--primary-light) 100%);
+  border: none;
+  box-shadow: 0 4px 14px rgba(45, 138, 110, 0.3);
+  padding: 10px 24px;
+  transition: all var(--duration-normal) var(--ease-out-expo);
+}
+
+.download-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 24px rgba(45, 138, 110, 0.4);
+}
+
+.download-btn ::v-deep span {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+/* ── 操作栏 ── */
+.action-bar {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
 }
 
 .fav-btn {
-  width: 100%;
+  font-weight: 600;
+  transition: all var(--duration-normal) var(--ease-out-expo);
 }
 
-.error-state {
+.fav-btn.is-fav {
+  background: linear-gradient(135deg, #F09342, #FFB74D);
+  border-color: transparent;
+  color: white;
+}
+
+.fav-btn.is-fav:hover {
+  background: linear-gradient(135deg, #E08532, #F0A835);
+}
+
+.report-btn {
+  font-weight: 500;
+}
+
+.profile-btn {
+  font-weight: 500;
+}
+
+/* ── 描述卡片 ── */
+.description-content {
+  font-size: 15px;
+  line-height: 1.8;
+  color: var(--text-regular);
+  white-space: pre-wrap;
+}
+
+.description-content p {
+  margin: 0;
+}
+
+.description-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  padding: 32px 0;
+  color: var(--text-placeholder);
+  font-size: 14px;
+}
+
+.description-empty i {
+  font-size: 32px;
+  opacity: 0.5;
+}
+
+/* ── 标签卡片 ── */
+.tags-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.work-tag {
+  background: var(--primary-bg) !important;
+  border-color: rgba(45, 138, 110, 0.15) !important;
+  color: var(--primary) !important;
+  font-weight: 500;
+  border-radius: var(--radius-full);
+  padding: 6px 16px;
+}
+
+/* ================= 侧边栏 ================= */
+.detail-sidebar {
+  position: sticky;
+  top: 24px;
+}
+
+.author-card {
+  position: relative;
+  overflow: hidden;
   text-align: center;
-  padding: 80px 24px;
-  color: #86909c;
-  font-size: 16px;
+  padding: 32px 24px 24px;
 }
 
-.error-state i {
-  font-size: 56px;
-  display: block;
-  margin-bottom: 16px;
-  color: #c0c4cc;
+.author-card-bg {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 100px;
+  background: linear-gradient(135deg, var(--primary-bg) 0%, rgba(200, 170, 110, 0.1) 100%);
+  pointer-events: none;
+}
+
+.author-avatar-large {
+  position: relative;
+  z-index: 1;
+  border: 4px solid white;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08);
+  margin-bottom: 12px;
+}
+
+.author-card-name {
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--text-main);
+  margin: 0 0 4px;
+}
+
+.author-card-role {
+  font-size: 13px;
+  color: var(--text-light);
+  background: var(--primary-bg);
+  padding: 3px 14px;
+  border-radius: var(--radius-full);
+  display: inline-block;
+  font-weight: 500;
+}
+
+.author-card-divider {
+  height: 1px;
+  background: var(--border-light);
+  margin: 20px 0;
+}
+
+.author-card-stats {
+  display: flex;
+  justify-content: center;
+  gap: 32px;
+}
+
+.author-stat {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+}
+
+.author-stat-num {
+  font-size: 22px;
+  font-weight: 700;
+  color: var(--primary);
+}
+
+.author-stat-label {
+  font-size: 12px;
+  color: var(--text-light);
+}
+
+/* ================= 举报对话框 ================= */
+::v-deep .report-dialog {
+  border-radius: var(--radius-xl) !important;
+  overflow: hidden;
+}
+
+::v-deep .report-dialog .el-dialog__header {
+  padding: 28px 32px 0;
+  font-weight: 700;
+  font-size: 18px;
+  color: var(--text-main);
+}
+
+::v-deep .report-dialog .el-dialog__body {
+  padding: 16px 32px;
+}
+
+::v-deep .report-dialog .el-dialog__footer {
+  padding: 16px 32px 28px;
+}
+
+.report-form {
+  text-align: center;
+}
+
+.report-icon {
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #FEF0F0, #FDE8E8);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0 auto 16px;
+  font-size: 26px;
+  color: var(--danger);
+}
+
+.report-desc {
+  font-size: 14px;
+  color: var(--text-secondary);
+  line-height: 1.6;
+  margin: 0 0 20px;
+}
+
+.report-textarea ::v-deep .el-textarea__inner {
+  border-radius: var(--radius-md);
+  background: var(--bg-page);
+  border-color: var(--border-color);
+  font-size: 14px;
+  resize: none;
+  transition: all var(--duration-normal) var(--ease-out-expo);
+}
+
+.report-textarea ::v-deep .el-textarea__inner:focus {
+  border-color: var(--danger);
+  box-shadow: 0 0 0 3px rgba(224, 85, 85, 0.1);
+}
+
+.dialog-footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+}
+
+.dialog-footer .el-button {
+  font-weight: 500;
+}
+
+/* ================= 空状态 ================= */
+.empty-state {
+  padding: 120px 0;
+  position: relative;
+  z-index: 1;
+}
+
+/* ================= 动画 ================= */
+.fade-in-up {
+  animation: fadeInUp 0.6s var(--ease-out-expo) both;
+}
+
+@keyframes fadeInUp {
+  from { opacity: 0; transform: translateY(24px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* ================= 响应式 ================= */
+@media (max-width: 900px) {
+  .detail-body {
+    grid-template-columns: 1fr;
+  }
+
+  .detail-sidebar {
+    position: static;
+  }
+
+  .hero-section {
+    padding: 32px 24px 28px;
+  }
+
+  .hero-title {
+    font-size: 26px;
+  }
+
+  .hero-stats {
+    flex-wrap: wrap;
+    gap: 16px;
+  }
+
+  .hero-stat-divider {
+    display: none;
+  }
+
+  .preview-image,
+  .preview-placeholder {
+    height: 240px;
+  }
+
+  .file-action-bar {
+    flex-direction: column;
+    gap: 12px;
+  }
+
+  .file-meta-info {
+    flex-wrap: wrap;
+  }
+}
+
+@media (max-width: 480px) {
+  .work-detail-container {
+    padding: 16px 12px 60px;
+  }
+
+  .hero-section {
+    padding: 24px 16px 20px;
+    border-radius: var(--radius-lg);
+  }
+
+  .hero-title {
+    font-size: 22px;
+  }
+
+  .hero-author {
+    gap: 12px;
+  }
+
+  .action-bar {
+    flex-direction: column;
+  }
+
+  .action-bar .el-button {
+    width: 100%;
+  }
 }
 </style>

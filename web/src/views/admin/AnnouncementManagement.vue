@@ -143,7 +143,7 @@
           ></textarea>
         </el-form-item>
         <el-form-item label="置顶">
-          <el-switch v-model="form.isPinned" active-color="#0052D9"></el-switch>
+          <el-switch v-model="form.isPinned" active-color="var(--primary)"></el-switch>
         </el-form-item>
       </el-form>
       <span slot="footer" class="dialog-footer">
@@ -347,7 +347,7 @@ export default {
 }
 
 .logo-icon { 
-  background: #0052D9; 
+  background: var(--primary); 
   color: white; 
   font-weight: bold; 
   padding: 4px 8px; 
@@ -368,7 +368,7 @@ export default {
 
 .add-btn:hover {
   transform: translateY(-2px);
-  box-shadow: 0 4px 12px rgba(0, 82, 217, 0.3);
+  box-shadow: 0 4px 12px rgba(45, 138, 110, 0.3);
 }
 
 /* 3. 公告表格区域 */
@@ -469,8 +469,8 @@ export default {
 
 .custom-textarea:focus {
   outline: none !important;
-  border-color: #0052D9 !important;
-  box-shadow: 0 0 0 2px rgba(0, 82, 217, 0.2) !important;
+  border-color: var(--primary) !important;
+  box-shadow: 0 0 0 2px rgba(45, 138, 110, 0.2) !important;
 }
 
 .dialog-footer {

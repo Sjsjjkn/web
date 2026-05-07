@@ -155,7 +155,7 @@ export default {
 
 .loading-icon {
   font-size: 48px;
-  color: #165dff;
+  color: var(--primary);
   animation: spin 1s linear infinite;
 }
 

@@ -350,14 +350,6 @@ export default {
       } catch (error) {
         this.$message.error(error.response?.data?.message || '获取用户列表失败')
         console.error('获取用户列表失败:', error)
-        this.users = [
-          { id: 1, username: 'admin', name: '系统管理员', role: 'Admin', workId: '000000', department: '信息中心', password: '123456', createdAt: '2026-01-01T00:00:00' },
-          { id: 2, username: 'teacher1', name: '张老师', role: 'Teacher', workId: '100001', department: '计算机系', password: '100001', createdAt: '2026-01-02T00:00:00' },
-          { id: 3, username: 'college1', name: '李院长', role: 'College', workId: '200001', department: '计算机系', password: '200001', createdAt: '2026-01-03T00:00:00' },
-          { id: 4, username: 'student1', name: '王同学', role: 'Student', workId: '300001', department: '计算机系', password: '300001', createdAt: '2026-01-04T00:00:00' },
-          { id: 5, username: 'student2', name: '刘同学', role: 'Student', workId: '300002', department: '计算机系', password: '300002', createdAt: '2026-01-05T00:00:00' }
-        ]
-        this.totalUsers = this.users.length
       }
     },
     async searchUsers() {
@@ -534,76 +526,71 @@ export default {
 </script>
 
 <style scoped>
-/* 基础设置 */
 .admin-container {
   min-height: 100vh;
-  background-color: #f8fafc;
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  background: var(--bg-page);
+  font-family: var(--font-main);
   overflow-x: hidden;
 }
 
-/* 1. 顶部导航 (滑入动画) */
 .admin-header {
   display: flex;
   justify-content: center;
-  padding: 0 40px;
-  height: 64px;
-  background-color: rgba(255, 255, 255, 0.9);
-  backdrop-filter: blur(10px);
-  border-bottom: 1px solid rgba(0,0,0,0.05);
+  background: rgba(248, 249, 245, 0.85);
+  backdrop-filter: blur(20px) saturate(180%);
+  -webkit-backdrop-filter: blur(20px) saturate(180%);
+  border-bottom: 1px solid var(--border-color);
   position: sticky;
   top: 0;
   z-index: 100;
-}
-
-.slide-down {
-  animation: slideDown 0.5s ease-out;
+  height: 64px;
+  padding: 0 40px;
 }
 
 .header-content {
   width: 100%;
-  max-width: 1200px;
+  max-width: 1400px;
+  padding: 16px 0;
   display: flex;
   justify-content: space-between;
   align-items: center;
 }
 
+.slide-down {
+  animation: slideDown 0.5s var(--ease-out-expo);
+}
+
 .logo-area { display: flex; align-items: center; gap: 12px; }
-.logo-icon { background: #0052D9; color: white; font-weight: bold; padding: 4px 8px; border-radius: 6px; }
-.system-title { font-size: 20px; font-weight: 600; color: #1a1a1a; margin: 0; }
-
-/* 2. 按钮悬停动画 */
-.import-btn,
-.export-btn,
-.refresh-btn {
-  transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
-  margin-left: 8px;
+.logo-icon {
+  background: linear-gradient(135deg, var(--primary) 0%, var(--primary-light) 100%);
+  color: white;
+  font-weight: 700;
+  font-size: 14px;
+  padding: 6px 10px;
+  border-radius: var(--radius-sm);
+  box-shadow: 0 2px 8px var(--primary-glow);
 }
+.system-title { font-size: 20px; font-weight: 700; color: var(--text-main); margin: 0; }
 
-.import-btn:hover {
+.header-actions { display: flex; gap: 10px; }
+.import-btn, .export-btn, .refresh-btn {
+  border-radius: var(--radius-full);
+  font-weight: 600;
+  transition: all var(--duration-normal) var(--ease-out-expo);
+}
+.import-btn:hover, .export-btn:hover, .refresh-btn:hover {
   transform: translateY(-2px);
-  box-shadow: 0 4px 12px rgba(82, 196, 26, 0.3);
+  box-shadow: 0 6px 20px rgba(45, 138, 110, 0.2);
 }
 
-.export-btn:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 4px 12px rgba(144, 202, 249, 0.3);
-}
-
-.refresh-btn:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 4px 12px rgba(0, 82, 217, 0.3);
-}
-
-/* 3. 搜索与筛选 (上滑淡入) */
 .filter-section {
-  max-width: 1200px;
-  margin: 40px auto 32px;
-  padding: 0 24px;
+  max-width: 1400px;
+  margin: 32px auto 24px;
+  padding: 0 40px;
 }
 
 .fade-in-up {
-  animation: fadeInUp 0.6s ease-out both;
+  animation: fadeInUp 0.6s var(--ease-out-expo) both;
 }
 
 .filter-bar {
@@ -616,19 +603,19 @@ export default {
 .search-bar { flex: 1; min-width: 300px; }
 .role-filter { min-width: 150px; }
 
-/* 4. 输入框聚焦动画 */
 ::v-deep .animated-input .el-input__inner {
-  border-radius: 24px;
-  transition: all 0.3s ease;
-  box-shadow: 0 2px 8px rgba(0,0,0,0.02);
+  border-radius: var(--radius-full);
+  border: 1px solid var(--border-color);
+  background: var(--bg-card);
+  transition: all var(--duration-normal) var(--ease-out-expo);
+  box-shadow: var(--shadow-xs);
+  height: 44px;
 }
 ::v-deep .animated-input .el-input__inner:focus {
-  box-shadow: 0 4px 16px rgba(0, 82, 217, 0.15);
-  border-color: #0052D9;
-  transform: scale(1.02);
+  box-shadow: 0 4px 20px rgba(45, 138, 110, 0.15);
+  border-color: var(--primary);
 }
 
-/* 搜索按钮样式 */
 ::v-deep .search-btn {
   padding: 0;
   width: 32px;
@@ -637,12 +624,12 @@ export default {
   display: flex;
   align-items: center;
   justify-content: center;
-  transition: all 0.3s ease;
+  transition: all 0.3s var(--ease-out-expo);
   margin-top: -4px;
 }
 
 ::v-deep .search-btn:hover {
-  background-color: rgba(0, 82, 217, 0.1);
+  background-color: rgba(45, 138, 110, 0.1);
   transform: scale(1.1);
 }
 
@@ -652,55 +639,60 @@ export default {
   height: 100%;
 }
 
-/* 5. 用户表格区域 */
 .users-section {
-  max-width: 1200px;
-  margin: 0 auto 40px;
-  padding: 0 24px;
-  background: white;
-  border-radius: 12px;
-  box-shadow: 0 2px 8px rgba(0,0,0,0.02);
+  max-width: 1400px;
+  margin: 0 auto 32px;
+  padding: 0 40px;
+  background: var(--bg-card);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-card);
   overflow: hidden;
 }
 
 ::v-deep .el-table {
-  border-radius: 12px 12px 0 0;
+  border-radius: var(--radius-lg) var(--radius-lg) 0 0;
   overflow: hidden;
 }
 
 ::v-deep .el-table__header-wrapper {
-  background: #f8fafc;
+  background: linear-gradient(180deg, var(--primary-bg) 0%, #E8F0EB 100%);
 }
 
 ::v-deep .el-table th {
-  background: #f8fafc !important;
-  font-weight: 600;
-  color: #333;
+  background: transparent !important;
+  font-weight: 700;
+  font-size: 13px;
+  color: var(--text-main);
+  letter-spacing: 0.3px;
+  border-bottom: 2px solid var(--border-color);
 }
 
-::v-deep .el-table tr:hover {
-  background: #f8fafc !important;
+::v-deep .el-table--striped .el-table__body tr.el-table__row--striped td {
+  background-color: rgba(237, 245, 240, 0.35);
 }
 
-/* 分页区域 */
+::v-deep .el-table__body tr:hover > td {
+  background-color: var(--bg-hover) !important;
+}
+
 .pagination-section {
-  max-width: 1200px;
-  margin: 0 auto 40px;
-  padding: 0 24px;
+  max-width: 1400px;
+  margin: 0 auto 48px;
+  padding: 0 40px;
   display: flex;
   justify-content: center;
 }
 
-/* 对话框样式 */
 ::v-deep .modern-dialog .el-dialog {
-  border-radius: 12px;
+  border-radius: var(--radius-lg);
   overflow: hidden;
+  box-shadow: var(--shadow-xl);
 }
 
 ::v-deep .modern-dialog .el-dialog__header {
-  background: #f8fafc;
+  background: var(--primary-bg);
   padding: 20px 24px;
-  border-bottom: 1px solid #e4e7ed;
+  border-bottom: 1px solid var(--border-light);
 }
 
 ::v-deep .modern-dialog .el-dialog__body {
@@ -711,18 +703,17 @@ export default {
   text-align: right;
 }
 
-/* 文件上传样式 */
 .file-name {
   margin-top: 12px;
-  padding: 8px 12px;
-  background: #f8fafc;
-  border-radius: 6px;
+  padding: 10px 14px;
+  background: var(--primary-bg);
+  border-radius: var(--radius-md);
   font-size: 14px;
-  color: #666;
+  color: var(--text-regular);
   word-break: break-all;
+  border: 1px solid var(--border-light);
 }
 
-/* 关键帧定义 */
 @keyframes slideDown {
   from { transform: translateY(-100%); opacity: 0; }
   to { transform: translateY(0); opacity: 1; }
@@ -731,5 +722,11 @@ export default {
 @keyframes fadeInUp {
   from { transform: translateY(30px); opacity: 0; }
   to { transform: translateY(0); opacity: 1; }
+}
+
+@media (max-width: 768px) {
+  .admin-header { padding: 0 20px; }
+  .filter-section, .users-section, .pagination-section { padding: 0 20px; }
+  .search-bar { min-width: auto; }
 }
 </style>

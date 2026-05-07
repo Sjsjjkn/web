@@ -365,7 +365,7 @@ export default {
 .notification-icon .icon {
   width: 18px;
   height: 18px;
-  color: #165dff;
+  color: var(--primary);
 }
 
 .notification-content {
@@ -472,7 +472,7 @@ export default {
 .modal-icon svg {
   width: 20px;
   height: 20px;
-  color: #165dff;
+  color: var(--primary);
 }
 
 .modal-title {

@@ -473,7 +473,7 @@ export default {
 .logo-icon {
   width: 40px;
   height: 40px;
-  background: linear-gradient(135deg, #0052D9, #1890FF);
+  background: linear-gradient(135deg, var(--primary), #1890FF);
   border-radius: 8px;
   display: flex;
   align-items: center;
@@ -496,7 +496,7 @@ export default {
 
 .refresh-btn:hover {
   transform: translateY(-2px);
-  box-shadow: 0 4px 12px rgba(0, 82, 217, 0.3);
+  box-shadow: 0 4px 12px rgba(45, 138, 110, 0.3);
 }
 
 .filter-section {
@@ -516,8 +516,8 @@ export default {
 }
 
 .animated-input:focus {
-  border-color: #0052D9;
-  box-shadow: 0 0 0 2px rgba(0, 82, 217, 0.2);
+  border-color: var(--primary);
+  box-shadow: 0 0 0 2px rgba(45, 138, 110, 0.2);
   transform: scale(1.02);
 }
 
@@ -539,15 +539,15 @@ export default {
 }
 
 .filter-tag:hover {
-  border-color: #0052D9;
-  color: #0052D9;
+  border-color: var(--primary);
+  color: var(--primary);
   transform: translateY(-2px);
 }
 
 .filter-tag.active {
-  background: #0052D9;
+  background: var(--primary);
   color: white;
-  border-color: #0052D9;
+  border-color: var(--primary);
 }
 
 .stats-section {
@@ -587,7 +587,7 @@ export default {
   align-items: center;
   justify-content: center;
   font-size: 24px;
-  color: #0052D9;
+  color: var(--primary);
 }
 
 .stat-number {
@@ -744,7 +744,7 @@ export default {
 
 .video-placeholder i, .document-placeholder i {
   font-size: 48px;
-  color: #0052D9;
+  color: var(--primary);
 }
 
 .video-placeholder span, .document-placeholder span {

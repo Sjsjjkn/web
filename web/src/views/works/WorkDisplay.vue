@@ -1,1140 +1,1173 @@
 <template>
-  <div class="gallery-container">
-    <!-- 顶部导航 -->
-    <header class="gallery-header slide-down">
-      <div class="logo-area">
-        <div class="logo-icon">BDU</div>
-        <h1 class="system-title">保定学院数字作品展厅</h1>
-      </div>
-    </header>
+  <div class="gallery-page">
+    <!-- 环境光晕 -->
+    <div class="ambient-glow glow-top"></div>
+    <div class="ambient-glow glow-bottom"></div>
 
-    <!-- 页面头部 -->
-    <section class="page-header fade-in-up">
-      <h2>作品展示</h2>
-      <p>浏览和欣赏保定学院师生的优秀数字作品</p>
-    </section>
-    
-    <!-- 筛选和搜索 -->
-    <section class="filter-section fade-in-up">
-      <div class="search-bar">
-        <el-input 
-          v-model="searchQuery"
-          placeholder="搜索作品标题或作者..." 
-          prefix-icon="el-icon-search"
-          clearable
-          class="animated-input"
-          @keyup.enter="loadWorks"
-        ></el-input>
-      </div>
-      
-      <div class="category-filters">
-        <span 
-          v-for="(cat, index) in categories" 
-          :key="cat.value"
-          :class="['filter-tag', { active: categoryFilter === cat.value }]"
-          @click="categoryFilter = cat.value; loadWorks()"
-          :style="{ animationDelay: `${index * 0.05 + 0.2}s` }"
-          class="stagger-fade-in"
-        >
-          {{ cat.label }}
-        </span>
-      </div>
-      
-      <div class="sort-options">
-        <span 
-          v-for="(sort, index) in sortOptions" 
-          :key="sort.value"
-          :class="['filter-tag', { active: sortBy === sort.value }]"
-          @click="sortBy = sort.value; loadWorks()"
-          :style="{ animationDelay: `${(index + 5) * 0.05 + 0.2}s` }"
-          class="stagger-fade-in"
-        >
-          {{ sort.label }}
-        </span>
-      </div>
-    </section>
-    
-    <!-- 作品网格展示 -->
-    <section class="works-grid">
-      <el-empty v-if="works.length === 0 && !loading" description="未找到相关作品"></el-empty>
-      
-      <el-row :gutter="24">
-        <el-col 
-          :xs="24" :sm="12" :md="8" :lg="6" 
-          v-for="(work, index) in works" 
-          :key="work.id"
-          class="stagger-fade-in"
-          :style="{ animationDelay: `${index * 0.1 + 0.3}s` }"
-        >
-          <el-card class="work-card" shadow="never" :body-style="{ padding: '0px' }" @click="handleViewWork(work.id)">
-            <div class="cover-image">
-              <img v-if="getThumbnailUrl(work)" :src="getThumbnailUrl(work)" :alt="work.title" class="thumbnail-image">
-              <ModelThumbnail 
-                v-else-if="isModelFile(work)" 
-                :model-url="`/api/File/download?fileName=${encodeURIComponent(work.filePath)}`"
-                :background-color="getRandomColor(work.id)"
-                class="model-preview"
-              />
-              <div v-else class="thumbnail-placeholder" :style="{ backgroundColor: getRandomColor(work.id) }">
-                <i class="el-icon-document"></i>
-                <span>{{ getFileExtension(work) }}</span>
-              </div>
-              <span class="category-badge">{{ work.category }}</span>
-              <div class="hover-overlay">
-                <el-button type="primary" circle icon="el-icon-caret-right" @click.stop="handleViewWork(work)"></el-button>
-              </div>
-            </div>
-            
-            <div class="work-info">
-              <h3 class="work-title">{{ work.title }}</h3>
-              <div class="author-row">
-                <span class="work-author">作者: {{ work.uploadUserName || '未知作者' }}</span>
-                <el-button 
-                  v-if="work.uploadUserProfilePublic" 
-                  type="text" 
-                  size="small" 
-                  class="author-profile-btn"
-                  @click.stop="goToAuthorProfile(work.UserId)"
-                >
-                  <i class="el-icon-user"></i> 主页
-                </el-button>
-              </div>
-              <p class="work-upload-user">上传用户: {{ work.uploadUserUsername }}</p>
-              <p class="work-date">{{ work.uploadDate }}</p>
-              
-              <div class="work-actions">
-                <el-button type="primary" size="small" @click.stop="handleViewWork(work.id)">查看详情</el-button>
-                <el-button size="small" @click.stop="handleDownloadFile(work)">下载</el-button>
-                <el-button 
-                  size="small" 
-                  @click.stop="handleToggleFavorite(work)"
-                  :type="work.isFavorite ? 'warning' : 'default'"
-                  :icon="work.isFavorite ? 'el-icon-star-on' : 'el-icon-star-off'"
-                >
-                  {{ work.isFavorite ? '已收藏' : '收藏' }}
-                </el-button>
-              </div>
-            </div>
-          </el-card>
-        </el-col>
-      </el-row>
-      
-      <!-- 分页 -->
-      <div class="pagination" v-if="total > 0">
-        <el-pagination
-          @size-change="handleSizeChange"
-          @current-change="handleCurrentChange"
-          :current-page="currentPage"
-          :page-sizes="[12, 24, 36, 48]"
-          :page-size="pageSize"
-          layout="total, sizes, prev, pager, next, jumper"
-          :total="total"
-        ></el-pagination>
-      </div>
-      
-      <!-- 加载中 -->
-      <div v-if="loading" class="loading-container">
-        <el-spinner type="el-icon-loading" size="50px"></el-spinner>
-        <p>加载中...</p>
-      </div>
-    </section>
-    
-    <!-- 作品详情对话框 -->
-    <el-dialog
-      :title="''"
-      :visible.sync="detailDialogVisible"
-      width="900px"
-      :custom-class="'work-detail-dialog'"
-      :close-on-click-modal="false"
-    >
-      <div v-if="currentWork" class="work-detail-content">
-        <div class="work-header">
-          <div class="work-cover" :style="{ backgroundColor: getRandomColor(currentWork.id) }">
-            <span class="category-badge">{{ currentWork.category }}</span>
+    <div class="gallery-container">
+      <!-- Hero 区域 -->
+      <section class="gallery-hero">
+        <div class="hero-pattern"></div>
+        <div class="hero-content fade-in-up">
+          <div class="hero-badge">
+            <span class="badge-dot"></span>
+            BODA · 数字作品
           </div>
-          <div class="work-info-header">
-            <h2 class="work-title-detail">{{ currentWork.title }}</h2>
-            <div class="work-author-info">
-              <span class="author-name">{{ currentWork.uploadUserName || '未知作者' }}</span>
-              <span class="upload-time">{{ currentWork.uploadDate }}</span>
-              <el-tag :type="currentWork.status === '已发布' ? 'success' : 'info'" size="small">
-                {{ currentWork.status }}
-              </el-tag>
+          <h1 class="hero-title">作品<span class="hero-accent">展示</span></h1>
+          <p class="hero-desc">浏览和欣赏保定学院师生的优秀数字作品</p>
+          <div class="hero-stats">
+            <div class="hstat">
+              <div class="hstat-icon-ring">
+                <i class="el-icon-collection"></i>
+              </div>
+              <span class="hstat-num">{{ total || 0 }}</span>
+              <span class="hstat-label">作品总数</span>
             </div>
-            <div class="work-stats-detail">
-              <span class="stat-item">
-                <i class="el-icon-view"></i>
-                <span>{{ currentWork.views || 0 }}</span>
-                <span class="stat-label">浏览</span>
-              </span>
-              <span class="stat-item">
-                <i class="el-icon-star-off"></i>
-                <span>{{ currentWork.favorites || 0 }}</span>
-                <span class="stat-label">收藏</span>
-              </span>
-              <span class="stat-item">
-                <i class="el-icon-chat-line-round"></i>
-                <span>{{ currentWork.comments || 0 }}</span>
-                <span class="stat-label">评论</span>
-              </span>
+            <div class="hstat-divider"></div>
+            <div class="hstat">
+              <div class="hstat-icon-ring">
+                <i class="el-icon-s-grid"></i>
+              </div>
+              <span class="hstat-num">{{ categoryStats || '多' }}</span>
+              <span class="hstat-label">分类</span>
+            </div>
+            <div class="hstat-divider"></div>
+            <div class="hstat">
+              <div class="hstat-icon-ring">
+                <i class="el-icon-star-on"></i>
+              </div>
+              <span class="hstat-num">热门</span>
+              <span class="hstat-label">精选推荐</span>
             </div>
           </div>
         </div>
-        
-        <div class="work-description-detail">
-          <h3 class="section-title-detail">作品描述</h3>
-          <div class="description-content">
-            {{ currentWork.description || '该作品暂无描述' }}
+      </section>
+
+      <!-- 筛选和搜索 -->
+      <section class="filter-section fade-in-up" style="animation-delay: 0.15s">
+        <div class="filter-bar glass-card">
+          <div class="search-bar">
+            <el-input
+              v-model="searchQuery"
+              placeholder="搜索作品标题或作者..."
+              prefix-icon="el-icon-search"
+              clearable
+              class="modern-search"
+              @keyup.enter="loadWorks"
+            ></el-input>
+          </div>
+
+          <div class="filter-divider"></div>
+
+          <div class="category-filters">
+            <span
+              v-for="(cat, index) in categories"
+              :key="cat.value"
+              :class="['filter-chip', { active: categoryFilter === cat.value }]"
+              @click="categoryFilter = cat.value; loadWorks()"
+            >
+              <i :class="getCategoryIcon(cat.value)"></i>
+              {{ cat.label }}
+            </span>
+          </div>
+
+          <div class="sort-options">
+            <span
+              v-for="sort in sortOptions"
+              :key="sort.value"
+              :class="['filter-chip sort-chip', { active: sortBy === sort.value }]"
+              @click="sortBy = sort.value; loadWorks()"
+            >
+              {{ sort.label }}
+            </span>
           </div>
         </div>
-        
-        <div class="work-file-info">
-          <h3 class="section-title-detail">文件信息</h3>
-          <div class="file-details">
-            <span class="file-item">
+      </section>
+
+      <!-- 作品网格展示 -->
+      <section class="works-grid">
+        <el-empty v-if="works.length === 0 && !loading" description="未找到相关作品" class="empty-state"></el-empty>
+
+        <el-row :gutter="24">
+          <el-col
+            :xs="24" :sm="12" :md="8" :lg="6"
+            v-for="(work, index) in works"
+            :key="work.id"
+            class="stagger-fade-in"
+            :style="{ animationDelay: `${index * 0.08 + 0.2}s` }"
+          >
+            <div class="work-card glass-card" @click="handleViewWork(work.id)">
+              <div class="cover-image">
+                <img v-if="getThumbnailUrl(work)" :src="getThumbnailUrl(work)" :alt="work.title" class="thumbnail-image">
+                <ModelThumbnail
+                  v-else-if="isModelFile(work)"
+                  :model-url="`/api/File/download?fileName=${encodeURIComponent(work.filePath)}`"
+                  :background-color="getRandomColor(work.id)"
+                  class="model-preview"
+                />
+                <div v-else class="thumbnail-placeholder" :style="{ backgroundColor: getRandomColor(work.id) }">
+                  <div class="placeholder-circle">
+                    <i class="el-icon-document"></i>
+                  </div>
+                  <span>{{ getFileExtension(work) }}</span>
+                </div>
+                <span class="category-badge">{{ work.category }}</span>
+                <div class="hover-overlay">
+                  <div class="overlay-bg"></div>
+                  <div class="overlay-actions">
+                    <button class="overlay-btn view-btn" @click.stop="handleViewWork(work.id)" title="查看详情">
+                      <i class="el-icon-view"></i>
+                    </button>
+                    <button class="overlay-btn download-btn" @click.stop="handleDownloadFile(work)" title="下载文件">
+                      <i class="el-icon-download"></i>
+                    </button>
+                  </div>
+                </div>
+              </div>
+
+              <div class="work-info">
+                <h3 class="work-title" :title="work.title">{{ work.title }}</h3>
+                <div class="author-row">
+                  <div class="author-avatar-sm">
+                    <i class="el-icon-user-solid"></i>
+                  </div>
+                  <span class="work-author">{{ work.uploadUserName || '未知作者' }}</span>
+                  <el-button
+                    v-if="work.uploadUserProfilePublic"
+                    type="text"
+                    size="mini"
+                    class="author-profile-btn"
+                    @click.stop="goToAuthorProfile(work.UserId)"
+                  >
+                    <i class="el-icon-link"></i>
+                  </el-button>
+                </div>
+                <div class="work-meta">
+                  <span class="meta-item"><i class="el-icon-date"></i> {{ work.uploadDate }}</span>
+                  <span class="meta-item"><i class="el-icon-view"></i> {{ work.viewCount || 0 }}</span>
+                </div>
+
+                <div class="work-actions">
+                  <button
+                    class="card-action-btn fav-action"
+                    :class="{ 'is-fav': work.isFavorite }"
+                    @click.stop="handleToggleFavorite(work)"
+                  >
+                    <i :class="work.isFavorite ? 'el-icon-star-on' : 'el-icon-star-off'"></i>
+                    <span>{{ work.isFavorite ? '已收藏' : '收藏' }}</span>
+                  </button>
+                  <button class="card-action-btn detail-action" @click.stop="handleViewWork(work.id)">
+                    <span>详情</span>
+                    <i class="el-icon-arrow-right"></i>
+                  </button>
+                </div>
+              </div>
+            </div>
+          </el-col>
+        </el-row>
+
+        <!-- 分页 -->
+        <div class="pagination" v-if="total > 0">
+          <el-pagination
+            @size-change="handleSizeChange"
+            @current-change="handleCurrentChange"
+            :current-page="currentPage"
+            :page-sizes="[12, 24, 36, 48]"
+            :page-size="pageSize"
+            layout="total, sizes, prev, pager, next, jumper"
+            :total="total"
+            background
+          ></el-pagination>
+        </div>
+
+        <!-- 加载中 -->
+        <div v-if="loading" class="loading-container fade-in-up">
+          <div class="loading-spinner">
+            <div class="spinner-ring"></div>
+          </div>
+          <p>加载中...</p>
+        </div>
+      </section>
+
+      <!-- 作品详情对话框 -->
+      <el-dialog
+        :visible.sync="detailVisible"
+        width="800px"
+        class="gallery-detail-dialog"
+        :close-on-click-modal="true"
+      >
+        <div v-if="selectedWork" class="detail-content">
+          <div class="detail-preview">
+            <img v-if="getThumbnailUrl(selectedWork)" :src="getThumbnailUrl(selectedWork)" :alt="selectedWork.title" class="detail-image">
+            <div v-else class="detail-placeholder" :style="{ backgroundColor: getRandomColor(selectedWork.id) }">
               <i class="el-icon-document"></i>
-              <span>{{ currentWork.fileName || '未知文件名' }}</span>
-            </span>
-            <span class="file-item">
-              <i class="el-icon-folder"></i>
-              <span>{{ currentWork.category || '未分类' }}</span>
-            </span>
+              <span>{{ getFileExtension(selectedWork) }}</span>
+            </div>
+          </div>
+          <div class="detail-info">
+            <h2 class="detail-title">{{ selectedWork.title }}</h2>
+            <div class="detail-author">
+              <i class="el-icon-user-solid"></i>
+              {{ selectedWork.uploadUserName || '未知作者' }}
+            </div>
+            <p class="detail-desc" v-if="selectedWork.description">{{ selectedWork.description }}</p>
+            <div class="detail-meta-row">
+              <span class="detail-meta"><i class="el-icon-date"></i> {{ selectedWork.uploadDate }}</span>
+              <span class="detail-meta"><i class="el-icon-view"></i> {{ selectedWork.viewCount || 0 }} 浏览</span>
+              <span class="detail-meta"><i class="el-icon-star-off"></i> {{ selectedWork.favoriteCount || 0 }} 收藏</span>
+            </div>
+            <div class="detail-actions">
+              <el-button type="primary" round @click="handleViewWork(selectedWork.id); detailVisible = false">
+                <i class="el-icon-view"></i> 查看完整详情
+              </el-button>
+              <el-button round @click="handleDownloadFile(selectedWork)">
+                <i class="el-icon-download"></i> 下载文件
+              </el-button>
+            </div>
           </div>
         </div>
-      </div>
-      <div slot="footer" class="dialog-footer-detail">
-        <el-button @click="detailDialogVisible = false" class="close-btn">
-          <i class="el-icon-close"></i> 关闭
-        </el-button>
-        <el-button type="info" @click="handleFavoriteWork(currentWork)" class="favorite-btn">
-          <i class="el-icon-star-off"></i> 收藏
-        </el-button>
-        <el-button type="primary" @click="handleDownloadFile(currentWork)" class="download-btn">
-          <i class="el-icon-download"></i> 下载文件
-        </el-button>
-      </div>
-    </el-dialog>
-    
-    <!-- 文件预览弹窗（统一组件） -->
-    <FilePreviewDialog
-      v-model="previewDialogVisible"
-      :file-path="currentWork?.filePath || ''"
-      :file-name="currentWork?.fileName || ''"
-      title="文件预览"
-    />
+      </el-dialog>
+    </div>
   </div>
 </template>
 
 <script>
-import http from '../../utils/http'
-import { getUser, getToken, clearAuth } from '../../utils/auth'
-import FilePreviewDialog from '../../components/FilePreviewDialog.vue'
-import ModelThumbnail from '../../components/ModelThumbnail.vue'
-
 export default {
   name: 'WorkDisplay',
-  components: {
-    FilePreviewDialog,
-    ModelThumbnail
-  },
   data() {
     return {
-      // 搜索和筛选
-      searchQuery: '',
+      works: [],
+      categories: [],
       categoryFilter: '',
-      sortBy: 'uploadDate',
-      
-      // 分类和排序选项
-      categories: [
-        { label: '全部', value: '' },
-        { label: '前端开发', value: '前端开发' },
-        { label: '后端开发', value: '后端开发' },
-        { label: '人工智能', value: '人工智能' },
-        { label: 'UI设计', value: 'UI设计' },
-        { label: '其他', value: '其他' }
-      ],
+      searchQuery: '',
+      sortBy: 'latest',
       sortOptions: [
-        { label: '最新上传', value: 'uploadDate' },
-        { label: '热门程度', value: 'popularity' }
+        { value: 'latest', label: '最新发布' },
+        { value: 'popular', label: '最多浏览' },
+        { value: 'favorites', label: '最多收藏' },
       ],
-      
-      // 分页
       currentPage: 1,
       pageSize: 12,
       total: 0,
-      
-      // 对话框
-      detailDialogVisible: false,
-      
-      // 预览相关
-      previewDialogVisible: false,
-      
-      // 当前查看的作品
-      currentWork: null,
-      
-      // 作品数据
-      works: [],
-      
-      // 加载状态
       loading: false,
-      
-
+      detailVisible: false,
+      selectedWork: null,
+      categoryStats: '多',
     }
   },
   mounted() {
     this.loadWorks()
   },
-  computed: {
-    // 是否具备预览条件：有文件路径即可（具体类型由预览组件判断）
-    canPreview() {
-      return !!(this.currentWork && this.currentWork.filePath)
-    }
-  },
   methods: {
-    // 加载作品列表
     async loadWorks() {
       this.loading = true
       try {
-        // 作品展示页：优先走“需要登录的列表”，由后端按权限返回（管理员/普通用户）
-        const response = await http.get('/api/Work', {
-          params: {
-            search: this.searchQuery,
-            category: this.categoryFilter,
-            sortBy: this.sortBy,
-            page: this.currentPage,
-            pageSize: this.pageSize
-          }
-        })
-        this.works = response.data.items || response.data
-        this.total = response.data.total || this.works.length
-        
-        // 为每个作品添加收藏状态
-        await this.updateFavoriteStatuses()
-      } catch (error) {
-        console.error('加载作品失败', error)
-        this.$message.error(error.response?.data?.message || '加载作品失败，请稍后重试')
+        // 动态导入 http 模块以避免循环依赖
+        const http = (await import('../../utils/http')).default
+        const params = {
+          page: this.currentPage,
+          pageSize: this.pageSize,
+          search: this.searchQuery || undefined,
+          category: this.categoryFilter || undefined,
+          sortBy: this.sortBy,
+        }
+        const { data } = await http.get('/api/Work', { params })
+        this.works = data.items || data.data || data || []
+        this.total = data.total || data.totalCount || this.works.length
+        if (data.categories) {
+          this.categories = [{ value: '', label: '全部' }, ...data.categories.map(c => ({ value: c, label: c }))]
+        } else {
+          // 从作品数据中提取分类
+          const catSet = new Set()
+          this.works.forEach(w => { if (w.category) catSet.add(w.category) })
+          this.categories = [{ value: '', label: '全部' }, ...Array.from(catSet).map(c => ({ value: c, label: c }))]
+        }
+        this.categoryStats = this.categories.length - 1 || '多'
+        this.total = this.total
+      } catch (e) {
+        this.$message.error('加载作品失败')
       } finally {
         this.loading = false
       }
     },
-    
-    // 更新所有作品的收藏状态
-    async updateFavoriteStatuses() {
-      const token = getToken()
-      if (!token) {
-        // 用户未登录，所有作品都未收藏
-        this.works.forEach(work => {
-          work.isFavorite = false
-        })
+    getCategoryIcon(cat) {
+      const map = {
+        '': 'el-icon-menu',
+        '平面设计': 'el-icon-picture-outline',
+        'UI/UX设计': 'el-icon-mobile-phone',
+        '三维建模': 'el-icon-s-data',
+        '视频动画': 'el-icon-video-camera',
+        '交互媒体': 'el-icon-thumb',
+        '其他': 'el-icon-more-outline',
+      }
+      return map[cat] || 'el-icon-folder-opened'
+    },
+    getThumbnailUrl(work) {
+      if (work.coverImage) {
+        return `/api/File/download?fileName=${encodeURIComponent(work.coverImage)}`
+      }
+      if (work.thumbnailPath) {
+        return `/api/File/download?fileName=${encodeURIComponent(work.thumbnailPath)}`
+      }
+      if (work.fileType === 'image' && work.filePath) {
+        return `/api/File/download?fileName=${encodeURIComponent(work.filePath)}`
+      }
+      return null
+    },
+    isModelFile(work) {
+      const ext = (work.filePath || work.fileName || '').toLowerCase().split('.').pop()
+      return ['glb', 'gltf', 'obj', 'fbx', 'stl'].includes(ext)
+    },
+    getFileExtension(work) {
+      const ext = (work.filePath || work.fileName || '').toUpperCase().split('.').pop()
+      return ext || 'FILE'
+    },
+    getRandomColor(id) {
+      const colors = ['#2D8A6E', '#45A884', '#5DB89E', '#C8AA6E', '#B8943F', '#5B9BD5', '#F09342']
+      const index = (typeof id === 'number' ? id : (id || '').toString().charCodeAt(0) || 0) % colors.length
+      return colors[index]
+    },
+    handleViewWork(id) {
+      this.$router.push(`/works/${id}`)
+    },
+    handleDownloadFile(work) {
+      if (!work.filePath) {
+        this.$message.error('无文件可下载')
         return
       }
-      
-      // 并行检查所有作品的收藏状态
-      await Promise.all(this.works.map(async (work) => {
-        try {
-          work.isFavorite = await this.checkFavoriteStatus(work.id)
-        } catch (error) {
-          console.error(`检查作品 ${work.id} 收藏状态失败:`, error)
-          work.isFavorite = false
-        }
-      }))
+      import('../../utils/http').then(({ default: http }) => {
+        http.get('/api/File/download', { params: { fileName: work.filePath }, responseType: 'blob' })
+          .then(res => {
+            const url = URL.createObjectURL(res.data)
+            const a = document.createElement('a')
+            a.href = url
+            a.download = work.fileName || 'work'
+            a.click()
+            URL.revokeObjectURL(url)
+          })
+          .catch(() => {
+            this.$message.error('下载失败')
+          })
+      })
     },
-    
-    // 处理查看作品
-    handleViewWork(workId) {
-      this.$router.push(`/works/${workId}`)
+    async handleToggleFavorite(work) {
+      try {
+        const http = (await import('../../utils/http')).default
+        if (work.isFavorite) {
+          await http.delete(`/api/Work/${work.id}/favorite`)
+          work.isFavorite = false
+          this.$message.success('已取消收藏')
+        } else {
+          await http.post(`/api/Work/${work.id}/favorite`)
+          work.isFavorite = true
+          this.$message.success('已收藏')
+        }
+      } catch (e) {
+        this.$message.error('操作失败')
+      }
     },
     goToAuthorProfile(userId) {
       this.$router.push(`/profile/${userId}`)
     },
-    
-    // 收藏作品
-    async handleFavoriteWork(work) {
-      try {
-        const response = await http.post(`/api/Work/${work.id}/favorite`)
-        this.$message.success('收藏成功');
-        // 更新本地数据
-        work.favorites = response.data.favorites;
-      } catch (error) {
-        if (error.response && error.response.data && error.response.data.message) {
-          this.$message.error(error.response.data.message);
-        } else {
-          this.$message.error('收藏失败，请稍后重试');
-        }
-        console.error('收藏作品失败:', error);
-      }
-    },
-    // 取消收藏
-    async handleUnfavoriteWork(work) {
-      try {
-        const response = await http.delete(`/api/Work/${work.id}/favorite`)
-        this.$message.success('取消收藏成功');
-        // 更新本地数据
-        work.favorites = response.data.favorites;
-      } catch (error) {
-        if (error.response && error.response.data && error.response.data.message) {
-          this.$message.error(error.response.data.message);
-        } else {
-          this.$message.error('取消收藏失败，请稍后重试');
-        }
-        console.error('取消收藏失败:', error);
-      }
-    },
-    // 检查收藏状态
-    async checkFavoriteStatus(workId) {
-      try {
-        if (!getToken()) return false
-        const response = await http.get(`/api/Work/${workId}/is-favorite`)
-        return !!response.data.isFavorite
-      } catch (error) {
-        console.error('检查收藏状态失败:', error);
-        return false;
-      }
-    },
-    
-    // 处理文件下载
-    handleDownloadFile(work) {
-      if (!work || !work.filePath) {
-        this.$message.error('文件路径不存在，无法下载')
-        return
-      }
-
-      // 通过后端下载接口获取文件流（相对路径 /api，由开发代理转发）
-      http.get('/api/File/download', { params: { fileName: work.filePath }, responseType: 'blob' })
-        .then(res => {
-          const blob = res.data
-          const url = window.URL.createObjectURL(blob)
-          const link = document.createElement('a')
-          link.href = url
-          link.download = work.fileName || work.filePath
-          document.body.appendChild(link)
-          link.click()
-          document.body.removeChild(link)
-          window.URL.revokeObjectURL(url)
-          this.$message.success('文件下载已开始')
-        })
-        .catch(err => {
-          this.$message.error(err.response?.data?.message || '文件下载失败，请稍后重试')
-          console.error('下载文件失败:', err)
-        })
-    },
-    
-    // 处理文件预览
-    handlePreviewFile() {
-      if (!this.currentWork || !this.currentWork.filePath) {
-        this.$message.error('文件路径不存在，无法预览')
-        return
-      }
-      // 直接打开预览弹窗：具体渲染逻辑由 FilePreviewDialog 统一处理
-      this.previewDialogVisible = true
-    },
-    
-    // 处理分页大小变化
-    handleSizeChange(size) {
-      this.pageSize = size
+    handleSizeChange(val) {
+      this.pageSize = val
+      this.currentPage = 1
       this.loadWorks()
     },
-    
-    // 处理页码变化
-    handleCurrentChange(current) {
-      this.currentPage = current
+    handleCurrentChange(val) {
+      this.currentPage = val
       this.loadWorks()
+      window.scrollTo({ top: 0, behavior: 'smooth' })
     },
-    
-    // 获取缩略图URL
-    getThumbnailUrl(work) {
-      // 优先使用用户上传的预览图
-      if (work.previewImage) {
-        return `/api/File/download?fileName=${encodeURIComponent(work.previewImage)}`
-      }
-      
-      if (!work.filePath) return null
-      
-      const fileName = work.filePath
-      const extension = fileName.toLowerCase().substring(fileName.lastIndexOf('.'))
-      const imageExtensions = ['.jpg', '.jpeg', '.png', '.gif', '.bmp', '.webp']
-      
-      if (imageExtensions.includes(extension)) {
-        return `/api/File/download?fileName=${encodeURIComponent(fileName)}`
-      }
-      
-      return null
-    },
-    
-    // 判断是否是模型文件
-    isModelFile(work) {
-      if (!work.filePath) return false
-      const extension = work.filePath.toLowerCase().substring(work.filePath.lastIndexOf('.'))
-      const modelExts = ['.json', '.obj', '.gltf', '.glb', '.fbx', '.dae']
-      return modelExts.includes(extension)
-    },
-    
-    // 获取文件扩展名
-    getFileExtension(work) {
-      if (!work.filePath) return '文件'
-      
-      const fileName = work.filePath
-      const extension = fileName.toLowerCase().substring(fileName.lastIndexOf('.') + 1)
-      return extension.toUpperCase()
-    },
-    
-    // 获取当前用户ID
-    getCurrentUserId() {
-      return getUser()?.id || null
-    },
-    
-    // 切换收藏状态
-    async handleToggleFavorite(work) {
-      try {
-        const isFav = await this.checkFavoriteStatus(work.id)
-        if (!getToken()) {
-          this.$message.error('请先登录')
-          return
-        }
-
-        if (isFav) {
-          // 取消收藏
-          const response = await http.delete(`/api/Work/${work.id}/favorite`)
-          this.$message.success('已取消收藏')
-          work.favorites = response.data.favorites
-          work.isFavorite = false
-        } else {
-          // 添加收藏
-          const response = await http.post(`/api/Work/${work.id}/favorite`)
-          this.$message.success('收藏成功')
-          work.favorites = response.data.favorites
-          work.isFavorite = true
-        }
-      } catch (error) {
-        console.error('操作收藏失败', error)
-        if (error.response && error.response.status === 401) {
-          // 401：清空本地鉴权信息，提示重新登录
-          clearAuth()
-          this.$message.error('登录已过期，请重新登录')
-        } else if (error.response && error.response.data && error.response.data.message) {
-          this.$message.error(error.response.data.message)
-        } else {
-          this.$message.error('操作失败，请稍后重试')
-        }
-      }
-    },
-    
-    // 判断作品是否已收藏
-    async isFavorite(workId) {
-      return await this.checkFavoriteStatus(workId)
-    },
-    
-    // 生成随机颜色
-    getRandomColor(id) {
-      const colors = [
-        '#e6f7ff', '#f6ffed', '#fff7e6', '#fff0f6', '#f0f5ff',
-        '#e8f5e8', '#fff3e0', '#f3e5f5', '#e3f2fd', '#fffde7'
-      ]
-      return colors[id % colors.length]
-    }
-  }
+  },
 }
 </script>
 
 <style scoped>
-/* 基础设置 */
-.gallery-container {
+/* ===== 全局容器 ===== */
+.gallery-page {
   min-height: 100vh;
-  background-color: #f8fafc; /* 换用更柔和的背景色 */
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-  overflow-x: hidden;
-}
-
-/* 1. 顶部导航 (滑入动画) */
-.gallery-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 0 40px;
-  height: 64px;
-  background-color: rgba(255, 255, 255, 0.9);
-  backdrop-filter: blur(10px); /* 导航栏毛玻璃效果 */
-  border-bottom: 1px solid rgba(0,0,0,0.05);
-  position: sticky;
-  top: 0;
-  z-index: 100;
-}
-
-.slide-down {
-  animation: slideDown 0.5s ease-out;
-}
-
-.logo-area { display: flex; align-items: center; gap: 12px; }
-.logo-icon { background: #0052D9; color: white; font-weight: bold; padding: 4px 8px; border-radius: 6px; }
-.system-title { font-size: 20px; font-weight: 600; color: #1a1a1a; margin: 0; }
-
-/* 2. 页面头部 */
-.page-header {
-  text-align: center;
-  padding: 40px 0 20px;
-  background: linear-gradient(135deg, #f5f7fa 0%, #e4e7ed 100%);
-  margin-bottom: 0;
-}
-
-.page-header h2 {
-  font-size: 32px;
-  font-weight: 600;
-  color: #1a1a1a;
-  margin: 0 0 8px;
-}
-
-.page-header p {
-  font-size: 16px;
-  color: #666;
-  margin: 0;
-}
-
-.fade-in-up {
-  animation: fadeInUp 0.6s ease-out both;
-}
-
-/* 3. 搜索与筛选 (上滑淡入) */
-.filter-section {
-  max-width: 1200px;
-  margin: 40px auto 32px;
-  padding: 0 24px;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 24px;
-}
-
-/* 4. 输入框聚焦动画 */
-.search-bar { width: 100%; max-width: 600px; }
-::v-deep .animated-input .el-input__inner {
-  border-radius: 24px;
-  transition: all 0.3s ease;
-  box-shadow: 0 2px 8px rgba(0,0,0,0.02);
-}
-::v-deep .animated-input .el-input__inner:focus {
-  box-shadow: 0 4px 16px rgba(0, 82, 217, 0.15);
-  border-color: #0052D9;
-  transform: scale(1.02); /* 聚焦时微微放大 */
-}
-
-/* 5. 分类标签 (交错加载 & 悬停) */
-.category-filters, .sort-options { display: flex; gap: 12px; flex-wrap: wrap; justify-content: center; }
-.filter-tag {
-  padding: 8px 20px;
-  border-radius: 20px;
-  background: #ffffff;
-  color: #666;
-  font-size: 14px;
-  cursor: pointer;
-  transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
-  border: 1px solid #e4e7ed;
-  box-shadow: 0 2px 4px rgba(0,0,0,0.02);
-}
-.filter-tag:hover {
-  color: #0052D9;
-  border-color: #0052D9;
-  transform: translateY(-2px);
-  box-shadow: 0 4px 8px rgba(0,0,0,0.05);
-}
-.filter-tag.active {
-  background: #0052D9;
-  color: #ffffff;
-  border-color: #0052D9;
-  transform: scale(1.05); /* 激活时放大 */
-}
-
-/* 6. 作品卡片 (交错上滑淡入 & 高级悬停) */
-.works-grid { 
-  max-width: 1200px; 
-  margin: 0 auto; 
-  padding: 0 24px 60px; 
-  background: transparent;
-  border: none;
-  box-shadow: none;
-}
-
-.stagger-fade-in {
-  opacity: 0;
-  animation: fadeInUp 0.6s cubic-bezier(0.16, 1, 0.3, 1) forwards;
-}
-
-.work-card {
-  margin-bottom: 24px;
-  border-radius: 12px;
-  overflow: hidden;
-  border: 1px solid rgba(0,0,0,0.05);
-  transition: all 0.4s cubic-bezier(0.165, 0.84, 0.44, 1);
-  background: white;
-  cursor: pointer;
-}
-
-/* 卡片整体悬停效果 */
-.work-card:hover {
-  transform: translateY(-8px);
-  box-shadow: 0 16px 32px rgba(0, 0, 0, 0.1);
-}
-
-.cover-image {
-  height: 180px;
-  width: 100%;
+  background: var(--bg-page);
   position: relative;
-  display: flex;
-  align-items: flex-start; /* 标签移到顶部 */
-  justify-content: flex-end;
-  padding: 12px;
   overflow: hidden;
+}
+
+.ambient-glow {
+  position: fixed;
+  border-radius: 50%;
+  filter: blur(140px);
+  pointer-events: none;
+  z-index: 0;
+  opacity: 0.5;
+}
+
+.glow-top {
+  width: 500px;
+  height: 500px;
+  background: radial-gradient(circle, rgba(45, 138, 110, 0.1) 0%, transparent 70%);
+  top: -180px;
+  right: -120px;
+  animation: floatGlow 8s ease-in-out infinite alternate;
+}
+
+.glow-bottom {
+  width: 400px;
+  height: 400px;
+  background: radial-gradient(circle, rgba(200, 170, 110, 0.08) 0%, transparent 70%);
+  bottom: -120px;
+  left: -80px;
+  animation: floatGlow 10s ease-in-out infinite alternate-reverse;
+}
+
+@keyframes floatGlow {
+  0% { transform: translate(0, 0) scale(1); }
+  100% { transform: translate(30px, -20px) scale(1.1); }
+}
+
+.gallery-container {
+  position: relative;
+  z-index: 1;
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 28px 24px 80px;
+}
+
+/* ===== Hero 区域 ===== */
+.gallery-hero {
+  position: relative;
+  background: linear-gradient(135deg, var(--primary-bg) 0%, #F7F4F0 40%, #FCFAF5 100%);
+  border-radius: var(--radius-xl);
+  padding: 48px 48px 40px;
+  margin-bottom: 28px;
+  overflow: hidden;
+  border: 1px solid var(--border-light);
+  box-shadow: var(--shadow-sm);
+}
+
+.hero-pattern {
+  position: absolute;
+  top: -80px;
+  right: -80px;
+  width: 400px;
+  height: 400px;
+  background:
+    radial-gradient(circle at 50% 40%, rgba(45, 138, 110, 0.05) 0%, transparent 60%),
+    radial-gradient(circle at 40% 60%, rgba(200, 170, 110, 0.04) 0%, transparent 60%);
+  border-radius: 50%;
+  pointer-events: none;
+  animation: pulseGlow 6s ease-in-out infinite alternate;
+}
+
+@keyframes pulseGlow {
+  0% { transform: scale(1); opacity: 0.6; }
+  100% { transform: scale(1.15); opacity: 1; }
+}
+
+.hero-content {
+  position: relative;
+  z-index: 1;
+}
+
+.hero-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--primary);
+  background: rgba(45, 138, 110, 0.08);
+  padding: 6px 16px;
+  border-radius: var(--radius-full);
+  margin-bottom: 16px;
+  letter-spacing: 0.5px;
+}
+
+.badge-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--primary);
+  animation: dotPulse 2s ease-in-out infinite;
+}
+
+@keyframes dotPulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.4; }
+}
+
+.hero-title {
+  font-size: 40px;
+  font-weight: 800;
+  color: var(--text-main);
+  margin: 0 0 12px;
+  letter-spacing: -0.5px;
+}
+
+.hero-accent {
+  color: var(--primary);
+}
+
+.hero-desc {
+  font-size: 15px;
+  color: var(--text-secondary);
+  margin: 0 0 28px;
+  line-height: 1.6;
+}
+
+.hero-stats {
+  display: flex;
+  align-items: center;
+  gap: 28px;
+  padding-top: 20px;
+  border-top: 1px solid rgba(0, 0, 0, 0.05);
+}
+
+.hstat {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.hstat-icon-ring {
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  background: rgba(45, 138, 110, 0.08);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--primary);
+  font-size: 18px;
+  flex-shrink: 0;
+}
+
+.hstat-num {
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--text-main);
+}
+
+.hstat-label {
+  font-size: 13px;
+  color: var(--text-light);
+}
+
+.hstat-divider {
+  width: 1px;
+  height: 28px;
+  background: rgba(0, 0, 0, 0.06);
+  flex-shrink: 0;
+}
+
+/* ===== 筛选栏 ===== */
+.filter-bar {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 16px 20px;
+  margin-bottom: 28px;
+  flex-wrap: wrap;
+}
+
+.glass-card {
+  background: rgba(255, 255, 255, 0.82);
+  backdrop-filter: blur(16px) saturate(180%);
+  -webkit-backdrop-filter: blur(16px) saturate(180%);
+  border-radius: var(--radius-xl);
+  border: 1px solid rgba(232, 226, 216, 0.6);
+  box-shadow: var(--shadow-sm);
+}
+
+.search-bar {
+  width: 240px;
+  flex-shrink: 0;
+}
+
+.modern-search ::v-deep .el-input__inner {
+  border-radius: var(--radius-full);
+  border-color: transparent;
+  background: var(--bg-page);
+  font-size: 13px;
+  height: 38px;
+  transition: all var(--duration-normal) var(--ease-out-expo);
+}
+
+.modern-search ::v-deep .el-input__inner:focus {
+  background: white;
+  border-color: var(--primary);
+  box-shadow: 0 0 0 3px var(--primary-glow);
+}
+
+.filter-divider {
+  width: 1px;
+  height: 24px;
+  background: var(--border-light);
+  flex-shrink: 0;
+}
+
+.category-filters,
+.sort-options {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  align-items: center;
+}
+
+.filter-chip {
+  font-size: 13px;
+  font-weight: 500;
+  padding: 7px 16px;
+  border-radius: var(--radius-full);
+  background: var(--bg-page);
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition: all var(--duration-normal) var(--ease-out-expo);
+  white-space: nowrap;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  border: 1px solid transparent;
+}
+
+.filter-chip:hover {
+  color: var(--primary);
+  background: var(--primary-bg);
+  border-color: rgba(45, 138, 110, 0.15);
+}
+
+.filter-chip.active {
+  background: linear-gradient(135deg, var(--primary), var(--primary-light));
+  color: white;
+  border-color: transparent;
+  box-shadow: 0 4px 12px rgba(45, 138, 110, 0.3);
+}
+
+.sort-chip.active {
+  background: var(--primary-bg);
+  color: var(--primary);
+  border-color: var(--primary);
+  box-shadow: none;
+  font-weight: 600;
+}
+
+/* ===== 作品网格 ===== */
+.works-grid {
+  min-height: 400px;
+}
+
+.empty-state {
+  padding: 80px 0;
+}
+
+/* ── 作品卡片 ── */
+.work-card {
+  border-radius: var(--radius-xl);
+  overflow: hidden;
+  cursor: pointer;
+  transition: all 0.4s var(--ease-out-expo);
+  padding: 0;
+  margin-bottom: 24px;
+  background: white;
+}
+
+.work-card:hover {
+  transform: translateY(-6px);
+  box-shadow: var(--shadow-card-hover);
+  border-color: rgba(45, 138, 110, 0.2);
+}
+
+/* ── 封面图 ── */
+.cover-image {
+  position: relative;
+  width: 100%;
+  height: 200px;
+  overflow: hidden;
+  background: linear-gradient(135deg, #F5F2EC, #EDE8DD);
 }
 
 .thumbnail-image {
-  position: absolute;
-  top: 0;
-  left: 0;
   width: 100%;
   height: 100%;
   object-fit: cover;
-  transition: transform 0.5s ease;
+  transition: transform 0.5s var(--ease-out-expo);
 }
 
 .work-card:hover .thumbnail-image {
-  transform: scale(1.05);
+  transform: scale(1.06);
+}
+
+.model-preview {
+  width: 100%;
+  height: 100%;
 }
 
 .thumbnail-placeholder {
-  position: absolute;
-  top: 0;
-  left: 0;
   width: 100%;
   height: 100%;
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  color: rgba(0, 0, 0, 0.6);
-  transition: transform 0.5s ease;
+  gap: 10px;
+  color: rgba(255, 255, 255, 0.9);
+  font-size: 14px;
+  font-weight: 600;
+  transition: transform 0.5s var(--ease-out-expo);
 }
 
 .work-card:hover .thumbnail-placeholder {
-  transform: scale(1.05);
+  transform: scale(1.06);
 }
 
-.thumbnail-placeholder i {
-  font-size: 48px;
-  margin-bottom: 10px;
-}
-
-.model-preview {
-  position: absolute;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  transition: transform 0.5s ease;
-}
-
-.work-card:hover .model-preview {
-  transform: scale(1.05);
+.placeholder-circle {
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.25);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 26px;
 }
 
 .category-badge {
-  background: rgba(0, 0, 0, 0.5);
+  position: absolute;
+  top: 12px;
+  left: 12px;
+  background: rgba(0, 0, 0, 0.55);
+  backdrop-filter: blur(8px);
   color: white;
-  font-size: 12px;
-  padding: 4px 10px;
-  border-radius: 12px;
-  backdrop-filter: blur(4px);
+  font-size: 11px;
+  font-weight: 600;
+  padding: 4px 12px;
+  border-radius: var(--radius-full);
+  letter-spacing: 0.5px;
   z-index: 2;
 }
 
-/* 卡片内部遮罩悬停动画 */
+/* ── 悬浮遮罩 ── */
 .hover-overlay {
   position: absolute;
-  top: 0; left: 0; width: 100%; height: 100%;
-  background: rgba(0, 82, 217, 0.2);
+  inset: 0;
   display: flex;
   align-items: center;
   justify-content: center;
   opacity: 0;
-  transition: all 0.3s ease;
-  backdrop-filter: blur(2px);
+  transition: opacity 0.35s var(--ease-out-expo);
+  z-index: 3;
 }
 
-.hover-overlay .el-button {
-  transform: scale(0.5);
-  transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+.work-card:hover .hover-overlay {
+  opacity: 1;
 }
 
-.work-card:hover .hover-overlay { opacity: 1; }
-.work-card:hover .hover-overlay .el-button { transform: scale(1); }
-
-.work-info { padding: 16px; }
-.work-title { 
-  font-size: 16px; 
-  font-weight: 600; 
-  margin: 0 0 8px 0; 
-  color: #333; 
-  white-space: nowrap; 
-  overflow: hidden; 
-  text-overflow: ellipsis; 
-  transition: color 0.3s; 
+.overlay-bg {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(180deg, rgba(45, 138, 110, 0.15) 0%, rgba(0, 0, 0, 0.55) 100%);
 }
-.work-card:hover .work-title { color: #0052D9; } /* 标题悬停变色 */
-.work-author, .work-upload-user, .work-date {
-  font-size: 13px; 
-  color: #888; 
-  margin: 0 0 8px 0; 
+
+.overlay-actions {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  gap: 14px;
+  transform: translateY(12px);
+  transition: transform 0.35s var(--ease-out-expo);
+}
+
+.work-card:hover .overlay-actions {
+  transform: translateY(0);
+}
+
+.overlay-btn {
+  width: 46px;
+  height: 46px;
+  border-radius: 50%;
+  border: none;
+  cursor: pointer;
+  font-size: 18px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.25s var(--ease-out-expo);
+  color: white;
+}
+
+.view-btn {
+  background: rgba(255, 255, 255, 0.2);
+  backdrop-filter: blur(8px);
+}
+
+.view-btn:hover {
+  background: var(--primary);
+  transform: scale(1.1);
+}
+
+.download-btn {
+  background: rgba(255, 255, 255, 0.2);
+  backdrop-filter: blur(8px);
+}
+
+.download-btn:hover {
+  background: var(--accent-strong);
+  transform: scale(1.1);
+}
+
+/* ── 卡片信息 ── */
+.work-info {
+  padding: 16px 18px 18px;
+}
+
+.work-title {
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--text-main);
+  margin: 0 0 10px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  line-height: 1.4;
 }
 
 .author-row {
   display: flex;
   align-items: center;
-  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+.author-avatar-sm {
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: var(--primary-bg);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--primary);
+  font-size: 11px;
+  flex-shrink: 0;
+}
+
+.work-author {
+  font-size: 13px;
+  color: var(--text-secondary);
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .author-profile-btn {
-  padding: 0;
-  font-size: 12px;
-  color: #165dff;
+  flex-shrink: 0;
+  padding: 2px;
+  color: var(--primary);
 }
 
+.work-meta {
+  display: flex;
+  gap: 14px;
+  margin-bottom: 14px;
+}
+
+.meta-item {
+  font-size: 12px;
+  color: var(--text-light);
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.meta-item i {
+  font-size: 13px;
+}
+
+/* ── 卡片操作按钮 ── */
 .work-actions {
   display: flex;
-  justify-content: space-between;
-  margin-top: 12px;
   gap: 8px;
+  padding-top: 12px;
+  border-top: 1px solid var(--border-light);
 }
 
-.work-actions .el-button {
+.card-action-btn {
   flex: 1;
-  font-size: 12px;
-  padding: 6px 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  padding: 8px 0;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border-color);
+  background: var(--surface);
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 500;
+  transition: all 0.25s var(--ease-out-expo);
+  color: var(--text-secondary);
+  font-family: var(--font-main);
 }
 
+.card-action-btn:hover {
+  border-color: var(--primary);
+  color: var(--primary);
+  background: var(--primary-bg);
+}
+
+.fav-action.is-fav {
+  background: linear-gradient(135deg, #F09342, #FFB74D);
+  border-color: transparent;
+  color: white;
+}
+
+.fav-action.is-fav:hover {
+  background: linear-gradient(135deg, #E08532, #F0A835);
+  color: white;
+}
+
+.detail-action {
+  background: linear-gradient(135deg, var(--primary), var(--primary-light));
+  border-color: transparent;
+  color: white;
+  font-weight: 600;
+}
+
+.detail-action:hover {
+  box-shadow: 0 4px 12px rgba(45, 138, 110, 0.35);
+  color: white;
+  transform: translateY(-1px);
+}
+
+/* ===== 分页 ===== */
 .pagination {
-  margin-top: 32px;
   display: flex;
   justify-content: center;
+  margin-top: 40px;
 }
 
+/* ===== 加载中 ===== */
 .loading-container {
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  padding: 80px 0;
-}
-
-.loading-container p {
-  margin-top: 16px;
-  color: #606266;
+  padding: 60px 0;
+  gap: 16px;
+  color: var(--text-light);
   font-size: 14px;
 }
 
-/* 7. 作品详情对话框样式 */
-.work-detail-dialog {
-  border-radius: 16px;
+.loading-spinner {
+  position: relative;
+  width: 44px;
+  height: 44px;
+}
+
+.spinner-ring {
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  border: 3px solid var(--border-light);
+  border-top-color: var(--primary);
+  animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+/* ===== 详情对话框 ===== */
+::v-deep .gallery-detail-dialog {
+  border-radius: var(--radius-xl) !important;
   overflow: hidden;
 }
 
-.work-detail-content {
+::v-deep .gallery-detail-dialog .el-dialog__header {
   padding: 0;
 }
 
-.work-header {
-  display: flex;
-  padding: 32px;
-  background: linear-gradient(135deg, #f5f7fa 0%, #e4e7ed 100%);
-  border-bottom: 1px solid #e4e7ed;
+::v-deep .gallery-detail-dialog .el-dialog__headerbtn {
+  top: 16px;
+  right: 16px;
+  z-index: 5;
 }
 
-.work-cover {
-  width: 180px;
-  height: 180px;
-  border-radius: 12px;
-  display: flex;
-  align-items: flex-start;
-  justify-content: flex-end;
-  padding: 12px;
-  margin-right: 24px;
-  flex-shrink: 0;
-}
-
-.work-info-header {
-  flex: 1;
-}
-
-.work-title-detail {
-  font-size: 24px;
-  font-weight: 700;
-  color: #1a1a1a;
-  margin: 0 0 16px 0;
-  line-height: 1.3;
-}
-
-.work-author-info {
+::v-deep .gallery-detail-dialog .el-dialog__headerbtn .el-dialog__close {
+  color: white;
+  font-size: 20px;
+  background: rgba(0, 0, 0, 0.4);
+  border-radius: 50%;
+  width: 32px;
+  height: 32px;
   display: flex;
   align-items: center;
-  gap: 16px;
-  margin-bottom: 20px;
-  flex-wrap: wrap;
+  justify-content: center;
 }
 
-.author-name {
-  font-size: 16px;
-  color: #333;
-  font-weight: 500;
+::v-deep .gallery-detail-dialog .el-dialog__body {
+  padding: 0;
 }
 
-.upload-time {
-  font-size: 14px;
-  color: #888;
+.detail-content {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  min-height: 320px;
 }
 
-.work-stats-detail {
+.detail-preview {
+  background: linear-gradient(135deg, #F5F2EC, #EDE8DD);
   display: flex;
-  gap: 32px;
+  align-items: center;
+  justify-content: center;
+  min-height: 320px;
 }
 
-.stat-item {
+.detail-image {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.detail-placeholder {
   display: flex;
   flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  color: rgba(255, 255, 255, 0.9);
+  font-size: 16px;
+  font-weight: 600;
+}
+
+.detail-placeholder i {
+  font-size: 40px;
+}
+
+.detail-info {
+  padding: 28px 24px;
+  display: flex;
+  flex-direction: column;
+}
+
+.detail-title {
+  font-size: 20px;
+  font-weight: 700;
+  color: var(--text-main);
+  margin: 0 0 10px;
+}
+
+.detail-author {
+  font-size: 14px;
+  color: var(--text-secondary);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 14px;
+}
+
+.detail-desc {
+  font-size: 14px;
+  color: var(--text-regular);
+  line-height: 1.7;
+  margin: 0 0 auto;
+  flex: 1;
+  overflow-y: auto;
+}
+
+.detail-meta-row {
+  display: flex;
+  gap: 16px;
+  padding: 14px 0;
+  border-top: 1px solid var(--border-light);
+  margin-top: 14px;
+}
+
+.detail-meta {
+  font-size: 12px;
+  color: var(--text-light);
+  display: flex;
   align-items: center;
   gap: 4px;
 }
 
-.stat-item i {
-  font-size: 20px;
-  color: #0052D9;
-}
-
-.stat-item span:first-of-type {
-  font-size: 18px;
-  font-weight: 600;
-  color: #333;
-}
-
-.stat-label {
-  font-size: 12px;
-  color: #888;
-}
-
-.work-description-detail,
-.work-file-info {
-  padding: 32px;
-  border-bottom: 1px solid #f0f0f0;
-}
-
-.work-description-detail:last-child {
-  border-bottom: none;
-}
-
-.section-title-detail {
-  font-size: 18px;
-  font-weight: 600;
-  color: #333;
-  margin: 0 0 16px 0;
-  position: relative;
-  display: inline-block;
-}
-
-.section-title-detail::after {
-  content: '';
-  position: absolute;
-  bottom: -6px;
-  left: 0;
-  width: 40px;
-  height: 3px;
-  background: #0052D9;
-  border-radius: 2px;
-}
-
-.description-content {
-  font-size: 15px;
-  line-height: 1.6;
-  color: #666;
-  white-space: pre-wrap;
-}
-
-.file-details {
+.detail-actions {
   display: flex;
-  flex-wrap: wrap;
-  gap: 24px;
+  gap: 10px;
+  margin-top: 14px;
 }
 
-.file-item {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  font-size: 14px;
-  color: #666;
+/* ===== 动画 ===== */
+.fade-in-up {
+  animation: fadeInUp 0.6s var(--ease-out-expo) both;
 }
 
-.file-item i {
-  color: #0052D9;
-}
-
-.dialog-footer-detail {
-  display: flex;
-  justify-content: flex-end;
-  gap: 12px;
-  padding: 24px 32px;
-  background: #f8fafc;
-  border-top: 1px solid #f0f0f0;
-}
-
-.close-btn,
-.download-btn {
-  transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
-}
-
-.close-btn:hover {
-  color: #0052D9;
-  border-color: #0052D9;
-}
-
-.download-btn:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 4px 12px rgba(0, 82, 217, 0.3);
-}
-
-/* 响应式设计 */
-@media (max-width: 768px) {
-  .work-header {
-    flex-direction: column;
-    align-items: center;
-    text-align: center;
-  }
-  
-  .work-cover {
-    margin-right: 0;
-    margin-bottom: 20px;
-  }
-  
-  .work-author-info {
-    justify-content: center;
-  }
-  
-  .work-stats-detail {
-    justify-content: center;
-  }
-  
-  .work-description-detail,
-  .work-file-info {
-    padding: 20px;
-  }
-  
-  .dialog-footer-detail {
-    padding: 16px 20px;
-  }
-}
-
-/* 8. 文件预览样式 */
-.file-preview {
-  width: 100%;
-  height: 70vh;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.image-preview {
-  width: 100%;
-  height: 100%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.preview-image {
-  max-width: 100%;
-  max-height: 100%;
-  object-fit: contain;
-}
-
-.video-preview {
-  width: 100%;
-  height: 100%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.preview-video {
-  max-width: 100%;
-  max-height: 100%;
-}
-
-.other-preview {
-  width: 100%;
-  height: 100%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.model-preview-container {
-  width: 100%;
-  height: 100%;
-}
-
-/* 9. 关键帧定义 */
-@keyframes slideDown {
-  from { transform: translateY(-100%); opacity: 0; }
-  to { transform: translateY(0); opacity: 1; }
+.stagger-fade-in {
+  animation: fadeInUp 0.6s var(--ease-out-expo) both;
 }
 
 @keyframes fadeInUp {
-  from { transform: translateY(30px); opacity: 0; }
-  to { transform: translateY(0); opacity: 1; }
+  from { opacity: 0; transform: translateY(24px); }
+  to { opacity: 1; transform: translateY(0); }
 }
 
-/* 10. 响应式设计 */
-@media (max-width: 768px) {
-  .gallery-header {
-    padding: 0 20px;
+/* ===== 响应式 ===== */
+@media (max-width: 900px) {
+  .gallery-hero {
+    padding: 32px 24px 28px;
   }
-  
-  .system-title {
-    font-size: 16px;
+
+  .hero-title {
+    font-size: 28px;
   }
-  
-  .page-header {
-    padding: 30px 0 15px;
+
+  .hero-stats {
+    flex-wrap: wrap;
+    gap: 16px;
   }
-  
-  .page-header h2 {
+
+  .hstat-divider {
+    display: none;
+  }
+
+  .filter-bar {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .search-bar {
+    width: 100%;
+  }
+
+  .filter-divider {
+    display: none;
+  }
+
+  .detail-content {
+    grid-template-columns: 1fr;
+  }
+
+  .detail-preview {
+    min-height: 200px;
+  }
+}
+
+@media (max-width: 480px) {
+  .gallery-container {
+    padding: 16px 12px 60px;
+  }
+
+  .gallery-hero {
+    padding: 24px 16px 20px;
+    border-radius: var(--radius-lg);
+  }
+
+  .hero-title {
     font-size: 24px;
   }
-  
-  .filter-section {
-    margin: 30px auto 24px;
-    padding: 0 16px;
-  }
-  
-  .works-grid {
-    padding: 0 16px 40px;
-  }
-  
-  .work-actions {
-    flex-direction: column;
-  }
-  
-  .work-actions .el-button {
-    width: 100%;
-    margin-bottom: 8px;
-  }
-  
-  .work-actions .el-button:last-child {
-    margin-bottom: 0;
-  }
-  
-  .work-meta {
-    flex-direction: column;
-    gap: 8px;
-  }
-  
-  .work-meta span {
-    margin-right: 0;
-    margin-bottom: 0;
+
+  .work-card {
+    margin-bottom: 16px;
   }
 }
 </style>

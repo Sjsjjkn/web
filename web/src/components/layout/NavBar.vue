@@ -335,13 +335,16 @@ export default {
 
 <style scoped>
 .modern-header {
-  height: 60px;
-  background-color: #ffffff;
-  border-bottom: 1px solid #e5e6eb;
-  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.04);
+  height: 64px;
+  background: var(--header-bg);
+  backdrop-filter: blur(20px) saturate(180%);
+  -webkit-backdrop-filter: blur(20px) saturate(180%);
+  border-bottom: 1px solid var(--border-color);
+  box-shadow: var(--shadow-xs);
   display: flex;
   justify-content: center;
-  position: relative;
+  position: sticky;
+  top: 0;
   z-index: 101;
   flex-shrink: 0;
 }
@@ -349,7 +352,7 @@ export default {
 .header-content {
   width: 100%;
   max-width: 1440px;
-  padding: 0 24px;
+  padding: 0 28px;
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -358,59 +361,62 @@ export default {
 .brand-area {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 12px;
   cursor: pointer;
 }
 
 .logo-mark {
-  width: 32px;
-  height: 32px;
-  background-color: #165dff;
-  border-radius: 8px;
+  width: 36px;
+  height: 36px;
+  background: linear-gradient(135deg, var(--primary) 0%, var(--primary-light) 100%);
+  border-radius: var(--radius-sm);
   display: flex;
   align-items: center;
   justify-content: center;
   color: white;
   font-size: 18px;
+  box-shadow: 0 2px 8px var(--primary-glow);
 }
 
 .logo-text {
   font-size: 18px;
-  font-weight: 600;
+  font-weight: 700;
   margin: 0;
-  color: #1d2129;
-  letter-spacing: 0.5px;
+  color: var(--text-main);
+  letter-spacing: -0.3px;
 }
 
 .school-tag {
-  font-size: 12px;
-  padding: 2px 6px;
-  background-color: #f5f7fa;
-  border-radius: 4px;
-  color: #4e5969;
-  border: 1px solid #e5e6eb;
+  font-size: 11px;
+  padding: 3px 10px;
+  background-color: var(--primary-bg);
+  border-radius: var(--radius-full);
+  color: var(--primary);
+  font-weight: 600;
+  letter-spacing: 0.3px;
 }
 
 .center-nav {
   display: flex;
   align-items: center;
   height: 100%;
-  gap: 4px;
+  gap: 2px;
 }
 
 .nav-item {
   height: 40px;
   display: flex;
   align-items: center;
-  padding: 0 16px;
-  color: #4e5969;
+  padding: 0 14px;
+  color: var(--text-regular);
   text-decoration: none;
   font-size: 14px;
   font-weight: 500;
-  border-radius: 6px;
-  transition: all 0.2s ease;
+  border-radius: var(--radius-sm);
+  transition: all var(--duration-normal) var(--ease-out-expo);
   cursor: pointer;
   position: relative;
+  letter-spacing: -0.1px;
 }
 
 .nav-item i {
@@ -421,29 +427,29 @@ export default {
 .nav-arrow {
   margin-left: 4px;
   margin-right: 0 !important;
-  font-size: 12px !important;
-  transition: transform 0.3s ease;
+  font-size: 11px !important;
+  transition: transform var(--duration-normal) var(--ease-out-expo);
 }
 
 .nav-item:hover {
-  background-color: #e8f3ff;
-  color: #165dff;
+  background-color: var(--primary-bg);
+  color: var(--primary);
 }
 
 .nav-dropdown-panel {
   position: absolute;
   top: 48px;
   left: 50%;
-  transform: translateX(-50%) translateY(10px);
-  background: white;
-  min-width: 170px;
-  border-radius: 8px;
-  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.08);
-  border: 1px solid #e5e6eb;
-  padding: 8px 0;
+  transform: translateX(-50%) translateY(8px);
+  background: var(--card-bg);
+  min-width: 180px;
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-lg);
+  border: 1px solid var(--border-color);
+  padding: 6px;
   opacity: 0;
   visibility: hidden;
-  transition: all 0.2s cubic-bezier(0.2, 0.8, 0.2, 1);
+  transition: all var(--duration-normal) var(--ease-out-expo);
   z-index: 510;
 }
 
@@ -459,22 +465,24 @@ export default {
 
 .dropdown-link {
   display: block;
-  padding: 10px 20px;
-  color: #1d2129;
+  padding: 9px 14px;
+  color: var(--text-main);
   text-decoration: none;
-  font-size: 14px;
-  transition: background 0.2s;
+  font-size: 13px;
+  font-weight: 500;
+  border-radius: var(--radius-sm);
+  transition: all var(--duration-fast) var(--ease-in-out);
 }
 
 .dropdown-link:hover {
-  background-color: #f5f7fa;
-  color: #165dff;
+  background-color: var(--primary-bg);
+  color: var(--primary);
 }
 
 .dropdown-divider {
   height: 1px;
-  background-color: #e5e6eb;
-  margin: 8px 0;
+  background-color: var(--border-color);
+  margin: 6px 8px;
 }
 
 .user-dropdown-wrap {
@@ -484,18 +492,20 @@ export default {
 .user-profile-trigger {
   display: flex;
   align-items: center;
-  gap: 12px;
-  padding: 6px 12px;
-  border-radius: 24px;
-  transition: background 0.2s;
+  gap: 10px;
+  padding: 5px 14px 5px 5px;
+  border-radius: var(--radius-full);
+  transition: background var(--duration-fast) var(--ease-in-out);
+  border: 1px solid transparent;
 }
 
 .user-profile-trigger:hover {
-  background-color: #f5f7fa;
+  background-color: var(--bg-hover);
+  border-color: var(--border-color);
 }
 
 .custom-avatar {
-  background-color: #165dff;
+  background: linear-gradient(135deg, var(--primary) 0%, var(--primary-light) 100%);
   color: white;
 }
 
@@ -506,92 +516,100 @@ export default {
 }
 
 .user-name {
-  font-size: 14px;
-  font-weight: 500;
-  color: #1d2129;
-  line-height: 1.2;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-main);
+  line-height: 1.3;
 }
 
 .user-role {
-  font-size: 12px;
-  color: #86909c;
-  line-height: 1.2;
-  margin-top: 2px;
+  font-size: 11px;
+  color: var(--text-light);
+  line-height: 1.3;
+  margin-top: 1px;
 }
 
 .modern-dropdown-menu {
-  border-radius: 8px;
-  padding: 8px 0;
-  border: 1px solid #e5e6eb;
-  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.08);
+  border-radius: var(--radius-md);
+  padding: 6px;
+  border: 1px solid var(--border-color);
+  box-shadow: var(--shadow-lg);
   z-index: 110;
 }
 
 .modern-dropdown-menu .el-dropdown-menu__item {
-  padding: 8px 24px;
-  font-size: 14px;
+  padding: 8px 16px;
+  font-size: 13px;
+  border-radius: var(--radius-sm);
+  transition: all var(--duration-fast) var(--ease-in-out);
+}
+
+.modern-dropdown-menu .el-dropdown-menu__item:hover {
+  background-color: var(--primary-bg);
+  color: var(--primary);
 }
 
 .danger-text {
-  color: #f53f3f !important;
+  color: #D44444 !important;
 }
 
 .danger-text:hover {
-  background-color: #ffece8 !important;
-  color: #f53f3f !important;
+  background-color: #FEF2F2 !important;
+  color: #D44444 !important;
 }
 
 .user-actions {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 6px;
 }
 
 .notification-btn {
   position: relative;
-  width: 40px;
-  height: 40px;
+  width: 38px;
+  height: 38px;
   display: flex;
   align-items: center;
   justify-content: center;
-  margin-right: 12px;
-  border-radius: 8px;
+  margin-right: 8px;
+  border-radius: var(--radius-full);
   cursor: pointer;
-  transition: background 0.2s;
-  color: #4e5969;
+  transition: all var(--duration-fast) var(--ease-in-out);
+  color: var(--text-regular);
   font-size: 18px;
 }
 
 .notification-btn:hover {
-  background-color: #f5f7fa;
-  color: #165dff;
+  background-color: var(--bg-hover);
+  color: var(--primary);
 }
 
 .notification-badge {
   position: absolute;
-  top: 6px;
-  right: 6px;
+  top: 4px;
+  right: 4px;
   min-width: 18px;
   height: 18px;
   padding: 0 5px;
-  background-color: #f53f3f;
+  background-color: #D44444;
   color: white;
-  font-size: 12px;
-  font-weight: 500;
-  border-radius: 9px;
+  font-size: 11px;
+  font-weight: 600;
+  border-radius: var(--radius-full);
   display: flex;
   align-items: center;
   justify-content: center;
+  box-shadow: 0 2px 6px rgba(212, 68, 68, 0.3);
 }
 
 .notification-panel {
   position: fixed;
-  top: 70px;
-  right: 20px;
+  top: 72px;
+  right: 24px;
   z-index: 1000;
 }
 
-/* 角色切换按钮样式 */
+/* Role switch button */
 .role-switch-wrap {
   cursor: pointer;
 }
@@ -599,19 +617,20 @@ export default {
 .role-switch-btn {
   display: flex;
   align-items: center;
-  gap: 6px;
-  padding: 6px 12px;
-  border-radius: 24px;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  gap: 5px;
+  padding: 5px 12px;
+  border-radius: var(--radius-full);
+  background: linear-gradient(135deg, var(--accent) 0%, #C87D2A 100%);
   color: white;
-  transition: all 0.2s ease;
-  font-size: 13px;
-  font-weight: 500;
+  transition: all var(--duration-fast) var(--ease-out-expo);
+  font-size: 12px;
+  font-weight: 600;
+  box-shadow: 0 2px 8px rgba(212, 145, 62, 0.25);
 }
 
 .role-switch-btn:hover {
   transform: translateY(-1px);
-  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+  box-shadow: 0 4px 16px rgba(212, 145, 62, 0.4);
 }
 
 .role-switch-btn i {
@@ -619,15 +638,15 @@ export default {
 }
 
 .role-text {
-  padding-right: 4px;
+  padding-right: 2px;
 }
 
 .role-switch-menu {
   min-width: 200px;
-  border-radius: 8px;
-  padding: 8px 0;
-  border: 1px solid #e5e6eb;
-  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.08);
+  border-radius: var(--radius-md);
+  padding: 6px;
+  border: 1px solid var(--border-color);
+  box-shadow: var(--shadow-lg);
 }
 
 .role-switch-menu .dropdown-group {
@@ -635,27 +654,30 @@ export default {
 }
 
 .role-switch-menu .dropdown-group-title {
-  padding: 6px 20px;
-  font-size: 12px;
-  color: #86909c;
-  font-weight: 500;
-  background-color: #f5f7fa;
+  padding: 6px 16px;
+  font-size: 11px;
+  color: var(--text-light);
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
 }
 
 .role-switch-menu .el-dropdown-menu__item {
-  padding: 10px 20px;
-  font-size: 14px;
+  padding: 9px 16px;
+  font-size: 13px;
   display: flex;
   align-items: center;
   gap: 8px;
+  border-radius: var(--radius-sm);
+  transition: all var(--duration-fast) var(--ease-in-out);
 }
 
 .role-switch-menu .el-dropdown-menu__item:hover {
-  background-color: #e8f3ff;
-  color: #165dff;
+  background-color: var(--primary-bg);
+  color: var(--primary);
 }
 
 .role-switch-menu .el-dropdown-menu__item i {
-  font-size: 16px;
+  font-size: 15px;
 }
 </style>
