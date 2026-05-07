@@ -357,9 +357,9 @@ export default {
             iconEmoji: '👥'
           },
           {
-            value: data.totalViews.toString(),
-            label: '总浏览量',
-            iconEmoji: '👁'
+            value: data.excellentWorks.toString(),
+            label: '优秀作品',
+            iconEmoji: '⭐'
           },
           {
             value: data.todayWorks.toString(),
@@ -605,7 +605,7 @@ export default {
 
 .stat-icon.icon-0 { background: var(--primary-bg, #EDF5F0); color: var(--primary, #2D8A6E); }
 .stat-icon.icon-1 { background: #E5F0F5; color: var(--info, #5B9BD5); }
-.stat-icon.icon-2 { background: #FDF2E4; color: var(--warning, #F09342); }
+.stat-icon.icon-2 { background: #FFF8E1; color: #FFB300; }
 .stat-icon.icon-3 { background: #FDF0EB; color: var(--accent, #C8AA6E); }
 
 .stat-info h3 {
