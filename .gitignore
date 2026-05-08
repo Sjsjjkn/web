@@ -1,1 +1,28 @@
+# Compiled binaries
+api/Backend/bin/
+api/Backend/obj/
+web/dist/
+web/node_modules/
+
+# Uploads directory
 api/Backend/Uploads/
+
+# IDE files
+.vscode/
+.vs/
+*.suo
+*.user
+*.userosscache
+*.sln.docstates
+
+# Logs
+*.log
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Environment variables
+.env
+.env.local
+.env.*.local
