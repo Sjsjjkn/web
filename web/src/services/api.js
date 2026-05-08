@@ -84,7 +84,7 @@ export const workApi = {
     })
   },
   incrementViews(id) {
-    return http.post(`/api/Work/${id}/view`)
+    return http.get(`/api/Work/${id}/view`)
   }
 }
 

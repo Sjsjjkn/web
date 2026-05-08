@@ -241,20 +241,7 @@ export default {
       return colors[index]
     },
     handleViewWork(id) {
-      this.incrementViewCount(id)
       this.$router.push(`/works/${id}`)
-    },
-    async incrementViewCount(id) {
-      try {
-        const http = (await import('../../utils/http')).default
-        const response = await http.get(`/api/Work/${id}/view`)
-        const work = this.works.find(w => w.id === id)
-        if (work) {
-          work.views = response.data.views || (work.views || 0) + 1
-        }
-      } catch (e) {
-        console.error('增加浏览量失败:', e)
-      }
     },
     handleDownloadFile(work) {
       if (!work.filePath) {

@@ -320,12 +320,11 @@ export default {
   justify-content: center;
   padding: 0 40px;
   height: 64px;
-  background-color: rgba(255, 255, 255, 0.9);
-  backdrop-filter: blur(10px);
+  background-color: #fff;
   border-bottom: 1px solid rgba(0,0,0,0.05);
   position: sticky;
   top: 0;
-  z-index: 100;
+  z-index: 10;
 }
 
 .slide-down {
@@ -413,7 +412,7 @@ export default {
 /* 对话框样式 */
 ::v-deep .modern-dialog .el-dialog {
   border-radius: 12px;
-  overflow: visible !important;
+  overflow: hidden;
 }
 
 ::v-deep .modern-dialog .el-dialog__header {
@@ -424,8 +423,6 @@ export default {
 
 ::v-deep .modern-dialog .el-dialog__body {
   padding: 24px;
-  display: block !important;
-  overflow: visible !important;
 }
 
 ::v-deep .modern-dialog .el-form-item {
