@@ -162,6 +162,9 @@
       custom-class="detail-dialog"
       destroy-on-close
       append-to-body
+      :modal-append-to-body="true"
+      :modal="true"
+      :lock-scroll="false"
     >
       <div v-if="currentWork" class="detail-content">
         <!-- 顶部封面区 -->
@@ -452,7 +455,7 @@ export default {
       const user = getUser()
       const target = user && ['Admin', 'Teacher'].includes(user.role)
         ? '/works/manage'
-        : '/account/works'
+        : '/account/space'
       if (this.$route.path !== target) {
         this.$router.push(target)
       }

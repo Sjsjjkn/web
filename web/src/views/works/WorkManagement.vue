@@ -136,6 +136,8 @@
       width="680px"
       :close-on-click-modal="false"
       @close="resetForm"
+      append-to-body
+      :modal-append-to-body="false"
     >
       <el-form ref="workForm" :model="form" :rules="rules" label-width="90px" label-position="right">
         <el-form-item label="作品标题" prop="title">

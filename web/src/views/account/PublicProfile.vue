@@ -1,333 +1,371 @@
 <template>
-  <div class="public-profile-container" v-if="!loading">
-    <div v-if="error" class="error-page">
-      <el-empty description="个人主页不可访问" :image="emptyImage">
-        <p class="error-message">{{ error }}</p>
-      </el-empty>
+  <div class="public-profile-page" v-loading="loading">
+    <!-- 顶部用户信息卡片 -->
+    <div class="profile-header" v-if="user">
+      <div class="header-bg"></div>
+      <div class="profile-card">
+        <div class="avatar-section">
+          <img 
+            v-if="user.avatar" 
+            :src="user.avatar" 
+            :alt="user.name" 
+            class="profile-avatar"
+          />
+          <div v-else class="avatar-placeholder">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+            </svg>
+          </div>
+        </div>
+        <div class="profile-info">
+          <h1 class="profile-name">{{ user.name }}</h1>
+          <span class="profile-role">{{ translateRole(user.role) }}</span>
+          <p class="profile-bio" v-if="user.bio">{{ user.bio }}</p>
+          <div class="profile-meta" v-if="user.workId || user.department">
+            <span v-if="user.workId">{{ user.workId }}</span>
+            <span v-if="user.workId && user.department">|</span>
+            <span v-if="user.department">{{ user.department }}</span>
+          </div>
+        </div>
+      </div>
     </div>
 
-    <div v-else class="profile-content">
-      <el-card class="profile-header-card" shadow="never">
-        <div class="profile-banner">
-          <div class="banner-decoration"></div>
-        </div>
-        <div class="profile-info-wrap">
-          <div class="avatar-wrapper">
-            <el-avatar :size="96" class="user-avatar" :src="userInfo.avatar" />
-          </div>
-          <div class="user-main-info">
-            <h2 class="user-name">
-              {{ userInfo.name }}
-              <el-tag size="small" effect="plain" class="role-tag">
-                {{ getRoleText(userInfo.role) }}
-              </el-tag>
-            </h2>
-            <div class="user-meta">
-              <span><i class="el-icon-user"></i> {{ getWorkIdLabel(userInfo.role) }}：{{ userInfo.workId }}</span>
-              <el-divider direction="vertical" />
-              <span><i class="el-icon-office-building"></i> {{ getDepartmentLabel(userInfo.role) }}：{{ userInfo.department }}</span>
-            </div>
-          </div>
-        </div>
-        <div v-if="userInfo.bio" class="profile-bio">
-          <p>{{ userInfo.bio }}</p>
-        </div>
-      </el-card>
-
-      <el-card class="profile-works-card" shadow="never">
-        <div class="content-header">
-          <h3 class="section-title">作品展示</h3>
-          <span class="work-count">{{ userInfo.workCount }} 件作品</span>
-        </div>
-        <div v-if="userInfo.works && userInfo.works.length > 0" class="works-grid">
-          <div
-            v-for="work in userInfo.works"
-            :key="work.id"
-            class="work-card"
-            @click="goToWorkDetail(work.id)"
-          >
-            <div class="work-thumbnail">
-              <img v-if="work.thumbnailUrl" :src="work.thumbnailUrl" :alt="work.title" />
-              <div v-else class="no-thumbnail">
-                <i class="el-icon-file-text"></i>
-                <span>{{ work.fileType }}</span>
-              </div>
-            </div>
-            <div class="work-info">
-              <h4 class="work-title">{{ work.title }}</h4>
-              <p class="work-desc">{{ work.description }}</p>
-              <span class="work-date">{{ formatDate(work.createdAt) }}</span>
-            </div>
-          </div>
-        </div>
-        <div v-else class="no-works">
-          <el-empty description="暂无作品" />
-        </div>
-      </el-card>
+    <!-- 统计数据 -->
+    <div class="stats-row" v-if="user">
+      <div class="stat-item">
+        <span class="stat-value">{{ user.workCount }}</span>
+        <span class="stat-label">作品</span>
+      </div>
+      <div class="stat-divider"></div>
+      <div class="stat-item">
+        <span class="stat-value">{{ totalViews }}</span>
+        <span class="stat-label">总浏览</span>
+      </div>
+      <div class="stat-divider"></div>
+      <div class="stat-item">
+        <span class="stat-value">{{ totalFavorites }}</span>
+        <span class="stat-label">总收藏</span>
+      </div>
     </div>
-  </div>
-  <div v-else class="loading-container">
-    <i class="el-icon-loading loading-icon"></i>
-    <span>加载中...</span>
+
+    <!-- 作品列表 -->
+    <div class="works-section" v-if="user">
+      <h2 class="section-title">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+        </svg>
+        <span>作品集</span>
+        <span class="work-count">({{ user.workCount }})</span>
+      </h2>
+      
+      <div class="works-grid" v-if="works.length > 0">
+        <div 
+          class="work-card"
+          v-for="work in works"
+          :key="work.id"
+          @click="$router.push(`/works/${work.id}`)"
+        >
+          <div class="work-cover">
+            <img 
+              v-if="work.thumbnailUrl" 
+              :src="work.thumbnailUrl" 
+              :alt="work.title" 
+            />
+            <div v-else class="work-placeholder">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+              </svg>
+            </div>
+          </div>
+          <div class="work-info">
+            <h4 class="work-title">{{ work.title }}</h4>
+            <p class="work-desc">{{ work.description || '暂无描述' }}</p>
+            <div class="work-meta">
+              <span>{{ work.fileType }}</span>
+              <span>{{ formatDate(work.createdAt) }}</span>
+            </div>
+          </div>
+        </div>
+      </div>
+      
+      <div class="empty-state" v-else>
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+        </svg>
+        <p>暂无作品</p>
+      </div>
+    </div>
   </div>
 </template>
 
 <script>
+import http from '../../utils/http'
+
 export default {
   name: 'PublicProfile',
   data() {
     return {
       loading: true,
-      error: '',
-      userInfo: {},
-      emptyImage: 'https://cube.elemecdn.com/e/fd/0fc7d20532fdaf769a25683617711png.png'
+      user: null,
+      works: [],
+      totalViews: 0,
+      totalFavorites: 0
     }
   },
-  mounted() {
-    this.loadProfile()
+  async mounted() {
+    const userId = this.$route.params.userId
+    if (userId) {
+      await this.loadProfile(userId)
+    }
   },
   methods: {
-    async loadProfile() {
+    async loadProfile(userId) {
       try {
-        const userId = this.$route.params.userId
-        console.log('加载用户资料，userId:', userId)
-        const response = await this.$axios.get(`/api/Auth/public-profile/${userId}`)
-        this.userInfo = response.data
-        this.error = ''
-      } catch (error) {
-        console.error('加载公开资料失败:', error)
-        if (error.response?.status === 403) {
-          this.error = '该用户的个人主页未公开'
-        } else if (error.response?.status === 404) {
-          this.error = '用户不存在'
-        } else {
-          this.error = '加载个人主页失败'
+        const res = await http.get(`/api/Auth/public-profile/${userId}`)
+        if (res.data) {
+          this.user = res.data
+          this.works = res.data.works || []
+          this.calculateStats()
         }
-        this.userInfo = {}
+      } catch (error) {
+        console.error('加载用户主页失败:', error)
+        if (error.response?.status === 403) {
+          this.$message.error('该用户的个人主页未公开')
+        } else if (error.response?.status === 404) {
+          this.$message.error('用户不存在')
+        } else {
+          this.$message.error('加载失败')
+        }
       } finally {
         this.loading = false
       }
     },
-    getRoleText(role) {
+    calculateStats() {
+      this.totalViews = this.works.reduce((sum, w) => sum + (w.views || 0), 0)
+      this.totalFavorites = this.works.reduce((sum, w) => sum + (w.favorites || 0), 0)
+    },
+    translateRole(role) {
       const roles = {
+        admin: '管理员',
+        teacher: '导师',
+        student: '学生',
+        guest: '访客',
         Admin: '管理员',
-        Teacher: '教师',
-        Student: '学生'
+        Teacher: '导师',
+        Student: '学生',
+        Guest: '访客'
       }
-      return roles[role] || role
+      return roles[role] || role || '未知身份'
     },
-    getWorkIdLabel(role) {
-      if (role === 'Teacher') return '教师编号'
-      if (role === 'Student') return '学号'
-      return '编号'
-    },
-    getDepartmentLabel(role) {
-      if (role === 'Teacher') return '所属院系'
-      if (role === 'Student') return '班级'
-      return '部门'
-    },
-    formatDate(dateStr) {
-      if (!dateStr) return ''
-      const date = new Date(dateStr)
+    formatDate(dateString) {
+      if (!dateString) return '--'
+      const date = new Date(dateString)
       return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`
-    },
-    goToWorkDetail(workId) {
-      this.$router.push(`/works/${workId}`)
     }
   }
 }
 </script>
 
 <style scoped>
-.public-profile-container {
+.public-profile-page {
   min-height: 100vh;
-  background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
-  padding: 20px;
+  background: #f5f7fa;
+  padding-bottom: 40px;
 }
 
-.loading-container {
+.profile-header {
+  position: relative;
+  padding: 40px 24px;
+}
+
+.header-bg {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+}
+
+.profile-card {
+  position: relative;
+  max-width: 800px;
+  margin: 0 auto;
+  background: #fff;
+  border-radius: 20px;
+  padding: 32px;
   display: flex;
-  flex-direction: column;
+  gap: 24px;
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.1);
+}
+
+.avatar-section {
+  flex-shrink: 0;
+}
+
+.profile-avatar {
+  width: 120px;
+  height: 120px;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 4px solid #fff;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+.avatar-placeholder {
+  width: 120px;
+  height: 120px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  display: flex;
   align-items: center;
   justify-content: center;
-  min-height: 400px;
-}
-
-.loading-icon {
+  color: #fff;
   font-size: 48px;
-  color: var(--primary);
-  animation: spin 1s linear infinite;
-}
-
-@keyframes spin {
-  from {
-    transform: rotate(0deg);
-  }
-  to {
-    transform: rotate(360deg);
-  }
-}
-
-.error-page {
-  padding: 60px 20px;
-}
-
-.error-message {
-  color: #f53f3f;
-  margin-top: 10px;
-}
-
-.profile-content {
-  max-width: 900px;
-  margin: 0 auto;
-}
-
-.profile-header-card {
-  margin-bottom: 20px;
-  border-radius: 12px;
-  overflow: hidden;
-}
-
-.profile-banner {
-  height: 180px;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  position: relative;
-}
-
-.banner-decoration {
-  position: absolute;
-  bottom: 0;
-  left: 0;
-  right: 0;
-  height: 30px;
-  background: linear-gradient(45deg, transparent 33.33%, rgba(255,255,255,0.1) 33.33%, rgba(255,255,255,0.1) 66.66%, transparent 66.66%);
-  background-size: 20px 20px;
-}
-
-.profile-info-wrap {
-  display: flex;
-  align-items: flex-end;
-  padding: 20px;
-  margin-top: -60px;
-  position: relative;
-}
-
-.avatar-wrapper {
-  margin-right: 24px;
-}
-
-.user-avatar {
   border: 4px solid #fff;
-  box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
 }
 
-.user-main-info {
+.profile-info {
   flex: 1;
 }
 
-.user-name {
-  font-size: 24px;
-  font-weight: 600;
-  margin: 0 0 8px 0;
-  display: flex;
-  align-items: center;
-  gap: 12px;
+.profile-name {
+  margin: 0 0 8px;
+  font-size: 28px;
+  font-weight: 700;
+  color: #1a1a1a;
 }
 
-.role-tag {
+.profile-role {
+  display: inline-block;
+  padding: 4px 12px;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: #fff;
+  border-radius: 20px;
   font-size: 12px;
-}
-
-.user-meta {
-  display: flex;
-  align-items: center;
-  gap: 16px;
-  color: #646a73;
-  font-size: 14px;
+  font-weight: 500;
+  margin-bottom: 12px;
 }
 
 .profile-bio {
-  padding: 0 20px 20px;
-  margin-top: -10px;
-}
-
-.profile-bio p {
-  margin: 0;
-  color: #8f959e;
+  margin: 0 0 12px;
+  color: #666;
   font-size: 14px;
   line-height: 1.6;
 }
 
-.profile-works-card {
-  border-radius: 12px;
+.profile-meta {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  color: #888;
 }
 
-.content-header {
+.stats-row {
+  max-width: 800px;
+  margin: -20px auto 32px;
+  position: relative;
+  background: #fff;
+  border-radius: 12px;
+  padding: 20px 32px;
   display: flex;
-  justify-content: space-between;
   align-items: center;
-  margin-bottom: 20px;
+  justify-content: center;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+}
+
+.stat-item {
+  text-align: center;
+  flex: 1;
+}
+
+.stat-value {
+  display: block;
+  font-size: 24px;
+  font-weight: 700;
+  color: #1a1a1a;
+}
+
+.stat-label {
+  font-size: 13px;
+  color: #888;
+}
+
+.stat-divider {
+  width: 1px;
+  height: 40px;
+  background: #eee;
+}
+
+.works-section {
+  max-width: 900px;
+  margin: 0 auto;
+  padding: 0 24px;
 }
 
 .section-title {
-  font-size: 18px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0 0 24px;
+  font-size: 20px;
   font-weight: 600;
-  margin: 0;
+  color: #1a1a1a;
+}
+
+.section-title svg {
+  width: 20px;
+  height: 20px;
+  color: #667eea;
 }
 
 .work-count {
-  color: #8f959e;
   font-size: 14px;
+  font-weight: 400;
+  color: #888;
 }
 
 .works-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
   gap: 20px;
 }
 
 .work-card {
-  cursor: pointer;
-  border-radius: 8px;
-  overflow: hidden;
   background: #fff;
-  box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+  border-radius: 12px;
+  overflow: hidden;
+  cursor: pointer;
   transition: all 0.3s ease;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
 }
 
 .work-card:hover {
   transform: translateY(-4px);
-  box-shadow: 0 8px 24px rgba(0,0,0,0.12);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
 }
 
-.work-thumbnail {
+.work-cover {
+  position: relative;
+  width: 100%;
   height: 160px;
   overflow: hidden;
   background: #f5f7fa;
 }
 
-.work-thumbnail img {
+.work-cover img {
   width: 100%;
   height: 100%;
   object-fit: cover;
 }
 
-.no-thumbnail {
+.work-placeholder {
+  width: 100%;
+  height: 100%;
   display: flex;
-  flex-direction: column;
   align-items: center;
   justify-content: center;
-  height: 100%;
-  color: #8f959e;
-}
-
-.no-thumbnail i {
-  font-size: 32px;
-  margin-bottom: 8px;
-}
-
-.no-thumbnail span {
-  font-size: 12px;
+  color: #ccc;
+  font-size: 48px;
 }
 
 .work-info {
@@ -335,33 +373,46 @@ export default {
 }
 
 .work-title {
-  margin: 0 0 8px 0;
+  margin: 0 0 8px;
   font-size: 15px;
-  font-weight: 500;
-  color: #1f2329;
+  font-weight: 600;
+  color: #1a1a1a;
+  white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-  white-space: nowrap;
 }
 
 .work-desc {
-  margin: 0 0 10px 0;
+  margin: 0 0 12px;
   font-size: 13px;
-  color: #646a73;
-  overflow: hidden;
-  text-overflow: ellipsis;
+  color: #666;
   display: -webkit-box;
   -webkit-line-clamp: 2;
   -webkit-box-orient: vertical;
-  line-height: 1.5;
+  overflow: hidden;
 }
 
-.work-date {
+.work-meta {
+  display: flex;
+  justify-content: space-between;
   font-size: 12px;
-  color: #8f959e;
+  color: #999;
 }
 
-.no-works {
-  padding: 40px 0;
+.empty-state {
+  text-align: center;
+  padding: 60px 24px;
+  color: #999;
+}
+
+.empty-state svg {
+  width: 80px;
+  height: 80px;
+  margin-bottom: 16px;
+}
+
+.empty-state p {
+  margin: 0;
+  font-size: 14px;
 }
 </style>

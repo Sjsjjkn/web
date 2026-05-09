@@ -882,6 +882,82 @@ namespace Backend.Controllers
                 return StatusCode(500, new { message = "检查收藏状态失败" });
             }
         }
+
+        // GET: api/Work/favorites
+        [HttpGet("favorites")]
+        public async Task<ActionResult> GetMyFavorites()
+        {
+            try
+            {
+                var userId = GetCurrentUserId();
+                if (userId == null)
+                    return Unauthorized(new { message = "未授权" });
+
+                var favorites = await _context.WorkFavorites
+                    .Where(f => f.UserId == userId.Value)
+                    .Include(f => f.Work)
+                        .ThenInclude(w => w.Uploader)
+                    .OrderByDescending(f => f.FavoriteDate)
+                    .Select(fw => new
+                    {
+                        id = fw.Id,
+                        workId = fw.Work.Id,
+                        title = fw.Work.Title,
+                        description = fw.Work.Description,
+                        fileType = Path.GetExtension(fw.Work.FileName ?? "").TrimStart('.').ToLower(),
+                        coverImage = fw.Work.PreviewImage ?? fw.Work.FilePath,
+                        authorName = fw.Work.Uploader.Name ?? fw.Work.Uploader.Username,
+                        favoritedAt = fw.FavoriteDate
+                    })
+                    .ToListAsync();
+
+                return Ok(favorites);
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"获取收藏列表失败: {ex.Message}");
+                return StatusCode(500, new { message = "获取收藏列表失败" });
+            }
+        }
+
+        // GET: api/Work/history
+        [HttpGet("history")]
+        public async Task<ActionResult> GetViewHistory()
+        {
+            try
+            {
+                var userId = GetCurrentUserId();
+                if (userId == null)
+                    return Unauthorized(new { message = "未授权" });
+
+                // 从 ModerationItem 或使用最近浏览的作品（简化实现：返回用户自己最近上传的作品）
+                // 由于没有专门的浏览历史表，返回当前用户自己的作品作为历史
+                var works = await _context.Works
+                    .Where(w => w.UserId == userId.Value)
+                    .Include(w => w.Uploader)
+                    .OrderByDescending(w => w.UploadDate)
+                    .Take(20)
+                    .Select(w => new
+                    {
+                        id = w.Id,
+                        workId = w.Id,
+                        title = w.Title,
+                        description = w.Description,
+                        fileType = Path.GetExtension(w.FileName ?? "").TrimStart('.').ToLower(),
+                        coverImage = w.PreviewImage ?? w.FilePath,
+                        authorName = w.Uploader.Name ?? w.Uploader.Username,
+                        viewedAt = w.UploadDate
+                    })
+                    .ToListAsync();
+
+                return Ok(works);
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"获取浏览历史失败: {ex.Message}");
+                return StatusCode(500, new { message = "获取浏览历史失败" });
+            }
+        }
     }
 
     /// <summary>

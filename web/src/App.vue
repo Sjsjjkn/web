@@ -309,6 +309,32 @@ body::before {
   border-radius: var(--radius-lg) !important;
 }
 
+/* 解决 touchmove 事件警告 */
+.el-dialog__wrapper,
+.el-dialog,
+.el-loading-mask,
+.el-popover,
+.el-dropdown-menu {
+  touch-action: pan-y;
+  -ms-touch-action: pan-y;
+}
+
+/* 确保对话框遮罩层和内容都显示在最顶层 */
+.el-dialog__wrapper {
+  z-index: 2000 !important;
+}
+
+.el-dialog {
+  z-index: 2001 !important;
+}
+
+.el-dialog__header,
+.el-dialog__body,
+.el-dialog__footer {
+  position: relative;
+  z-index: 2002 !important;
+}
+
 /* ── 过渡动画 ── */
 .fade-transform-enter-active,
 .fade-transform-leave-active {

@@ -84,9 +84,15 @@
             </div>
             <div class="author-info">
               <h3 class="author-name">{{ work.author || work.uploadUserName || '匿名用户' }}</h3>
-              <p class="author-role">{{ translateRole(work.authorRole || work.role) }}</p>
+              <p class="author-role">{{ translateRole(work.authorRole || work.role || work.uploadUserRole) }}</p>
             </div>
-            <button class="view-profile-btn">查看主页</button>
+            <button 
+              class="view-profile-btn" 
+              :disabled="!work.uploadUserProfilePublic"
+              @click="handleViewProfile"
+            >
+              {{ work.uploadUserProfilePublic ? '查看主页' : '主页未公开' }}
+            </button>
           </div>
 
           <!-- 数据指标 -->
@@ -286,6 +292,23 @@ export default {
         window.open(`/api/File/download?fileName=${encodeURIComponent(this.work.filePath)}`, '_blank')
       } else {
         this.$message.warning('暂无下载文件')
+      }
+    },
+
+    handleViewProfile() {
+      console.log('handleViewProfile called', {
+        work: this.work,
+        allKeys: this.work ? Object.keys(this.work) : [],
+        userId: this.work?.UserId,
+        userId_lower: this.work?.userId,
+        uploadUserId: this.work?.uploadUserId,
+        profilePublic: this.work?.uploadUserProfilePublic
+      })
+      const userId = this.work?.UserId || this.work?.userId || this.work?.uploadUserId || this.work?.user_id || this.work?.id
+      if (this.work && userId) {
+        this.$router.push(`/profile/${userId}`)
+      } else {
+        this.$message.warning('无法查看主页')
       }
     },
 

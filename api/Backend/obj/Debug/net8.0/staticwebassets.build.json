@@ -1,6 +1,6 @@
 {
   "Version": 1,
-  "Hash": "ejgRKNXaBf8DS23QCxBjgx+tCdxZRV9g544tomPOw/o=",
+  "Hash": "L3ApZVukiF6zZKcg66jYSIJrxaHpWqkg1DvBdjTRLs4=",
   "Source": "Backend",
   "BasePath": "_content/Backend",
   "Mode": "Default",
@@ -15,5 +15,25 @@
       "Pattern": "**"
     }
   ],
-  "Assets": []
+  "Assets": [
+    {
+      "Identity": "D:\\毕设\\web\\api\\Backend\\wwwroot\\uploads\\avatars\\avatar_1_20260508205333.png",
+      "SourceId": "Backend",
+      "SourceType": "Discovered",
+      "ContentRoot": "D:\\毕设\\web\\api\\Backend\\wwwroot\\",
+      "BasePath": "_content/Backend",
+      "RelativePath": "uploads/avatars/avatar_1_20260508205333.png",
+      "AssetKind": "All",
+      "AssetMode": "All",
+      "AssetRole": "Primary",
+      "AssetMergeBehavior": "PreferTarget",
+      "AssetMergeSource": "",
+      "RelatedAsset": "",
+      "AssetTraitName": "",
+      "AssetTraitValue": "",
+      "CopyToOutputDirectory": "Never",
+      "CopyToPublishDirectory": "PreserveNewest",
+      "OriginalItemSpec": "wwwroot\\uploads\\avatars\\avatar_1_20260508205333.png"
+    }
+  ]
 }

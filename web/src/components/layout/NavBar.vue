@@ -14,10 +14,6 @@
           <i class="el-icon-s-home"></i>首页
         </router-link>
 
-        <router-link to="/account/announcements" class="nav-item">
-          <i class="el-icon-bell"></i>系统公告
-        </router-link>
-
         <router-link to="/works" class="nav-item">
           <i class="el-icon-picture-outline"></i>作品展厅
         </router-link>
@@ -26,10 +22,7 @@
           <i class="el-icon-user"></i>用户中心
           <i class="el-icon-arrow-down nav-arrow"></i>
           <div class="nav-dropdown-panel">
-            <router-link to="/account/profile" class="dropdown-link">个人信息</router-link>
-            <router-link to="/account/favorites" class="dropdown-link">我的收藏</router-link>
-            <router-link to="/account/works" class="dropdown-link">个人作品集</router-link>
-            <router-link to="/account/announcements" class="dropdown-link">系统公告</router-link>
+            <router-link to="/account/space" class="dropdown-link">个人空间</router-link>
             <div class="dropdown-divider" v-if="hasPermission(['Admin', 'Teacher'])"></div>
             <router-link v-if="hasPermission(['Admin', 'Teacher'])" to="/works/manage" class="dropdown-link">作品管理</router-link>
             <router-link to="/account/feedback" class="dropdown-link">意见反馈</router-link>
@@ -72,7 +65,6 @@
       </nav>
 
       <div class="user-actions">
-        <!-- 角色切换按钮 -->
         <el-dropdown trigger="click" @command="handleRoleSwitch" class="role-switch-wrap">
           <div class="role-switch-btn">
             <i class="el-icon-switch-button"></i>
@@ -101,7 +93,6 @@
           </el-dropdown-menu>
         </el-dropdown>
 
-        <!-- 通知按钮 -->
         <div class="notification-btn" @click="toggleNotificationPanel">
           <i class="el-icon-bell"></i>
           <span class="notification-badge" v-if="unreadCount > 0">{{ unreadCount }}</span>
@@ -125,7 +116,6 @@
       </div>
     </div>
 
-    <!-- 通知面板 -->
     <div class="notification-panel" v-if="showNotificationPanel" @click.self="showNotificationPanel = false">
       <NotificationCenter @update-count="handleNotificationCountUpdate" />
     </div>
@@ -163,7 +153,6 @@ export default {
   mounted() {
     this.loadUserInfo()
     this.loadUnreadCount()
-    // 监听用户信息更新事件，实现头像实时更新
     eventBus.$on('user-info-updated', this.handleUserInfoUpdated)
     eventBus.$on('avatar-updated', this.handleAvatarUpdated)
   },
@@ -191,7 +180,6 @@ export default {
         this.currentUser.username = userInfo.username || ''
         this.currentUser.role = userInfo.role || ''
         this.currentUser.avatar = userInfo.avatar || ''
-        // 同步到 localStorage
         const stored = localStorage.getItem('userInfo')
         const current = stored ? JSON.parse(stored) : {}
         Object.assign(current, userInfo)
@@ -202,7 +190,6 @@ export default {
       console.log('NavBar: avatar-updated', fileName)
       if (fileName) {
         this.currentUser.avatar = fileName
-        // 同步到 localStorage
         const stored = localStorage.getItem('userInfo')
         const current = stored ? JSON.parse(stored) : {}
         current.avatar = fileName
@@ -224,13 +211,13 @@ export default {
     },
     getAvatarUrl() {
       if (this.currentUser.avatar) {
-        return `/api/File/download?fileName=${encodeURIComponent(this.currentUser.avatar)}`
+        return `/api/File/download?fileName=${encodeURIComponent(this.currentUser.avatar)}&t=${Date.now()}`
       }
       return null
     },
     handleCommand(command) {
       if (command === 'profile') {
-        this.$router.push('/account/profile')
+        this.$router.push('/account/space')
         return
       }
       if (command === 'settings') {
@@ -267,7 +254,6 @@ export default {
     toggleNotificationPanel() {
       this.showNotificationPanel = !this.showNotificationPanel
       if (this.showNotificationPanel) {
-        // 打开面板后重新加载通知列表
         eventBus.$emit('notification-panel-opened')
       }
     },
@@ -275,13 +261,12 @@ export default {
       if (count !== undefined) {
         this.unreadCount = count
       } else {
-        // 如果没有传具体数值，重新获取
         this.loadUnreadCount()
       }
     },
     async handleRoleSwitch(username) {
       const password = '123456'
-      this.$loading({
+      const loadingInstance = this.$loading({
         lock: true,
         text: '正在切换身份...',
         spinner: 'el-icon-loading',
@@ -307,26 +292,22 @@ export default {
         }
         setUser(data.user)
 
-        // 更新当前用户信息
         this.currentUser.username = data.user.username || ''
         this.currentUser.role = data.user.role || ''
         this.currentUser.avatar = data.user.avatar || ''
 
-        // 刷新通知数量
         this.loadUnreadCount()
 
-        // 触发用户信息更新事件
         eventBus.$emit('user-info-updated', data.user)
 
         this.$message.success(`已切换为 ${data.user.name || data.user.username} 身份`)
 
-        // 刷新当前页面以应用新身份的权限
         window.location.reload()
       } catch (error) {
         const errorMessage = error.response?.data?.message || error.message || '切换身份失败'
         this.$message.error(errorMessage)
       } finally {
-        this.$loading().close()
+        loadingInstance.close()
       }
     }
   }
@@ -609,7 +590,6 @@ export default {
   z-index: 1000;
 }
 
-/* Role switch button */
 .role-switch-wrap {
   cursor: pointer;
 }

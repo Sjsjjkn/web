@@ -470,62 +470,24 @@ namespace Backend.Controllers
         // ==================== 头像上传 ====================
 
         // PUT: api/Auth/avatar
+        // 接受 JSON body: { avatar: "fileName" }
         [HttpPut("avatar")]
-        public async Task<IActionResult> UploadAvatar(IFormFile file)
+        public async Task<IActionResult> UpdateAvatar([FromBody] UpdateAvatarRequest request)
         {
             try
             {
-                if (file == null || file.Length == 0)
-                    return BadRequest(new { message = "请选择要上传的头像文件" });
-
-                // 文件类型校验
-                var allowedExtensions = new[] { ".jpg", ".jpeg", ".png", ".gif" };
-                var ext = Path.GetExtension(file.FileName).ToLower();
-                if (!allowedExtensions.Contains(ext))
-                {
-                    return BadRequest(new { message = "仅支持 JPG、PNG、GIF 格式的图片" });
-                }
-
-                if (file.Length > 2 * 1024 * 1024) // 2MB
-                {
-                    return BadRequest(new { message = "图片大小不能超过 2MB" });
-                }
+                if (request == null || string.IsNullOrEmpty(request.Avatar))
+                    return BadRequest(new { message = "请提供头像文件名" });
 
                 var user = await GetCurrentUserAsync();
-
-                // 生成唯一文件名
-                var fileName = $"avatar_{user.Id}_{DateTime.Now:yyyyMMddHHmmss}{ext}";
-                var uploadDir = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot", "uploads", "avatars");
-                if (!Directory.Exists(uploadDir))
-                    Directory.CreateDirectory(uploadDir);
-
-                var filePath = Path.Combine(uploadDir, fileName);
-
-                // 保存文件
-                using (var stream = new FileStream(filePath, FileMode.Create))
-                {
-                    await file.CopyToAsync(stream);
-                }
-
-                // 删除旧头像（可选保留）
-                if (!string.IsNullOrEmpty(user.Avatar))
-                {
-                    var oldPath = Path.Combine(uploadDir, user.Avatar);
-                    if (System.IO.File.Exists(oldPath))
-                    {
-                        try { System.IO.File.Delete(oldPath); } catch { /* 忽略删除旧文件错误 */ }
-                    }
-                }
-
-                // 更新数据库
-                user.Avatar = fileName;
+                user.Avatar = request.Avatar;
                 await _context.SaveChangesAsync();
 
                 return Ok(new
                 {
-                    message = "头像上传成功",
-                    avatar = fileName,
-                    avatarUrl = $"/api/File/download?fileName={Uri.EscapeDataString(fileName)}"
+                    message = "头像更新成功",
+                    avatar = request.Avatar,
+                    avatarUrl = $"/api/File/download?fileName={Uri.EscapeDataString(request.Avatar)}"
                 });
             }
             catch (UnauthorizedAccessException ex)
@@ -534,7 +496,41 @@ namespace Backend.Controllers
             }
             catch (Exception ex)
             {
-                return StatusCode(500, new { message = $"头像上传失败: {ex.Message}" });
+                return StatusCode(500, new { message = $"头像更新失败: {ex.Message}" });
+            }
+        }
+
+        // ==================== 个人统计 ====================
+
+        // GET: api/Auth/stats
+        [HttpGet("stats")]
+        public async Task<IActionResult> GetPersonalStats()
+        {
+            try
+            {
+                var userId = GetCurrentUserId();
+                var user = await _context.Users
+                    .Include(u => u.UploadedWorks)
+                    .Include(u => u.WorkFavorites)
+                    .FirstOrDefaultAsync(u => u.Id == userId);
+
+                if (user == null)
+                    return NotFound(new { message = "用户不存在" });
+
+                var workCount = user.UploadedWorks?.Count(w => w.Status == "已发布") ?? 0;
+                var favoriteCount = user.WorkFavorites?.Count ?? 0;
+                var viewCount = user.UploadedWorks?.Sum(w => w.Views) ?? 0;
+
+                return Ok(new
+                {
+                    workCount,
+                    favoriteCount,
+                    viewCount
+                });
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { message = $"获取统计数据失败: {ex.Message}" });
             }
         }
 
@@ -985,5 +981,10 @@ namespace Backend.Controllers
     public class UpdateRoleRequest
     {
         public string? Role { get; set; }
+    }
+
+    public class UpdateAvatarRequest
+    {
+        public string? Avatar { get; set; }
     }
 }

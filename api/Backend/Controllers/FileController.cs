@@ -337,9 +337,16 @@ namespace Backend.Controllers
                 if (string.IsNullOrEmpty(fileName))
                     return BadRequest(new { message = "文件名不能为空" });
 
+                // 先在 Uploads 根目录查找，找不到则递归搜索子目录（如 Uploads/avatars/）
                 var filePath = Path.Combine(_uploadPath, fileName);
                 if (!System.IO.File.Exists(filePath))
-                    return NotFound(new { message = "文件不存在" });
+                {
+                    // 递归搜索子目录
+                    var foundFile = Directory.GetFiles(_uploadPath, fileName, SearchOption.AllDirectories).FirstOrDefault();
+                    if (foundFile == null)
+                        return NotFound(new { message = "文件不存在" });
+                    filePath = foundFile;
+                }
 
                 // 获取文件MIME类型
                 var provider = new FileExtensionContentTypeProvider();
@@ -347,6 +354,12 @@ namespace Backend.Controllers
                     contentType = "application/octet-stream";
 
                 var fileBytes = System.IO.File.ReadAllBytes(filePath);
+
+                // 添加 no-cache 头，防止浏览器缓存导致头像/缩略图更新后仍显示旧文件
+                Response.Headers["Cache-Control"] = "no-cache, no-store, must-revalidate";
+                Response.Headers["Pragma"] = "no-cache";
+                Response.Headers["Expires"] = "0";
+
                 return File(fileBytes, contentType, fileName);
             }
             catch (Exception ex)

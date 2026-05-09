@@ -128,6 +128,8 @@
         width="700px"
         :close-on-click-modal="true"
         append-to-body
+        :modal-append-to-body="false"
+        :modal="false"
       >
         <div v-if="selectedWork" class="detail-content">
           <div class="detail-cover">

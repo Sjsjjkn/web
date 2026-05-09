@@ -58,26 +58,17 @@ const routes = [
     name: 'WorkDetail',
     component: () => import('../views/works/WorkDetail.vue')
   },
+  // 合并后的个人空间（原：个人信息、我的收藏、个人作品集、系统公告）
   {
-    path: '/account/profile',
-    name: 'AccountProfile',
-    component: () => import('../views/account/Profile.vue')
+    path: '/account/space',
+    name: 'AccountSpace',
+    component: () => import('../views/account/PersonalSpace.vue')
   },
   {
     path: '/profile/:userId',
     name: 'PublicProfile',
     component: () => import('../views/account/PublicProfile.vue'),
     meta: { public: true }
-  },
-  {
-    path: '/account/favorites',
-    name: 'AccountFavorites',
-    component: () => import('../views/account/Favorites.vue')
-  },
-  {
-    path: '/account/works',
-    name: 'AccountWorks',
-    component: () => import('../views/account/MyWorks.vue')
   },
   {
     path: '/account/settings',
@@ -88,11 +79,6 @@ const routes = [
     path: '/account/notifications',
     name: 'AccountNotifications',
     component: () => import('../views/account/NotificationList.vue')
-  },
-  {
-    path: '/account/announcements',
-    name: 'AccountAnnouncements',
-    component: () => import('../views/account/Announcements.vue')
   },
   {
     path: '/account/feedback',
