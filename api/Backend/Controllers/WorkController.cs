@@ -459,6 +459,16 @@ namespace Backend.Controllers
                     }
                 }
 
+                // 如果作品状态变为待审核，通知所有管理员
+                if (existingWork.Status == "待审核" && existingWork.Uploader == null)
+                {
+                    existingWork.Uploader = await _context.Users.FindAsync(existingWork.UserId);
+                }
+                if (existingWork.Status == "待审核")
+                {
+                    await NotifyAdminForReview(existingWork);
+                }
+
                 return Ok(new { message = "更新成功", work = existingWork });
             }
             catch (Exception ex)

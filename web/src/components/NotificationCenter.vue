@@ -232,7 +232,12 @@ export default {
     goToWorkDetail() {
       if (this.selectedNotification?.workId) {
         this.showDetailModal = false
-        this.$router.push(`/works/${this.selectedNotification.workId}`)
+        const user = JSON.parse(localStorage.getItem('userInfo') || '{}')
+        if (user.role === 'Admin' || user.role === 'Teacher') {
+          this.$router.push('/admin/moderation')
+        } else {
+          this.$router.push(`/works/${this.selectedNotification.workId}`)
+        }
       }
     },
 

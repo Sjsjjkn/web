@@ -8,6 +8,15 @@
         </div>
         <div class="header-actions">
           <el-button 
+            type="primary" 
+            round 
+            class="add-btn"
+            icon="el-icon-plus"
+            @click="handleAddUser"
+          >
+            添加用户
+          </el-button>
+          <el-button 
             type="success" 
             round 
             class="import-btn"
@@ -139,7 +148,7 @@
               @click="editUserRole(scope.row)"
               :disabled="scope.row.username === 'admin'"
             >
-              修改角色
+              修改信息
             </el-button>
             <el-button 
               type="warning" 
@@ -174,22 +183,34 @@
       />
     </div>
 
+    <!-- 编辑用户信息弹窗 -->
     <el-dialog
       :title="dialogTitle"
       :visible.sync="dialogVisible"
-      width="400px"
+      :modal="false"
+      width="560px"
       class="modern-dialog"
     >
-      <el-form :model="form" :rules="rules" ref="formRef" label-width="80px">
-        <el-form-item label="用户名" disabled>
-          <el-input v-model="form.username" />
+      <el-form :model="form" :rules="rules" ref="formRef" label-width="100px">
+        <el-form-item label="用户名">
+          <el-input v-model="form.username" disabled />
         </el-form-item>
-        <el-form-item label="当前角色" disabled>
-          <el-tag :type="getRoleType(form.role)">
-            {{ getRoleText(form.role) }}
-          </el-tag>
+        <el-form-item label="姓名" prop="name">
+          <el-input v-model="form.name" placeholder="请输入姓名" />
         </el-form-item>
-        <el-form-item label="新角色" prop="newRole">
+        <el-form-item label="工号/学号" prop="workId">
+          <el-input v-model="form.workId" placeholder="请输入工号或学号" />
+        </el-form-item>
+        <el-form-item label="部门/院系" prop="department">
+          <el-input v-model="form.department" placeholder="请输入部门或院系" />
+        </el-form-item>
+        <el-form-item label="电话" prop="phone">
+          <el-input v-model="form.phone" placeholder="请输入电话" />
+        </el-form-item>
+        <el-form-item label="邮箱" prop="email">
+          <el-input v-model="form.email" placeholder="请输入邮箱" />
+        </el-form-item>
+        <el-form-item label="角色" prop="newRole">
           <el-select v-model="form.newRole" placeholder="请选择角色">
             <el-option label="超级管理员" value="Admin"></el-option>
             <el-option label="教师" value="Teacher"></el-option>
@@ -204,15 +225,17 @@
       </span>
     </el-dialog>
 
+    <!-- 重置密码弹窗 -->
     <el-dialog
       title="重置密码"
       :visible.sync="resetDialogVisible"
+      :modal="false"
       width="400px"
       class="modern-dialog"
     >
       <el-form :model="resetForm" :rules="resetRules" ref="resetFormRef" label-width="80px">
-        <el-form-item label="用户名" disabled>
-          <el-input v-model="resetForm.username" />
+        <el-form-item label="用户名">
+          <el-input v-model="resetForm.username" disabled />
         </el-form-item>
         <el-form-item label="新密码" prop="password">
           <el-input v-model="resetForm.password" type="password" placeholder="请输入新密码" />
@@ -227,9 +250,11 @@
       </span>
     </el-dialog>
 
+    <!-- 导入弹窗 -->
     <el-dialog
       title="导入师生名单"
       :visible.sync="importDialogVisible"
+      :modal="false"
       width="500px"
       class="modern-dialog"
     >
@@ -259,6 +284,74 @@
         <el-button type="primary" @click="confirmImport" round>导入</el-button>
       </span>
     </el-dialog>
+
+    <!-- 添加用户弹窗 -->
+    <el-dialog
+      title="添加用户"
+      :visible.sync="addDialogVisible"
+      :modal="false"
+      width="560px"
+      class="modern-dialog"
+    >
+      <el-form :model="addForm" :rules="addRules" ref="addFormRef" label-width="100px">
+        <el-form-item label="用户名" prop="username">
+          <el-input v-model="addForm.username" placeholder="请输入用户名" />
+        </el-form-item>
+        <el-form-item label="密码" prop="password">
+          <el-input v-model="addForm.password" type="password" placeholder="请输入密码" show-password />
+        </el-form-item>
+        <el-form-item label="确认密码" prop="confirmPassword">
+          <el-input v-model="addForm.confirmPassword" type="password" placeholder="请确认密码" show-password />
+        </el-form-item>
+        <el-form-item label="姓名" prop="name">
+          <el-input v-model="addForm.name" placeholder="请输入姓名" />
+        </el-form-item>
+        <el-form-item label="工号/学号">
+          <el-input v-model="addForm.workId" placeholder="请输入工号或学号" />
+        </el-form-item>
+        <el-form-item label="部门/院系">
+          <el-input v-model="addForm.department" placeholder="请输入部门或院系" />
+        </el-form-item>
+        <el-form-item label="电话">
+          <el-input v-model="addForm.phone" placeholder="请输入电话" />
+        </el-form-item>
+        <el-form-item label="邮箱">
+          <el-input v-model="addForm.email" placeholder="请输入邮箱" />
+        </el-form-item>
+        <el-form-item label="角色" prop="newRole">
+          <el-select v-model="addForm.newRole" placeholder="请选择角色" @change="onAddRoleChange">
+            <el-option label="超级管理员" value="Admin"></el-option>
+            <el-option label="教师" value="Teacher"></el-option>
+            <el-option label="院" value="College"></el-option>
+            <el-option label="学生" value="Student"></el-option>
+          </el-select>
+        </el-form-item>
+        <el-form-item v-if="addForm.newRole === 'Student'" label="指导教师" prop="supervisorId">
+          <el-select v-model="addForm.supervisorId" placeholder="请选择指导教师" clearable filterable>
+            <el-option 
+              v-for="t in teacherList" 
+              :key="t.id" 
+              :label="t.name + ' (' + t.department + ')'" 
+              :value="t.id"
+            />
+          </el-select>
+        </el-form-item>
+        <el-form-item v-if="addForm.newRole === 'Teacher'" label="指导学生" prop="studentIds">
+          <el-select v-model="addForm.studentIds" placeholder="请选择学生（可多选）" multiple filterable>
+            <el-option 
+              v-for="s in studentList" 
+              :key="s.id" 
+              :label="s.name + ' (' + s.department + ')'" 
+              :value="s.id"
+            />
+          </el-select>
+        </el-form-item>
+      </el-form>
+      <span slot="footer" class="dialog-footer">
+        <el-button @click="addDialogVisible = false" round>取消</el-button>
+        <el-button type="primary" @click="confirmAddUser" round>确定添加</el-button>
+      </span>
+    </el-dialog>
   </div>
 </template>
 
@@ -279,11 +372,17 @@ export default {
       dialogVisible: false,
       resetDialogVisible: false,
       importDialogVisible: false,
+      addDialogVisible: false,
       dialogTitle: '',
       form: {
         id: '',
         username: '',
         role: '',
+        name: '',
+        workId: '',
+        department: '',
+        phone: '',
+        email: '',
         newRole: ''
       },
       resetForm: {
@@ -297,9 +396,27 @@ export default {
         file: null,
         fileName: ''
       },
+      addForm: {
+        username: '',
+        password: '',
+        confirmPassword: '',
+        name: '',
+        workId: '',
+        department: '',
+        phone: '',
+        email: '',
+        newRole: 'Student',
+        supervisorId: null,
+        studentIds: []
+      },
+      teacherList: [],
+      studentList: [],
       rules: {
+        name: [
+          { required: true, message: '请输入姓名', trigger: 'blur' }
+        ],
         newRole: [
-          { required: true, message: '请选择新角色', trigger: 'change' }
+          { required: true, message: '请选择角色', trigger: 'change' }
         ]
       },
       resetRules: {
@@ -319,6 +436,27 @@ export default {
         file: [
           { required: true, message: '请上传文件', trigger: 'change' }
         ]
+      },
+      addRules: {
+        username: [
+          { required: true, message: '请输入用户名', trigger: 'blur' },
+          { min: 4, max: 20, message: '用户名长度4-20位', trigger: 'blur' },
+          { pattern: /^[a-zA-Z0-9_]+$/, message: '用户名只能包含字母、数字和下划线', trigger: 'blur' }
+        ],
+        password: [
+          { required: true, message: '请输入密码', trigger: 'blur' },
+          { min: 6, max: 20, message: '密码长度6-20位', trigger: 'blur' }
+        ],
+        confirmPassword: [
+          { required: true, message: '请确认密码', trigger: 'blur' },
+          { validator: this.validateAddPassword, trigger: 'blur' }
+        ],
+        name: [
+          { required: true, message: '请输入姓名', trigger: 'blur' }
+        ],
+        newRole: [
+          { required: true, message: '请选择角色', trigger: 'change' }
+        ]
       }
     }
   },
@@ -326,6 +464,14 @@ export default {
     this.getUsers()
   },
   methods: {
+    validateAddPassword(rule, value, callback) {
+      if (value !== this.addForm.password) {
+        callback(new Error('两次输入的密码不一致'))
+      } else {
+        callback()
+      }
+    },
+    
     validatePassword(rule, value, callback) {
       if (value !== this.resetForm.password) {
         callback(new Error('两次输入的密码不一致'))
@@ -378,27 +524,38 @@ export default {
         id: user.id,
         username: user.username,
         role: user.role,
+        name: user.name || '',
+        workId: user.workId || '',
+        department: user.department || '',
+        phone: user.phone || '',
+        email: user.email || '',
         newRole: user.role
       }
-      this.dialogTitle = `编辑 ${user.username} 的角色`
+      this.dialogTitle = `编辑 ${user.username} 的信息`
       this.dialogVisible = true
     },
     async confirmEditRole() {
-      try {
-        await http.put(`/api/Auth/role/${this.form.id}`, {
-          role: this.form.newRole
-        })
+      this.$refs.formRef.validate(async (valid) => {
+        if (!valid) return
         
-        this.$message.success('角色更新成功')
-        this.dialogVisible = false
-        this.getUsers()
-      } catch (error) {
-        this.$message.error(error.response?.data?.message || '角色更新失败')
-        console.error('角色更新失败:', error)
-        this.$message.success('角色更新成功')
-        this.dialogVisible = false
-        this.getUsers()
-      }
+        try {
+          await http.put(`/api/Auth/users/${this.form.id}`, {
+            name: this.form.name,
+            workId: this.form.workId,
+            department: this.form.department,
+            phone: this.form.phone,
+            email: this.form.email,
+            role: this.form.newRole
+          })
+          
+          this.$message.success('用户信息更新成功')
+          this.dialogVisible = false
+          this.getUsers()
+        } catch (error) {
+          this.$message.error(error.response?.data?.message || '用户信息更新失败')
+          console.error('用户信息更新失败:', error)
+        }
+      })
     },
     resetPassword(user) {
       this.resetForm = {
@@ -410,20 +567,111 @@ export default {
       this.resetDialogVisible = true
     },
     async confirmResetPassword() {
-      try {
-        await http.put(`/api/Auth/password/${this.resetForm.id}`, {
-          password: this.resetForm.password
-        })
+      this.$refs.resetFormRef.validate(async (valid) => {
+        if (!valid) return
         
-        this.$message.success('密码重置成功')
-        this.resetDialogVisible = false
-      } catch (error) {
-        this.$message.error(error.response?.data?.message || '密码重置失败')
-        console.error('密码重置失败:', error)
-        this.$message.success('密码重置成功')
-        this.resetDialogVisible = false
+        try {
+          await http.put(`/api/Auth/password/${this.resetForm.id}`, {
+            password: this.resetForm.password
+          })
+          
+          this.$message.success('密码重置成功')
+          this.resetDialogVisible = false
+        } catch (error) {
+          this.$message.error(error.response?.data?.message || '密码重置失败')
+          console.error('密码重置失败:', error)
+        }
+      })
+    },
+    handleAddUser() {
+      this.addForm = {
+        username: '',
+        password: '',
+        confirmPassword: '',
+        name: '',
+        workId: '',
+        department: '',
+        phone: '',
+        email: '',
+        newRole: 'Student',
+        supervisorId: null,
+        studentIds: []
+      }
+      this.addDialogVisible = true
+      this.loadAddOptions()
+      this.$nextTick(() => {
+        if (this.$refs.addFormRef) {
+          this.$refs.addFormRef.clearValidate()
+        }
+      })
+    },
+
+    async loadAddOptions() {
+      await Promise.all([this.loadTeacherList(), this.loadStudentList()])
+    },
+
+    async loadTeacherList() {
+      try {
+        const res = await http.get('/api/Auth/teachers')
+        this.teacherList = res.data
+      } catch (e) {
+        console.error('获取教师列表失败:', e)
       }
     },
+
+    async loadStudentList() {
+      try {
+        const res = await http.get('/api/Auth/students')
+        this.studentList = res.data
+      } catch (e) {
+        console.error('获取学生列表失败:', e)
+      }
+    },
+
+    onAddRoleChange(role) {
+      if (role !== 'Student') {
+        this.addForm.supervisorId = null
+      }
+      if (role !== 'Teacher') {
+        this.addForm.studentIds = []
+      }
+    },
+
+    async confirmAddUser() {
+      this.$refs.addFormRef.validate(async (valid) => {
+        if (!valid) return
+        
+        try {
+          const payload = {
+            username: this.addForm.username,
+            password: this.addForm.password,
+            name: this.addForm.name,
+            role: this.addForm.newRole,
+            workId: this.addForm.workId,
+            department: this.addForm.department,
+            phone: this.addForm.phone,
+            email: this.addForm.email
+          }
+          
+          if (this.addForm.newRole === 'Student' && this.addForm.supervisorId) {
+            payload.supervisorId = this.addForm.supervisorId
+          }
+          if (this.addForm.newRole === 'Teacher' && this.addForm.studentIds.length > 0) {
+            payload.studentIds = this.addForm.studentIds
+          }
+          
+          await http.post('/api/Auth/users', payload)
+          
+          this.$message.success('用户创建成功')
+          this.addDialogVisible = false
+          this.getUsers()
+        } catch (error) {
+          this.$message.error(error.response?.data?.message || '创建用户失败')
+          console.error('创建用户失败:', error)
+        }
+      })
+    },
+    
     handleImport() {
       this.importForm = {
         fileType: 'excel',
@@ -452,9 +700,6 @@ export default {
       } catch (error) {
         this.$message.error(error.response?.data?.message || '导入失败')
         console.error('导入失败:', error)
-        this.$message.success('导入成功')
-        this.importDialogVisible = false
-        this.getUsers()
       }
     },
     async handleExport() {
@@ -475,28 +720,24 @@ export default {
       } catch (error) {
         this.$message.error(error.response?.data?.message || '导出失败')
         console.error('导出失败:', error)
-        this.$message.success('导出成功')
       }
     },
     async deleteUser(user) {
       try {
-        this.$confirm('确定要删除该用户吗？', '提示', {
+        await this.$confirm('确定要删除该用户吗？', '提示', {
           confirmButtonText: '确定',
           cancelButtonText: '取消',
           type: 'warning'
-        }).then(async () => {
-          await http.delete(`/api/Auth/users/${user.id}`)
-          
-          this.$message.success('删除成功')
-          this.getUsers()
-        }).catch(() => {
-          // 取消删除
         })
-      } catch (error) {
-        this.$message.error(error.response?.data?.message || '删除失败')
-        console.error('删除失败:', error)
+        
+        await http.delete(`/api/Auth/users/${user.id}`)
         this.$message.success('删除成功')
         this.getUsers()
+      } catch (error) {
+        if (error !== 'cancel') {
+          this.$message.error(error.response?.data?.message || '删除失败')
+          console.error('删除失败:', error)
+        }
       }
     },
     getRoleType(role) {
@@ -573,12 +814,12 @@ export default {
 .system-title { font-size: 20px; font-weight: 700; color: var(--text-main); margin: 0; }
 
 .header-actions { display: flex; gap: 10px; }
-.import-btn, .export-btn, .refresh-btn {
+.add-btn, .import-btn, .export-btn, .refresh-btn {
   border-radius: var(--radius-full);
   font-weight: 600;
   transition: all var(--duration-normal) var(--ease-out-expo);
 }
-.import-btn:hover, .export-btn:hover, .refresh-btn:hover {
+.add-btn:hover, .import-btn:hover, .export-btn:hover, .refresh-btn:hover {
   transform: translateY(-2px);
   box-shadow: 0 6px 20px rgba(45, 138, 110, 0.2);
 }

@@ -399,8 +399,8 @@ export default {
 <style scoped>
 .work-detail-page {
   min-height: 100vh;
-  background: #F7F7F8;
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  background: var(--bg-page, #F8F9F5);
+  font-family: var(--font-main, 'Inter', 'Noto Sans SC', sans-serif);
 }
 
 /* 加载状态 */
@@ -416,8 +416,8 @@ export default {
 .loading-spinner {
   width: 40px;
   height: 40px;
-  border: 4px solid #e5e7eb;
-  border-top-color: #111;
+  border: 4px solid var(--border-color, #E8E2D8);
+  border-top-color: var(--primary, #2D8A6E);
   border-radius: 50%;
   animation: spin 1s linear infinite;
 }
@@ -429,7 +429,7 @@ export default {
 .loading-text {
   font-size: 12px;
   font-weight: 500;
-  color: #9ca3af;
+  color: var(--text-light, #888888);
   letter-spacing: 0.1em;
   text-transform: uppercase;
 }
@@ -447,7 +447,7 @@ export default {
   gap: 8px;
   font-size: 14px;
   font-weight: 500;
-  color: #6b7280;
+  color: var(--text-secondary, #555555);
   flex-wrap: wrap;
 }
 
@@ -456,27 +456,27 @@ export default {
   align-items: center;
   gap: 6px;
   padding: 8px 16px;
-  background: #fff;
-  border: 1px solid #e5e7eb;
-  border-radius: 9999px;
+  background: var(--bg-card, #FFFFFF);
+  border: 1px solid var(--border-color, #E8E2D8);
+  border-radius: var(--radius-full, 9999px);
   cursor: pointer;
-  transition: all 0.2s ease;
+  transition: all var(--duration-fast, .18s) ease;
 }
 
 .back-btn:hover {
-  border-color: #d1d5db;
-  color: #111;
-  box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+  border-color: var(--primary, #2D8A6E);
+  color: var(--primary, #2D8A6E);
+  box-shadow: var(--shadow-sm, 0 2px 8px rgba(0, 0, 0, .05));
 }
 
 .nav-icon {
   width: 16px;
   height: 16px;
-  color: #9ca3af;
+  color: var(--text-light, #888888);
 }
 
 .back-btn:hover .nav-icon {
-  color: #111;
+  color: var(--primary, #2D8A6E);
 }
 
 .nav-divider {
@@ -486,15 +486,15 @@ export default {
 
 .nav-item {
   cursor: pointer;
-  transition: color 0.2s;
+  transition: color var(--duration-fast, .18s);
 }
 
 .nav-item:hover {
-  color: #111;
+  color: var(--text-main, #1A1A1A);
 }
 
 .nav-title {
-  color: #111;
+  color: var(--text-main, #1A1A1A);
   max-width: 200px;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -530,10 +530,10 @@ export default {
   width: 100%;
   aspect-ratio: auto;
   min-height: 500px;
-  background: #f3f4f6;
-  border: 1px solid rgba(229, 231, 235, 0.6);
-  border-radius: 2rem;
-  box-shadow: 0 8px 30px rgba(0,0,0,0.04);
+  background: var(--border-light, #F2EDE6);
+  border: 1px solid var(--border-color, #E8E2D8);
+  border-radius: var(--radius-xl, 24px);
+  box-shadow: var(--shadow-card, 0 2px 12px rgba(0, 0, 0, .04), 0 1px 3px rgba(0, 0, 0, .03));
   overflow: hidden;
 }
 
@@ -541,7 +541,7 @@ export default {
   width: 100%;
   height: 100%;
   object-fit: cover;
-  transition: transform 0.7s ease-out;
+  transition: transform var(--duration-slow, .5s) var(--ease-out-expo);
 }
 
 .preview-container:hover .preview-image {
@@ -554,7 +554,7 @@ export default {
   align-items: center;
   justify-content: center;
   gap: 12px;
-  color: #9ca3af;
+  color: var(--text-light, #888888);
   width: 100%;
   height: 100%;
 }
@@ -575,7 +575,7 @@ export default {
   inset: 0;
   background: linear-gradient(to top, rgba(0,0,0,0.4), transparent);
   opacity: 0;
-  transition: opacity 0.3s ease;
+  transition: opacity var(--duration-normal, .3s) ease;
   pointer-events: none;
 }
 
@@ -595,11 +595,11 @@ export default {
   background: rgba(255,255,255,0.2);
   backdrop-filter: blur(12px);
   border: 1px solid rgba(255,255,255,0.3);
-  border-radius: 1rem;
+  border-radius: var(--radius-lg, 18px);
   color: #fff;
   opacity: 0;
   transform: translateY(8px);
-  transition: all 0.3s ease;
+  transition: all var(--duration-normal, .3s) ease;
 }
 
 .preview-container:hover .preview-info-bar {
@@ -657,7 +657,7 @@ export default {
 
 .badge {
   padding: 6px 12px;
-  border-radius: 9999px;
+  border-radius: var(--radius-full, 9999px);
   font-size: 11px;
   font-weight: 800;
   letter-spacing: 0.1em;
@@ -665,22 +665,22 @@ export default {
 }
 
 .badge-published {
-  background: #dcfce7;
-  color: #166534;
-  border: 1px solid rgba(34, 197, 94, 0.3);
+  background: var(--primary-bg, #EDF5F0);
+  color: var(--primary, #2D8A6E);
+  border: 1px solid var(--primary-glow, rgba(45, 138, 110, 0.2));
 }
 
 .badge-category {
-  background: rgba(229, 231, 235, 0.6);
-  color: #374151;
+  background: var(--bg-hover, #F5F2EC);
+  color: var(--text-secondary, #555555);
 }
 
 /* 标题 */
 .work-title {
   font-size: 2.25rem;
-  font-weight: 800;
+  font-weight: 700;
   line-height: 1.1;
-  color: #111;
+  color: var(--text-main, #1A1A1A);
   margin: 0;
 }
 
@@ -696,15 +696,15 @@ export default {
   align-items: center;
   gap: 8px;
   padding: 8px 24px 8px 8px;
-  background: #fff;
-  border: 1px solid #e5e7eb;
-  border-radius: 1rem;
-  box-shadow: 0 1px 2px rgba(0,0,0,0.04);
-  transition: box-shadow 0.2s;
+  background: var(--bg-card, #FFFFFF);
+  border: 1px solid var(--border-color, #E8E2D8);
+  border-radius: var(--radius-lg, 18px);
+  box-shadow: var(--shadow-card, 0 2px 12px rgba(0, 0, 0, .04), 0 1px 3px rgba(0, 0, 0, .03));
+  transition: box-shadow var(--duration-fast, .18s);
 }
 
 .author-card:hover {
-  box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+  box-shadow: var(--shadow-card-hover, 0 16px 40px rgba(0, 0, 0, .12));
 }
 
 .author-avatar-wrap {
@@ -714,9 +714,9 @@ export default {
 .author-avatar {
   width: 56px;
   height: 56px;
-  border-radius: 0.75rem;
+  border-radius: var(--radius-md, 14px);
   object-fit: cover;
-  transition: transform 0.2s;
+  transition: transform var(--duration-fast, .18s);
 }
 
 .author-card:hover .author-avatar {
@@ -726,12 +726,12 @@ export default {
 .author-avatar-placeholder {
   width: 56px;
   height: 56px;
-  border-radius: 0.75rem;
-  background: #f3f4f6;
+  border-radius: var(--radius-md, 14px);
+  background: var(--primary-bg, #EDF5F0);
   display: flex;
   align-items: center;
   justify-content: center;
-  color: #9ca3af;
+  color: var(--primary, #2D8A6E);
 }
 
 .author-avatar-placeholder svg {
@@ -745,32 +745,33 @@ export default {
 
 .author-name {
   font-size: 16px;
-  font-weight: 700;
-  color: #111;
+  font-weight: 600;
+  color: var(--text-main, #1A1A1A);
   margin: 0;
 }
 
 .author-role {
   font-size: 12px;
   font-weight: 500;
-  color: #6b7280;
+  color: var(--text-light, #888888);
   margin: 2px 0 0;
 }
 
 .view-profile-btn {
   padding: 8px 16px;
-  background: #f3f4f6;
+  background: var(--bg-hover, #F5F2EC);
   border: none;
-  border-radius: 0.75rem;
+  border-radius: var(--radius-md, 14px);
   font-size: 12px;
-  font-weight: 700;
-  color: #374151;
+  font-weight: 600;
+  color: var(--text-secondary, #555555);
   cursor: pointer;
-  transition: all 0.2s;
+  transition: all var(--duration-fast, .18s);
 }
 
 .view-profile-btn:hover {
-  background: #e5e7eb;
+  background: var(--primary-bg, #EDF5F0);
+  color: var(--primary, #2D8A6E);
 }
 
 /* 数据指标 */
@@ -786,33 +787,33 @@ export default {
   align-items: center;
   justify-content: center;
   padding: 16px;
-  background: #fff;
-  border: 1px solid #e5e7eb;
-  border-radius: 1rem;
-  box-shadow: 0 1px 2px rgba(0,0,0,0.04);
+  background: var(--bg-card, #FFFFFF);
+  border: 1px solid var(--border-color, #E8E2D8);
+  border-radius: var(--radius-lg, 18px);
+  box-shadow: var(--shadow-card, 0 2px 12px rgba(0, 0, 0, .04), 0 1px 3px rgba(0, 0, 0, .03));
 }
 
 .stat-item svg {
   width: 20px;
   height: 20px;
-  color: #9ca3af;
+  color: var(--text-light, #888888);
   margin-bottom: 8px;
 }
 
 .stat-item:nth-child(2) svg {
-  color: #f43f5e;
+  color: var(--accent-strong, #B8943F);
 }
 
 .stat-value {
   font-size: 1.25rem;
-  font-weight: 800;
-  color: #111;
+  font-weight: 700;
+  color: var(--text-main, #1A1A1A);
 }
 
 .stat-label {
   font-size: 10px;
-  font-weight: 700;
-  color: #9ca3af;
+  font-weight: 600;
+  color: var(--text-light, #888888);
   text-transform: uppercase;
   letter-spacing: 0.05em;
   margin-top: 4px;
@@ -831,19 +832,19 @@ export default {
   justify-content: center;
   gap: 8px;
   height: 56px;
-  background: #111;
+  background: var(--primary, #2D8A6E);
   color: #fff;
   border: none;
-  border-radius: 1rem;
+  border-radius: var(--radius-lg, 18px);
   font-size: 16px;
-  font-weight: 700;
+  font-weight: 600;
   cursor: pointer;
-  transition: all 0.3s;
+  transition: all var(--duration-normal, .3s);
 }
 
 .download-btn:hover {
-  background: #374151;
-  box-shadow: 0 8px 24px rgba(0,0,0,0.2);
+  background: var(--primary-hover, #25755C);
+  box-shadow: var(--shadow-lg, 0 12px 36px rgba(0, 0, 0, .10));
   transform: translateY(-2px);
 }
 
@@ -864,24 +865,26 @@ export default {
   justify-content: center;
   gap: 8px;
   height: 48px;
-  background: #fff;
-  border: 1px solid #e5e7eb;
-  border-radius: 1rem;
+  background: var(--bg-card, #FFFFFF);
+  border: 1px solid var(--border-color, #E8E2D8);
+  border-radius: var(--radius-lg, 18px);
   font-size: 14px;
-  font-weight: 700;
-  color: #374151;
+  font-weight: 600;
+  color: var(--text-secondary, #555555);
   cursor: pointer;
-  transition: all 0.2s;
+  transition: all var(--duration-fast, .18s);
 }
 
 .favorite-btn:hover {
-  background: #f9fafb;
+  background: var(--bg-hover, #F5F2EC);
+  border-color: var(--primary, #2D8A6E);
+  color: var(--primary, #2D8A6E);
 }
 
 .favorite-btn.favorited {
-  background: #fef2f2;
-  border-color: #fecaca;
-  color: #dc2626;
+  background: var(--accent-light, #F0E6D0);
+  border-color: var(--accent, #C8AA6E);
+  color: var(--accent-strong, #B8943F);
 }
 
 .favorite-btn svg {
@@ -899,17 +902,18 @@ export default {
   display: flex;
   align-items: center;
   justify-content: center;
-  background: #fff;
-  border: 1px solid #e5e7eb;
-  border-radius: 1rem;
-  color: #6b7280;
+  background: var(--bg-card, #FFFFFF);
+  border: 1px solid var(--border-color, #E8E2D8);
+  border-radius: var(--radius-lg, 18px);
+  color: var(--text-light, #888888);
   cursor: pointer;
-  transition: all 0.2s;
+  transition: all var(--duration-fast, .18s);
 }
 
 .share-btn:hover {
-  color: #111;
-  background: #f9fafb;
+  color: var(--primary, #2D8A6E);
+  background: var(--bg-hover, #F5F2EC);
+  border-color: var(--primary, #2D8A6E);
 }
 
 .share-btn svg {
@@ -920,7 +924,7 @@ export default {
 /* 分割线 */
 .divider {
   height: 1px;
-  background: rgba(229, 231, 235, 0.8);
+  background: var(--border-color, #E8E2D8);
 }
 
 /* 作品描述 */
@@ -932,8 +936,8 @@ export default {
 
 .section-title {
   font-size: 14px;
-  font-weight: 700;
-  color: #111;
+  font-weight: 600;
+  color: var(--text-main, #1A1A1A);
   text-transform: uppercase;
   letter-spacing: 0.05em;
   margin: 0;
@@ -941,19 +945,18 @@ export default {
 
 .description-content {
   font-size: 15px;
-  line-height: 1.8;
-  color: #4b5563;
+  line-height: 1.7;
+  color: var(--text-secondary, #555555);
   white-space: pre-wrap;
-  font-weight: 500;
 }
 
 .description-placeholder {
   padding: 24px;
-  background: #fff;
-  border: 1px solid #e5e7eb;
-  border-radius: 1rem;
+  background: var(--bg-card, #FFFFFF);
+  border: 1px solid var(--border-color, #E8E2D8);
+  border-radius: var(--radius-lg, 18px);
   text-align: center;
-  color: #9ca3af;
+  color: var(--text-light, #888888);
   font-size: 14px;
 }
 
@@ -972,17 +975,18 @@ export default {
 
 .tag-item {
   padding: 8px 16px;
-  background: #f3f4f6;
-  border-radius: 0.75rem;
+  background: var(--primary-bg, #EDF5F0);
+  border-radius: var(--radius-md, 14px);
   font-size: 12px;
-  font-weight: 700;
-  color: #374151;
+  font-weight: 600;
+  color: var(--primary, #2D8A6E);
   cursor: pointer;
-  transition: all 0.2s;
+  transition: all var(--duration-fast, .18s);
 }
 
 .tag-item:hover {
-  background: #e5e7eb;
+  background: var(--primary-light, #45A884);
+  color: #fff;
 }
 
 /* 举报按钮 */
@@ -995,14 +999,14 @@ export default {
   background: none;
   border: none;
   font-size: 12px;
-  font-weight: 700;
-  color: #9ca3af;
+  font-weight: 600;
+  color: var(--text-light, #888888);
   cursor: pointer;
-  transition: color 0.2s;
+  transition: color var(--duration-fast, .18s);
 }
 
 .report-btn:hover {
-  color: #dc2626;
+  color: var(--danger, #E05555);
 }
 
 .report-btn svg {

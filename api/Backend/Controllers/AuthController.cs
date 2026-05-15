@@ -86,7 +86,6 @@ namespace Backend.Controllers
         {
             try
             {
-                Console.WriteLine("Login method called");
 
                 if (request == null || string.IsNullOrEmpty(request.Username) || string.IsNullOrEmpty(request.Password))
                 {
@@ -94,22 +93,15 @@ namespace Backend.Controllers
                     return BadRequest(new { message = "用户名和密码不能为空" });
                 }
 
-                Console.WriteLine($"Login attempt: Username={request.Username}");
-
                 var user = await _context.Users.FirstOrDefaultAsync(u => u.Username == request.Username);
-                Console.WriteLine($"User found: {user != null}");
 
                 if (user == null)
                 {
-                    Console.WriteLine($"User not found: {request.Username}");
                     return Unauthorized(new { message = "用户名或密码错误" });
                 }
 
-                Console.WriteLine($"User found: Id={user.Id}, Username={user.Username}");
-
                 if (!PasswordHasher.Verify(request.Password, user.Password))
                 {
-                    Console.WriteLine($"Password mismatch for user: {request.Username}");
                     return Unauthorized(new { message = "用户名或密码错误" });
                 }
 
@@ -548,9 +540,9 @@ namespace Backend.Controllers
                     return NotFound(new { message = "用户不存在" });
                 }
 
-                if (!new[] { "Admin", "Teacher", "Student" }.Contains(request.Role))
+                if (!new[] { "Admin", "Teacher", "College", "Student" }.Contains(request.Role))
                 {
-                    return BadRequest(new { message = "角色值无效，可选值: Admin, Teacher, Student" });
+                    return BadRequest(new { message = "角色值无效，可选值: Admin, Teacher, College, Student" });
                 }
 
                 user.Role = request.Role;
@@ -570,6 +562,52 @@ namespace Backend.Controllers
             catch (Exception ex)
             {
                 return StatusCode(500, new { message = $"更新角色失败: {ex.Message}" });
+            }
+        }
+
+        // PUT: api/Auth/users/{id}
+        [HttpPut("users/{id}")]
+        public async Task<IActionResult> UpdateUser(int id, [FromBody] UpdateUserRequest request)
+        {
+            try
+            {
+                var user = await _context.Users.FindAsync(id);
+                if (user == null)
+                {
+                    return NotFound(new { message = "用户不存在" });
+                }
+
+                if (!string.IsNullOrEmpty(request.Name))
+                    user.Name = request.Name;
+                if (!string.IsNullOrEmpty(request.WorkId))
+                    user.WorkId = request.WorkId;
+                if (!string.IsNullOrEmpty(request.Department))
+                    user.Department = request.Department;
+                if (!string.IsNullOrEmpty(request.Phone))
+                    user.Phone = request.Phone;
+                if (!string.IsNullOrEmpty(request.Email))
+                    user.Email = request.Email;
+
+                if (!string.IsNullOrEmpty(request.Role))
+                {
+                    if (!new[] { "Admin", "Teacher", "College", "Student" }.Contains(request.Role))
+                    {
+                        return BadRequest(new { message = "角色值无效，可选值: Admin, Teacher, College, Student" });
+                    }
+                    user.Role = request.Role;
+                }
+
+                await _context.SaveChangesAsync();
+
+                return Ok(new
+                {
+                    message = "用户信息更新成功",
+                    user = BuildUserResponse(user)
+                });
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { message = $"更新用户信息失败: {ex.Message}" });
             }
         }
 
@@ -671,15 +709,16 @@ namespace Backend.Controllers
 
                 Console.WriteLine($"Importing file: {file.FileName}, Type: {fileType}");
 
-                var importedUsers = new List<User>();
+                List<User> importedUsers;
+                Dictionary<string, string> teacherMap;
 
                 if (fileType == "excel" || file.FileName.EndsWith(".xlsx", StringComparison.OrdinalIgnoreCase) || file.FileName.EndsWith(".xls", StringComparison.OrdinalIgnoreCase))
                 {
-                    importedUsers = await ParseExcelFile(file);
+                    (importedUsers, teacherMap) = await ParseExcelFile(file);
                 }
                 else if (fileType == "csv" || file.FileName.EndsWith(".csv", StringComparison.OrdinalIgnoreCase))
                 {
-                    importedUsers = await ParseCsvFile(file);
+                    (importedUsers, teacherMap) = await ParseCsvFile(file);
                 }
                 else
                 {
@@ -705,11 +744,40 @@ namespace Backend.Controllers
 
                 await _context.SaveChangesAsync();
 
+                // 建立师生关系
+                int relationCount = 0;
+                foreach (var kvp in teacherMap)
+                {
+                    var student = await _context.Users.FirstOrDefaultAsync(u => u.Username == kvp.Key);
+                    var teacher = await _context.Users.FirstOrDefaultAsync(u => u.WorkId == kvp.Value || u.Username == kvp.Value);
+                    if (student != null && teacher != null)
+                    {
+                        var exists = await _context.StudentTeachers
+                            .AnyAsync(st => st.StudentId == student.Id && st.TeacherId == teacher.Id);
+                        if (!exists)
+                        {
+                            _context.StudentTeachers.Add(new StudentTeacher
+                            {
+                                StudentId = student.Id,
+                                TeacherId = teacher.Id,
+                                CreatedAt = DateTime.Now
+                            });
+                            relationCount++;
+                        }
+                    }
+                }
+
+                if (relationCount > 0)
+                {
+                    await _context.SaveChangesAsync();
+                }
+
                 return Ok(new
                 {
                     message = "导入成功",
                     importedCount = importedCount,
-                    skippedCount = skippedCount
+                    skippedCount = skippedCount,
+                    relationCount = relationCount
                 });
             }
             catch (Exception ex)
@@ -719,9 +787,10 @@ namespace Backend.Controllers
             }
         }
 
-        private async Task<List<User>> ParseExcelFile(IFormFile file)
+        private async Task<(List<User> Users, Dictionary<string, string> TeacherMap)> ParseExcelFile(IFormFile file)
         {
             var users = new List<User>();
+            var teacherMap = new Dictionary<string, string>();
 
             using (var stream = new MemoryStream())
             {
@@ -742,6 +811,7 @@ namespace Backend.Controllers
                             var role = worksheet.Cells[row, 3].Text?.Trim();
                             var workId = worksheet.Cells[row, 4].Text?.Trim();
                             var department = worksheet.Cells[row, 5].Text?.Trim();
+                            var teacherWorkId = worksheet.Cells[row, 6].Text?.Trim();
 
                             if (!string.IsNullOrEmpty(username))
                             {
@@ -755,6 +825,11 @@ namespace Backend.Controllers
                                     Department = department,
                                     CreatedAt = DateTime.Now
                                 });
+
+                                if (!string.IsNullOrEmpty(teacherWorkId))
+                                {
+                                    teacherMap[username] = teacherWorkId;
+                                }
                             }
                         }
                         catch (Exception ex)
@@ -765,12 +840,13 @@ namespace Backend.Controllers
                 }
             }
 
-            return users;
+            return (users, teacherMap);
         }
 
-        private async Task<List<User>> ParseCsvFile(IFormFile file)
+        private async Task<(List<User> Users, Dictionary<string, string> TeacherMap)> ParseCsvFile(IFormFile file)
         {
             var users = new List<User>();
+            var teacherMap = new Dictionary<string, string>();
 
             using (var stream = new StreamReader(file.OpenReadStream()))
             {
@@ -789,6 +865,7 @@ namespace Backend.Controllers
                             var role = parts[2]?.Trim();
                             var workId = parts[3]?.Trim();
                             var department = parts[4]?.Trim();
+                            var teacherWorkId = parts.Length >= 6 ? parts[5]?.Trim() : null;
 
                             if (!string.IsNullOrEmpty(username))
                             {
@@ -802,6 +879,11 @@ namespace Backend.Controllers
                                     Department = department,
                                     CreatedAt = DateTime.Now
                                 });
+
+                                if (!string.IsNullOrEmpty(teacherWorkId))
+                                {
+                                    teacherMap[username] = teacherWorkId;
+                                }
                             }
                         }
                     }
@@ -812,7 +894,7 @@ namespace Backend.Controllers
                 }
             }
 
-            return users;
+            return (users, teacherMap);
         }
 
         // GET: api/Auth/export
@@ -833,8 +915,9 @@ namespace Backend.Controllers
                     worksheet.Cells[1, 4].Value = "工号/学号";
                     worksheet.Cells[1, 5].Value = "部门/院系";
                     worksheet.Cells[1, 6].Value = "密码";
+                    worksheet.Cells[1, 7].Value = "指导教师工号";
 
-                    using (var headerRange = worksheet.Cells[1, 1, 1, 6])
+                    using (var headerRange = worksheet.Cells[1, 1, 1, 7])
                     {
                         headerRange.Style.Font.Bold = true;
                         headerRange.Style.Fill.PatternType = OfficeOpenXml.Style.ExcelFillStyle.Solid;
@@ -843,6 +926,10 @@ namespace Backend.Controllers
                     }
 
                     var users = await _context.Users.ToListAsync();
+                    var studentTeachers = await _context.StudentTeachers
+                        .Include(st => st.Teacher)
+                        .ToListAsync();
+
                     for (int i = 0; i < users.Count; i++)
                     {
                         var user = users[i];
@@ -853,6 +940,13 @@ namespace Backend.Controllers
                         worksheet.Cells[row, 4].Value = user.WorkId;
                         worksheet.Cells[row, 5].Value = user.Department;
                         worksheet.Cells[row, 6].Value = user.Password;
+
+                        // 查找该学生的指导教师工号
+                        var st = studentTeachers.FirstOrDefault(x => x.StudentId == user.Id);
+                        if (st != null && st.Teacher != null)
+                        {
+                            worksheet.Cells[row, 7].Value = st.Teacher.WorkId ?? st.Teacher.Username;
+                        }
                     }
 
                     worksheet.Cells[worksheet.Dimension.Address].AutoFitColumns();
@@ -900,6 +994,133 @@ namespace Backend.Controllers
             }
         }
 
+        // POST: api/Auth/users
+        [HttpPost("users")]
+        public async Task<IActionResult> CreateUser([FromBody] CreateUserRequest request)
+        {
+            try
+            {
+                if (request == null || string.IsNullOrEmpty(request.Username) || string.IsNullOrEmpty(request.Password))
+                {
+                    return BadRequest(new { message = "用户名和密码不能为空" });
+                }
+
+                var existingUser = await _context.Users.FirstOrDefaultAsync(u => u.Username == request.Username);
+                if (existingUser != null)
+                {
+                    return Conflict(new { message = "用户名已存在" });
+                }
+
+                var newUser = new User
+                {
+                    Username = request.Username,
+                    Password = PasswordHasher.Hash(request.Password),
+                    Name = request.Name ?? "",
+                    Role = request.Role ?? "Student",
+                    WorkId = request.WorkId ?? "",
+                    Department = request.Department ?? "",
+                    Phone = request.Phone ?? "",
+                    Email = request.Email ?? "",
+                    CreatedAt = DateTime.Now
+                };
+
+                _context.Users.Add(newUser);
+                await _context.SaveChangesAsync();
+
+                // 处理师生关系
+                // 如果创建的是学生且指定了指导教师
+                if (newUser.Role == "Student" && request.SupervisorId.HasValue && request.SupervisorId > 0)
+                {
+                    var supervisor = await _context.Users.FindAsync(request.SupervisorId.Value);
+                    if (supervisor != null)
+                    {
+                        _context.StudentTeachers.Add(new StudentTeacher
+                        {
+                            StudentId = newUser.Id,
+                            TeacherId = supervisor.Id,
+                            CreatedAt = DateTime.Now
+                        });
+                    }
+                }
+
+                // 如果创建的是教师且指定了学生
+                if (newUser.Role == "Teacher" && request.StudentIds != null)
+                {
+                    foreach (var studentId in request.StudentIds)
+                    {
+                        var student = await _context.Users.FindAsync(studentId);
+                        if (student != null)
+                        {
+                            var existingRelation = await _context.StudentTeachers
+                                .FirstOrDefaultAsync(st => st.StudentId == studentId && st.TeacherId == newUser.Id);
+                            if (existingRelation == null)
+                            {
+                                _context.StudentTeachers.Add(new StudentTeacher
+                                {
+                                    StudentId = studentId,
+                                    TeacherId = newUser.Id,
+                                    CreatedAt = DateTime.Now
+                                });
+                            }
+                        }
+                    }
+                }
+
+                if (request.SupervisorId.HasValue || (request.StudentIds != null && request.StudentIds.Count > 0))
+                {
+                    await _context.SaveChangesAsync();
+                }
+
+                return Ok(new
+                {
+                    message = "用户创建成功",
+                    user = BuildUserResponse(newUser)
+                });
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { message = $"创建用户失败: {ex.Message}" });
+            }
+        }
+
+        // GET: api/Auth/teachers
+        [HttpGet("teachers")]
+        public async Task<IActionResult> GetTeachers()
+        {
+            try
+            {
+                var teachers = await _context.Users
+                    .Where(u => u.Role == "Teacher")
+                    .Select(u => new { id = u.Id, name = u.Name, department = u.Department })
+                    .ToListAsync();
+
+                return Ok(teachers);
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { message = $"获取教师列表失败: {ex.Message}" });
+            }
+        }
+
+        // GET: api/Auth/students
+        [HttpGet("students")]
+        public async Task<IActionResult> GetStudents()
+        {
+            try
+            {
+                var students = await _context.Users
+                    .Where(u => u.Role == "Student")
+                    .Select(u => new { id = u.Id, name = u.Name, department = u.Department })
+                    .ToListAsync();
+
+                return Ok(students);
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { message = $"获取学生列表失败: {ex.Message}" });
+            }
+        }
+
         // PUT: api/Auth/password/{id}
         [HttpPut("password/{id}")]
         public async Task<IActionResult> ResetPassword(int id, [FromBody] ResetPasswordRequest request)
@@ -912,7 +1133,7 @@ namespace Backend.Controllers
                     return NotFound(new { message = "用户不存在" });
                 }
 
-                user.Password = request.Password;
+                user.Password = PasswordHasher.Hash(request.Password);
                 await _context.SaveChangesAsync();
 
                 return Ok(new { message = "密码重置成功" });
@@ -981,6 +1202,30 @@ namespace Backend.Controllers
     public class UpdateRoleRequest
     {
         public string? Role { get; set; }
+    }
+
+    public class UpdateUserRequest
+    {
+        public string? Name { get; set; }
+        public string? WorkId { get; set; }
+        public string? Department { get; set; }
+        public string? Phone { get; set; }
+        public string? Email { get; set; }
+        public string? Role { get; set; }
+    }
+
+    public class CreateUserRequest
+    {
+        public string? Username { get; set; }
+        public string? Password { get; set; }
+        public string? Name { get; set; }
+        public string? Role { get; set; }
+        public string? WorkId { get; set; }
+        public string? Department { get; set; }
+        public string? Phone { get; set; }
+        public string? Email { get; set; }
+        public int? SupervisorId { get; set; }
+        public List<int>? StudentIds { get; set; }
     }
 
     public class UpdateAvatarRequest
