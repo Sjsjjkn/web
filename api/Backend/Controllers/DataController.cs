@@ -32,6 +32,36 @@ namespace Backend.Controllers
             return userId;
         }
 
+        // GET: api/Data/userStats
+        [HttpGet("userStats")]
+        public async Task<ActionResult> GetUserStats()
+        {
+            try
+            {
+                var userId = GetCurrentUserId();
+                if (userId == null)
+                    return Unauthorized(new { message = "请先登录" });
+
+                var workCount = await _context.Works.CountAsync(w => w.UserId == userId.Value);
+                var favoriteCount = await _context.WorkFavorites.CountAsync(f => f.UserId == userId.Value);
+                var viewCount = await _context.Works
+                    .Where(w => w.UserId == userId.Value)
+                    .SumAsync(w => w.Views);
+
+                return Ok(new
+                {
+                    workCount,
+                    favoriteCount,
+                    viewCount
+                });
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"获取用户统计失败: {ex.Message}");
+                return StatusCode(500, new { message = "获取用户统计失败" });
+            }
+        }
+
         // GET: api/Data/overview
         [HttpGet("overview")]
         public async Task<ActionResult> GetOverview()
@@ -57,11 +87,15 @@ namespace Backend.Controllers
                 // 优秀作品数
                 var excellentWorks = await _context.Works.CountAsync(w => w.IsExcellent == true);
 
+                // 总收藏数
+                var totalFavorites = await _context.WorkFavorites.CountAsync();
+
                 return Ok(new {
                     totalWorks,
                     totalUsers,
                     todayWorks,
-                    excellentWorks
+                    excellentWorks,
+                    totalFavorites
                 });
             }
             catch (Exception ex)
@@ -240,8 +274,10 @@ namespace Backend.Controllers
                 wsOverview.Cells[3, 2].Value = overview.totalUsers;
                 wsOverview.Cells[4, 1].Value = "今日上传";
                 wsOverview.Cells[4, 2].Value = overview.todayWorks;
-                wsOverview.Cells[5, 1].Value = "总浏览量";
-                wsOverview.Cells[5, 2].Value = overview.totalViews;
+                wsOverview.Cells[5, 1].Value = "总收藏数";
+                wsOverview.Cells[5, 2].Value = overview.totalFavorites;
+                wsOverview.Cells[6, 1].Value = "优秀作品数";
+                wsOverview.Cells[6, 2].Value = overview.excellentWorks;
                 wsOverview.Cells.AutoFitColumns();
 
                 // 2) 最近每日上传
@@ -301,14 +337,15 @@ namespace Backend.Controllers
 
         #region 内部查询（复用逻辑，避免导出接口重复写SQL）
 
-        private async Task<(int totalWorks, int totalUsers, int todayWorks, int totalViews)> GetOverviewInternal()
+        private async Task<(int totalWorks, int totalUsers, int todayWorks, int totalFavorites, int excellentWorks)> GetOverviewInternal()
         {
             var totalWorks = await _context.Works.CountAsync();
             var totalUsers = await _context.Users.CountAsync();
             var today = DateTime.Now.Date;
             var todayWorks = await _context.Works.CountAsync(w => w.UploadDate.Date == today);
-            var totalViews = 0;
-            return (totalWorks, totalUsers, todayWorks, totalViews);
+            var totalFavorites = await _context.WorkFavorites.CountAsync();
+            var excellentWorks = await _context.Works.CountAsync(w => w.IsExcellent == true);
+            return (totalWorks, totalUsers, todayWorks, totalFavorites, excellentWorks);
         }
 
         private async Task<(List<string> dates, List<int> uploads)> GetDailyUploadsInternal(int days)

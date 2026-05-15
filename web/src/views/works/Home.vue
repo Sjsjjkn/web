@@ -69,10 +69,6 @@
             </div>
             <!-- 分类标签 -->
             <span class="category-badge">{{ work.category || '未分类' }}</span>
-            <!-- 悬停遮罩 -->
-            <div class="card-overlay">
-              <button class="overlay-btn">▶</button>
-            </div>
           </div>
           <div class="card-body">
             <div class="card-title" @click="handleViewWork(work)">{{ work.title }}</div>
@@ -126,9 +122,6 @@
             </div>
             <span class="category-badge">{{ work.category || '未分类' }}</span>
             <span class="featured-badge">⭐ 优秀</span>
-            <div class="card-overlay">
-              <button class="overlay-btn">▶</button>
-            </div>
           </div>
           <div class="card-body">
             <div class="card-title" @click="handleViewWork(work)">{{ work.title }}</div>
@@ -162,8 +155,8 @@
       custom-class="detail-dialog"
       destroy-on-close
       append-to-body
-      :modal-append-to-body="true"
-      :modal="true"
+      :modal-append-to-body="false"
+      :modal="false"
       :lock-scroll="false"
     >
       <div v-if="currentWork" class="detail-content">
@@ -396,7 +389,7 @@ export default {
           return dateB - dateA
         })
 
-        this.recentWorks = sortedWorks.slice(0, 4).map(work => ({
+        const recentWorksData = sortedWorks.slice(0, 4).map(work => ({
           id: work.id,
           title: work.title || '未命名作品',
           uploadUserName: work.uploadUserName || '未知作者',
@@ -409,17 +402,28 @@ export default {
           fileName: work.fileName,
           views: work.views || 0,
           favorites: work.favorites || 0,
-          isFavorited: !!work.isFavorited,
+          isFavorited: false,
           isExcellent: !!work.isExcellent,
           userId: work.userId || work.UserId || work.userid,
           uploadUserProfilePublic: work.uploadUserProfilePublic
         }))
 
-        this.featuredWorks = sortedWorks
+        for (const work of recentWorksData) {
+          try {
+            const favResponse = await this.$axios.get(`/api/Work/${work.id}/is-favorite`)
+            work.isFavorited = favResponse.data.isFavorite || false
+          } catch (e) {
+            work.isFavorited = false
+          }
+        }
+
+        this.recentWorks = recentWorksData
+
+        const featuredWorksData = sortedWorks
           .filter(work => !!work.isExcellent)
           .sort((a, b) => {
             const scoreA = (a.favorites || 0) * 2 + (a.views || 0)
-            const scoreB = (b.favorites || 0) * 2 + (b.views || 0)
+            const scoreB = (b.favorites || 0) * 2 + (a.views || 0)
             return scoreB - scoreA
           })
           .slice(0, 4)
@@ -436,11 +440,22 @@ export default {
             fileName: work.fileName,
             views: work.views || 0,
             favorites: work.favorites || 0,
-            isFavorited: !!work.isFavorited,
+            isFavorited: false,
             isExcellent: true,
             userId: work.userId || work.UserId || work.userid,
             uploadUserProfilePublic: work.uploadUserProfilePublic
           }))
+
+        for (const work of featuredWorksData) {
+          try {
+            const favResponse = await this.$axios.get(`/api/Work/${work.id}/is-favorite`)
+            work.isFavorited = favResponse.data.isFavorite || false
+          } catch (e) {
+            work.isFavorited = false
+          }
+        }
+
+        this.featuredWorks = featuredWorksData
       } catch (error) {
         console.error('获取作品数据失败:', error)
         this.error = '获取作品数据失败，请稍后重试'
@@ -775,42 +790,6 @@ export default {
   font-weight: 600;
   color: var(--accent-strong, #B8943F);
   z-index: 2;
-}
-
-/* Hover Overlay */
-.card-overlay {
-  position: absolute;
-  inset: 0;
-  background: rgba(45, 138, 110, .12);
-  backdrop-filter: blur(2px);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  opacity: 0;
-  transition: opacity var(--duration-normal, .3s);
-  z-index: 3;
-}
-
-.work-card:hover .card-overlay {
-  opacity: 1;
-}
-
-.overlay-btn {
-  width: 48px;
-  height: 48px;
-  border-radius: 50%;
-  background: var(--primary, #2D8A6E);
-  color: #fff;
-  border: none;
-  font-size: 18px;
-  cursor: pointer;
-  box-shadow: 0 8px 24px var(--primary-glow, rgba(45,138,110,.2));
-  transform: scale(.8);
-  transition: transform var(--duration-normal, .3s) var(--ease-out-back, cubic-bezier(0.34, 1.56, 0.64, 1));
-}
-
-.work-card:hover .overlay-btn {
-  transform: scale(1);
 }
 
 /* Card Body */

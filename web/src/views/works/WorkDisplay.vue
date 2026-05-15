@@ -65,15 +65,11 @@
           >
             <div class="card-cover">
               <img v-if="getThumbnailUrl(work)" :src="getThumbnailUrl(work)" :alt="work.title" class="cover-img">
-              <div v-else class="cover-placeholder" :style="{ background: getRandomColor(work.id) }">
+              <div v-else class="cover-placeholder" :style="{ background: getGradient(work.id) }">
+                <span class="file-icon">{{ getFileEmoji(work) }}</span>
                 <span class="file-ext">{{ getFileExtension(work) }}</span>
               </div>
               <span class="category-tag">{{ work.category || '未分类' }}</span>
-              <div class="card-overlay">
-                <button class="overlay-btn" @click.stop="handleViewWork(work.id)">
-                  <i class="el-icon-view"></i>
-                </button>
-              </div>
             </div>
             <div class="card-body">
               <h3 class="card-title">{{ work.title }}</h3>
@@ -205,7 +201,18 @@ export default {
           sortBy: this.sortBy,
         }
         const { data } = await http.get('/api/Work', { params })
-        this.works = data.items || data.data || data || []
+        const worksData = data.items || data.data || data || []
+        
+        for (const work of worksData) {
+          try {
+            const favResponse = await http.get(`/api/Work/${work.id}/is-favorite`)
+            work.isFavorited = favResponse.data.isFavorite || false
+          } catch (e) {
+            work.isFavorited = false
+          }
+        }
+        
+        this.works = worksData
         this.total = data.total || data.totalCount || this.works.length
         if (data.categories) {
           this.categories = [{ value: '', label: '全部' }, ...data.categories.map(c => ({ value: c, label: c }))]
@@ -228,6 +235,16 @@ export default {
       if (work.thumbnailPath) {
         return `/api/File/download?fileName=${encodeURIComponent(work.thumbnailPath)}`
       }
+      if (work.filePath) {
+        const ext = (work.filePath || '').toLowerCase().split('.').pop()
+        const imageExts = ['jpg', 'jpeg', 'png', 'gif', 'bmp', 'webp']
+        if (imageExts.includes(ext)) {
+          return `/api/File/download?fileName=${encodeURIComponent(work.filePath)}`
+        }
+      }
+      if (work.previewImage) {
+        return `/api/File/download?fileName=${encodeURIComponent(work.previewImage)}`
+      }
       if (work.fileType === 'image' && work.filePath) {
         return `/api/File/download?fileName=${encodeURIComponent(work.filePath)}`
       }
@@ -241,6 +258,48 @@ export default {
       const colors = ['#2D8A6E', '#45A884', '#5DB89E', '#C8AA6E', '#B8943F', '#5B9BD5', '#F09342']
       const index = (typeof id === 'number' ? id : (id || '').toString().charCodeAt(0) || 0) % colors.length
       return colors[index]
+    },
+    getGradient(id) {
+      const gradients = [
+        'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+        'linear-gradient(135deg, #f093fb 0%, #f5576c 100%)',
+        'linear-gradient(135deg, #4facfe 0%, #00f2fe 100%)',
+        'linear-gradient(135deg, #43e97b 0%, #38f9d7 100%)',
+        'linear-gradient(135deg, #fa709a 0%, #fee140 100%)',
+        'linear-gradient(135deg, #a18cd1 0%, #fbc2eb 100%)',
+        'linear-gradient(135deg, #ff9a9e 0%, #fecfef 100%)',
+        'linear-gradient(135deg, #ffecd2 0%, #fcb69f 100%)'
+      ]
+      const index = (typeof id === 'number' ? id : (id || '').toString().charCodeAt(0) || 0) % gradients.length
+      return gradients[index]
+    },
+    getFileEmoji(work) {
+      const ext = (work.filePath || work.fileName || '').toLowerCase().split('.').pop()
+      const emojiMap = {
+        'pdf': '📕',
+        'doc': '📘',
+        'docx': '📘',
+        'ppt': '📗',
+        'pptx': '📗',
+        'xls': '📙',
+        'xlsx': '📙',
+        'zip': '📦',
+        'rar': '📦',
+        'jpg': '🖼️',
+        'jpeg': '🖼️',
+        'png': '🖼️',
+        'gif': '🖼️',
+        'mp4': '🎬',
+        'mp3': '🎵',
+        'txt': '📝',
+        'md': '📝',
+        'html': '🌐',
+        'css': '🎨',
+        'js': '💻',
+        'json': '📄',
+        'xml': '📄'
+      }
+      return emojiMap[ext] || '📄'
     },
     handleViewWork(id) {
       this.$router.push(`/works/${id}`)
@@ -428,30 +487,31 @@ export default {
 
 .works-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  grid-template-columns: repeat(4, 1fr);
   gap: 20px;
   margin-bottom: 32px;
 }
 
 .work-card {
-  background: white;
-  border-radius: 12px;
+  background: linear-gradient(145deg, #ffffff, #f8f9f5);
+  border-radius: 18px;
   overflow: hidden;
   cursor: pointer;
-  transition: all 0.3s;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+  transition: all 0.35s cubic-bezier(0.16, 1, 0.3, 1);
+  border: 1px solid #E8E2D8;
 }
 
 .work-card:hover {
-  transform: translateY(-4px);
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.1);
+  transform: translateY(-8px) scale(1.02);
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.12);
+  border-color: #D4CEC6;
 }
 
 .card-cover {
   position: relative;
-  height: 200px;
+  height: 220px;
   overflow: hidden;
-  background: #F2EDE6;
+  background: #F8F9F5;
 }
 
 .cover-img {
@@ -464,63 +524,46 @@ export default {
   width: 100%;
   height: 100%;
   display: flex;
+  flex-direction: column;
   align-items: center;
   justify-content: center;
   color: white;
-  font-size: 18px;
+  gap: 8px;
+}
+
+.cover-placeholder .file-icon {
+  font-size: 48px;
+  opacity: 0.9;
+}
+
+.cover-placeholder .file-ext {
+  font-size: 14px;
   font-weight: 600;
+  opacity: 0.9;
 }
 
 .category-tag {
   position: absolute;
   top: 12px;
   left: 12px;
-  padding: 4px 12px;
-  background: rgba(255, 255, 255, 0.9);
-  border-radius: 12px;
+  padding: 6px 14px;
+  background: rgba(255, 255, 255, 0.95);
+  border-radius: 9999px;
   font-size: 12px;
-  font-weight: 500;
-  color: #2D8A6E;
-}
-
-.card-overlay {
-  position: absolute;
-  inset: 0;
-  background: rgba(45, 138, 110, 0.8);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  opacity: 0;
-  transition: opacity 0.3s;
-}
-
-.work-card:hover .card-overlay {
-  opacity: 1;
-}
-
-.overlay-btn {
-  width: 48px;
-  height: 48px;
-  border-radius: 50%;
-  background: white;
-  border: none;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 20px;
-  color: #2D8A6E;
+  font-weight: 600;
+  color: #667eea;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
 }
 
 .card-body {
-  padding: 16px;
+  padding: 20px;
 }
 
 .card-title {
-  font-size: 15px;
-  font-weight: 600;
+  font-size: 16px;
+  font-weight: 700;
   color: #1A1A1A;
-  margin: 0 0 8px;
+  margin: 0 0 12px;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -528,36 +571,49 @@ export default {
 
 .card-meta {
   display: flex;
-  justify-content: space-between;
-  font-size: 12px;
-  color: #888888;
-  margin-bottom: 12px;
-  flex-wrap: wrap;
+  align-items: center;
+  gap: 16px;
+  font-size: 13px;
+  color: #666666;
+  margin-bottom: 16px;
 }
 
 .card-meta .author {
-  flex: 1;
-  min-width: 100px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
 }
 
-.card-meta .views,
+.card-meta .author::before {
+  content: '👤';
+  font-size: 14px;
+}
+
+.card-meta .views {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
 .card-meta .favorites {
-  margin-left: 8px;
+  display: flex;
+  align-items: center;
+  gap: 4px;
 }
 
 .card-actions {
   display: flex;
-  gap: 8px;
+  gap: 10px;
 }
 
 .action-btn {
   flex: 1;
-  padding: 8px 12px;
+  padding: 10px 14px;
   border: 1px solid #E8E2D8;
-  border-radius: 8px;
+  border-radius: 10px;
   background: white;
   cursor: pointer;
-  transition: all 0.2s;
+  transition: all 0.25s;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -567,14 +623,17 @@ export default {
 }
 
 .action-btn:hover {
-  border-color: #2D8A6E;
-  color: #2D8A6E;
+  border-color: #667eea;
+  color: #667eea;
+  background: #F5F7FF;
+  transform: translateY(-1px);
 }
 
 .action-btn.active {
-  background: #FFF8E1;
+  background: linear-gradient(135deg, #FFF8E1 0%, #FFF0C6 100%);
   border-color: #F5A623;
-  color: #F5A623;
+  color: #B8860B;
+  box-shadow: 0 2px 8px rgba(245, 166, 35, 0.2);
 }
 
 .pagination-wrapper {

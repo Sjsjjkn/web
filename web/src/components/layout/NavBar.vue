@@ -23,8 +23,8 @@
           <i class="el-icon-arrow-down nav-arrow"></i>
           <div class="nav-dropdown-panel">
             <router-link to="/account/space" class="dropdown-link">个人空间</router-link>
-            <div class="dropdown-divider" v-if="hasPermission(['Admin', 'Teacher'])"></div>
-            <router-link v-if="hasPermission(['Admin', 'Teacher'])" to="/works/manage" class="dropdown-link">作品管理</router-link>
+            <div class="dropdown-divider" v-if="hasPermission(['Admin', 'Teacher', 'Student'])"></div>
+            <router-link v-if="hasPermission(['Admin', 'Teacher', 'Student'])" to="/works/manage" class="dropdown-link">作品管理</router-link>
             <router-link to="/account/feedback" class="dropdown-link">意见反馈</router-link>
             <router-link to="/account/settings" class="dropdown-link">偏好设置</router-link>
           </div>
@@ -486,7 +486,7 @@ export default {
 }
 
 .custom-avatar {
-  background: linear-gradient(135deg, var(--primary) 0%, var(--primary-light) 100%);
+  background: transparent;
   color: white;
 }
 

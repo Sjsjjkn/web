@@ -43,6 +43,7 @@ namespace Backend.Controllers
             [FromQuery] string? category = null,
             [FromQuery] string? status = null,
             [FromQuery] string? sortBy = null,
+            [FromQuery] int? user_id = null,
             [FromQuery] int page = 1,
             [FromQuery] int pageSize = 12)
         {
@@ -50,6 +51,12 @@ namespace Backend.Controllers
             {
                 // 首页和作品展厅显示所有已发布作品，不限制权限
                 IQueryable<Work> query = _context.Works.Where(w => w.Status == "已发布");
+
+                // 按用户筛选（用于公开主页展示该用户的所有作品）
+                if (user_id.HasValue)
+                {
+                    query = query.Where(w => w.UserId == user_id.Value);
+                }
 
                 // 搜索筛选
                 if (!string.IsNullOrEmpty(search))

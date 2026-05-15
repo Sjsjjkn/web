@@ -76,33 +76,40 @@
           >
             <div class="card-cover">
               <img v-if="getThumbnailUrl(work)" :src="getThumbnailUrl(work)" :alt="work.title" class="cover-img">
-              <div v-else class="cover-placeholder" :style="{ background: getCategoryColor(work.category) }">
-                <span class="file-ext">{{ getFileExtension(work) }}</span>
+              <div v-else class="cover-placeholder" :style="{ background: getGradient(work.id, 0) }">
+                <span class="file-icon">{{ getFileEmoji(work) }}</span>
+                <span>{{ getFileExtension(work) }}</span>
               </div>
               <span class="category-tag">{{ work.category || '未分类' }}</span>
               <span :class="['status-tag', work.status]">{{ getStatusLabel(work.status) }}</span>
-              <div class="card-overlay">
-                <button class="overlay-btn view-btn" @click.stop="handleViewWork(work)">
-                  <i class="el-icon-view"></i>
-                </button>
-                <button class="overlay-btn edit-btn" @click.stop="handleEditWork(work)">
-                  <i class="el-icon-edit"></i>
-                </button>
-                <button class="overlay-btn download-btn" @click.stop="handleDownloadFile(work)">
-                  <i class="el-icon-download"></i>
-                </button>
-              </div>
             </div>
             <div class="card-body">
-              <h3 class="card-title">{{ work.title }}</h3>
-              <div class="card-meta">
-                <span class="author">{{ work.uploadUserName || '未知作者' }}</span>
-                <span class="views">👁 {{ work.views || 0 }}</span>
+              <div class="card-title">{{ work.title }}</div>
+              <div class="card-author">
+                <span class="author-avatar">{{ (work.uploadUserName || '未')[0] }}</span>
+                {{ work.uploadUserName || '未知作者' }}
+                <span class="card-date" v-if="work.fileUploadTime || work.uploadDate">
+                  · {{ formatDate(work.fileUploadTime || work.uploadDate) }}
+                </span>
+              </div>
+              <div class="card-stats">
+                <span class="stat-item">👁 {{ work.views || 0 }}</span>
+                <span class="stat-item">⭐ {{ work.favorites || 0 }}</span>
               </div>
               <div class="card-actions">
                 <button class="action-btn" @click.stop="handleEditWork(work)">
                   <i class="el-icon-edit"></i>
                   <span>编辑</span>
+                </button>
+                <button
+                  class="action-btn favorite-btn"
+                  @click.stop="handleFavoriteWork(work)"
+                  :class="{ active: work.isFavorited }"
+                  :title="work.isFavorited ? '取消收藏' : '收藏'"
+                >
+                  <i class="el-icon-star-off" v-if="!work.isFavorited"></i>
+                  <i class="el-icon-star-on" v-else></i>
+                  <span>{{ work.isFavorited ? '已收藏' : '收藏' }}</span>
                 </button>
                 <button class="action-btn primary" @click.stop="handleViewWork(work)">
                   <i class="el-icon-view"></i>
@@ -138,6 +145,8 @@
       @close="resetForm"
       append-to-body
       :modal-append-to-body="false"
+      :modal="false"
+      :lock-scroll="false"
     >
       <el-form ref="workForm" :model="form" :rules="rules" label-width="90px" label-position="right">
         <el-form-item label="作品标题" prop="title">
@@ -219,64 +228,77 @@
     <!-- 详情对话框 -->
     <el-dialog
       :visible.sync="detailDialogVisible"
-      width="800px"
+      :title="currentWork ? currentWork.title : '作品详情'"
+      width="680px"
+      :close-on-click-modal="true"
+      custom-class="detail-dialog"
+      destroy-on-close
+      append-to-body
+      :modal-append-to-body="false"
+      :modal="false"
+      :lock-scroll="false"
     >
-      <div slot="title">作品详情</div>
       <div v-if="currentWork" class="detail-content">
-        <div class="detail-preview">
-          <img v-if="getThumbnailUrl(currentWork)" :src="getThumbnailUrl(currentWork)" :alt="currentWork.title" class="detail-image">
-          <div v-else class="detail-placeholder" :style="{ backgroundColor: getCategoryColor(currentWork.category) }">
-            <span>{{ getFileExtension(currentWork) }}</span>
+        <!-- 顶部封面区 -->
+        <div class="detail-header">
+          <div class="detail-cover">
+            <img
+              v-if="getThumbnailUrl(currentWork)"
+              :src="getThumbnailUrl(currentWork)"
+              class="detail-cover-img"
+            />
+            <div
+              v-else
+              class="detail-cover-placeholder"
+              :style="{ background: getGradient(currentWork.id, 0) }"
+            >
+              <span style="font-size: 48px; opacity: 0.5;">{{ getFileEmoji(currentWork) }}</span>
+              <span>{{ getFileExtension(currentWork) }}</span>
+            </div>
+          </div>
+          <div class="detail-meta">
+            <div class="detail-author">
+              <span class="author-avatar-lg">{{ (currentWork.uploadUserName || '?')[0] }}</span>
+              <span class="detail-author-name">{{ currentWork.uploadUserName || '未知作者' }}</span>
+            </div>
+            <div class="detail-stats">
+              <span>👁 {{ currentWork.views || 0 }}</span>
+              <span>⭐ {{ currentWork.favorites || 0 }}</span>
+              <span>📁 {{ currentWork.category || '未分类' }}</span>
+            </div>
+            <div class="detail-date" v-if="currentWork.fileUploadTime || currentWork.uploadDate">
+              上传于 {{ formatDate(currentWork.fileUploadTime || currentWork.uploadDate) }}
+            </div>
           </div>
         </div>
-        <div class="detail-info">
-          <h2 class="detail-title">{{ currentWork.title }}</h2>
-          <div class="detail-author">
-            <div class="author-avatar">
-              <i class="el-icon-user-solid"></i>
-            </div>
-            <div class="author-meta">
-              <span class="author-name">{{ currentWork.uploadUserName || '未知作者' }}</span>
-              <span class="upload-time">{{ formatDate(currentWork.uploadDate) }}</span>
-            </div>
-            <el-tag :type="currentWork.status === '已发布' ? 'success' : 'info'" size="small">{{ currentWork.status || '未知' }}</el-tag>
-          </div>
-          <p class="detail-desc" v-if="currentWork.description">{{ currentWork.description }}</p>
-          <p class="detail-desc" v-else>暂无描述</p>
-          <div class="detail-meta-section">
-            <div class="detail-meta-row">
-              <div class="detail-meta-item">
-                <i class="el-icon-view"></i>
-                <span>{{ currentWork.views || 0 }}</span>
-                <span>浏览</span>
-              </div>
-              <div class="detail-meta-item">
-                <i class="el-icon-star-off"></i>
-                <span>{{ currentWork.favorites || 0 }}</span>
-                <span>收藏</span>
-              </div>
-              <div class="detail-meta-item">
-                <i class="el-icon-download"></i>
-                <span>{{ currentWork.downloads || 0 }}</span>
-                <span>下载</span>
-              </div>
-            </div>
-            <div class="detail-file-row">
-              <span class="file-tag">
-                <i class="el-icon-document"></i> {{ currentWork.fileName || '未知文件' }}
-              </span>
-              <span class="file-tag" v-if="currentWork.fileSize">
-                <i class="el-icon-data-line"></i> {{ formatFileSize(currentWork.fileSize) }}
-              </span>
-            </div>
-          </div>
-          <div class="detail-actions">
-            <el-button @click="handleDownloadFile(currentWork)" round>
-              <i class="el-icon-download"></i> 下载文件
-            </el-button>
+
+        <!-- 描述 -->
+        <div class="detail-description" v-if="currentWork.description">
+          <h4>作品描述</h4>
+          <p>{{ currentWork.description }}</p>
+        </div>
+
+        <!-- 文件信息 -->
+        <div class="detail-file">
+          <h4>文件信息</h4>
+          <div class="file-tags">
+            <span class="file-tag">📄 {{ currentWork.fileName || currentWork.filePath || '未知' }}</span>
+            <span class="file-tag">🏷 {{ formatFileType(currentWork.filePath) }}</span>
           </div>
         </div>
       </div>
+
+      <span slot="footer" class="dialog-footer">
+        <el-button @click="detailDialogVisible = false" class="btn-cancel">关闭</el-button>
+        <el-button
+          v-if="currentWork && currentWork.filePath"
+          type="primary"
+          @click="handleDownloadFile(currentWork)"
+          class="btn-download"
+        >
+          <i class="el-icon-download"></i> 下载文件
+        </el-button>
+      </span>
     </el-dialog>
   </div>
 </template>
@@ -344,6 +366,11 @@ export default {
   },
   mounted() {
     this.loadWorks()
+    if (this.$route.query.action === 'upload') {
+      this.$nextTick(() => {
+        this.handleCreateWork()
+      })
+    }
   },
   methods: {
     async loadWorks() {
@@ -358,7 +385,18 @@ export default {
             pageSize: this.pageSize
           }
         })
-        this.works = response.data.items || []
+        const worksData = response.data.items || []
+        
+        for (const work of worksData) {
+          try {
+            const favResponse = await http.get(`/api/Work/${work.id}/is-favorite`)
+            work.isFavorited = favResponse.data.isFavorite || false
+          } catch (e) {
+            work.isFavorited = false
+          }
+        }
+        
+        this.works = worksData
         this.total = response.data.total || 0
       } catch (error) {
         this.$message.error(error.response?.data?.message || '加载作品失败')
@@ -367,9 +405,30 @@ export default {
       }
     },
 
-    handleViewWork(work) {
+    async handleViewWork(work) {
       this.currentWork = work
       this.detailDialogVisible = true
+      try {
+        await http.get(`/api/Work/${work.id}/view`)
+        work.views = (work.views || 0) + 1
+      } catch (error) {
+        console.error('增加浏览量失败:', error)
+      }
+    },
+
+    async handleFavoriteWork(work) {
+      try {
+        if (work.isFavorited) {
+          await http.delete(`/api/Work/${work.id}/favorite`)
+        } else {
+          await http.post(`/api/Work/${work.id}/favorite`)
+        }
+        work.isFavorited = !work.isFavorited
+        work.favorites = work.isFavorited ? (work.favorites || 0) + 1 : Math.max(0, (work.favorites || 0) - 1)
+        this.$message.success(work.isFavorited ? '收藏成功' : '取消收藏成功')
+      } catch (error) {
+        this.$message.error(error.response?.data?.message || '操作失败')
+      }
     },
 
     handleCreateWork() {
@@ -426,38 +485,126 @@ export default {
       this.uploading = true
       this.uploadProgress = 0
 
-      const formData = new FormData()
-      formData.append('title', this.form.title)
-      formData.append('category', this.form.category)
-      formData.append('description', this.form.description || '')
-      formData.append('status', this.form.status)
-      if (this.isEdit && this.form.id) {
-        formData.append('id', this.form.id)
-      }
-      if (this.selectedFile) {
-        formData.append('file', this.selectedFile)
-      }
-
       try {
-        const url = this.isEdit ? '/api/Work/update' : '/api/Work/upload'
-        await http.post(url, formData, {
-          headers: { 'Content-Type': 'multipart/form-data' },
-          onUploadProgress: (progressEvent) => {
-            if (progressEvent.total) {
-              this.uploadProgress = Math.round((progressEvent.loaded * 100) / progressEvent.total)
-            }
-          }
-        })
-        this.$message.success(this.isEdit ? '作品修改成功' : '作品上传成功')
+        let filePath = ''
+        
+        // 如果有新文件，使用分片上传
+        if (this.selectedFile) {
+          filePath = await this.uploadFileWithChunks(this.selectedFile)
+        } else if (this.isEdit) {
+          // 编辑时没有选择新文件，保持原文件路径
+          filePath = this.existingFilePath
+        }
+
+        // 保存作品信息
+        const workData = {
+          title: this.form.title,
+          category: this.form.category,
+          description: this.form.description || '',
+          status: this.form.status,
+          filePath: filePath,
+          fileName: this.selectedFile ? this.selectedFile.name : this.existingFileName,
+          fileSize: this.selectedFile ? this.selectedFile.size : this.existingFileSize
+        }
+
+        if (this.isEdit && this.form.id) {
+          workData.id = this.form.id
+          await http.put('/api/Work/' + this.form.id, workData)
+          this.$message.success('作品修改成功')
+        } else {
+          await http.post('/api/Work', workData)
+          this.$message.success('作品上传成功')
+        }
+
         this.uploadDialogVisible = false
         this.resetForm()
         this.loadWorks()
       } catch (error) {
-        this.$message.error(error.response?.data?.message || '操作失败')
+        this.$message.error(error.response?.data?.message || error.message || '操作失败')
       } finally {
         this.uploading = false
         this.uploadProgress = 0
       }
+    },
+
+    async uploadFileWithChunks(file) {
+      const chunkSize = 2 * 1024 * 1024 // 2MB 分片大小
+      const totalChunks = Math.ceil(file.size / chunkSize)
+      const fileMD5 = await this.calculateMD5(file)
+      
+      // 检查上传状态（断点续传）
+      const statusResponse = await http.get('/api/File/upload-status', {
+        params: { md5: fileMD5, totalChunks: totalChunks }
+      })
+      const uploadedChunks = statusResponse.data.uploadedChunks || []
+
+      // 上传所有分片
+      for (let i = 0; i < totalChunks; i++) {
+        // 跳过已上传的分片
+        if (uploadedChunks.includes(i)) {
+          this.updateProgress(i, totalChunks)
+          continue
+        }
+
+        const start = i * chunkSize
+        const end = Math.min(start + chunkSize, file.size)
+        const chunk = file.slice(start, end)
+
+        const formData = new FormData()
+        formData.append('chunk', chunk)
+        formData.append('chunkIndex', i)
+        formData.append('totalChunks', totalChunks)
+        formData.append('md5', fileMD5)
+        formData.append('fileName', file.name)
+
+        await http.post('/api/File/upload-chunk', formData, {
+          headers: { 'Content-Type': 'multipart/form-data' }
+        })
+
+        this.updateProgress(i, totalChunks)
+      }
+
+      // 合并分片
+      const mergeResponse = await http.post('/api/File/merge-chunks', {
+        md5: fileMD5,
+        fileName: file.name,
+        totalChunks: totalChunks
+      })
+
+      return mergeResponse.data.filePath
+    },
+
+    updateProgress(currentChunk, totalChunks) {
+      this.uploadProgress = Math.round(((currentChunk + 1) / totalChunks) * 100)
+    },
+
+    calculateMD5(file) {
+      return new Promise((resolve, reject) => {
+        const SparkMD5 = require('spark-md5')
+        const chunkSize = 2 * 1024 * 1024
+        const fileReader = new FileReader()
+        const md5 = new SparkMD5.ArrayBuffer()
+        let offset = 0
+
+        const readNextChunk = () => {
+          const slice = file.slice(offset, offset + chunkSize)
+          fileReader.readAsArrayBuffer(slice)
+        }
+
+        fileReader.onload = (e) => {
+          md5.append(e.target.result)
+          offset += chunkSize
+
+          if (offset < file.size) {
+            readNextChunk()
+          } else {
+            resolve(md5.end())
+          }
+        }
+
+        fileReader.onerror = reject
+        readNextChunk()
+      })
     },
 
     handleDownloadFile(work) {
@@ -552,6 +699,77 @@ export default {
     getFileExtension(work) {
       if (!work.filePath) return 'FILE'
       return work.filePath.toLowerCase().substring(work.filePath.lastIndexOf('.') + 1).toUpperCase()
+    },
+
+    getGradient(seed, offset = 0) {
+      const gradients = [
+        'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+        'linear-gradient(135deg, #f093fb 0%, #f5576c 100%)',
+        'linear-gradient(135deg, #4facfe 0%, #00f2fe 100%)',
+        'linear-gradient(135deg, #43e97b 0%, #38f9d7 100%)',
+        'linear-gradient(135deg, #fa709a 0%, #fee140 100%)',
+        'linear-gradient(135deg, #a8edea 0%, #fed6e3 100%)',
+        'linear-gradient(135deg, #ff9a9e 0%, #fecfef 100%)',
+        'linear-gradient(135deg, #ffecd2 0%, #fcb69f 100%)'
+      ]
+      return gradients[(seed + offset) % gradients.length]
+    },
+
+    getFileEmoji(work) {
+      if (!work.filePath) return '📄'
+      const ext = work.filePath.toLowerCase().substring(work.filePath.lastIndexOf('.'))
+      const emojiMap = {
+        '.jpg': '🖼️',
+        '.jpeg': '🖼️',
+        '.png': '🖼️',
+        '.gif': '🖼️',
+        '.webp': '🖼️',
+        '.mp4': '🎬',
+        '.avi': '🎬',
+        '.mov': '🎬',
+        '.pdf': '📕',
+        '.doc': '📘',
+        '.docx': '📘',
+        '.txt': '📝',
+        '.zip': '📦',
+        '.rar': '📦',
+        '.exe': '⚙️',
+        '.js': '💻',
+        '.html': '🌐',
+        '.css': '🎨',
+        '.json': '📋',
+        '.xml': '📄',
+        '.md': '📝'
+      }
+      return emojiMap[ext] || '📄'
+    },
+
+    formatFileType(filePath) {
+      if (!filePath) return '未知类型'
+      const ext = filePath.toLowerCase().substring(filePath.lastIndexOf('.') + 1)
+      const typeMap = {
+        'jpg': 'JPEG 图片',
+        'jpeg': 'JPEG 图片',
+        'png': 'PNG 图片',
+        'gif': 'GIF 图片',
+        'webp': 'WebP 图片',
+        'mp4': 'MP4 视频',
+        'avi': 'AVI 视频',
+        'mov': 'MOV 视频',
+        'pdf': 'PDF 文档',
+        'doc': 'Word 文档',
+        'docx': 'Word 文档',
+        'txt': '文本文件',
+        'zip': 'ZIP 压缩包',
+        'rar': 'RAR 压缩包',
+        'js': 'JavaScript 文件',
+        'html': 'HTML 文件',
+        'css': 'CSS 文件',
+        'json': 'JSON 文件',
+        'xml': 'XML 文件',
+        'md': 'Markdown 文件'
+      }
+      return typeMap[ext] || `${ext.toUpperCase()} 文件`
     }
   }
 }
@@ -713,28 +931,30 @@ export default {
 
 .works-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  grid-template-columns: repeat(4, 1fr);
   gap: 20px;
 }
 
 .work-card {
-  background: #fff;
-  border-radius: 12px;
+  background: #FFFFFF;
+  border-radius: 18px;
+  border: 1px solid #E8E2D8;
   overflow: hidden;
-  box-shadow: 0 2px 8px rgba(0,0,0,0.06);
-  transition: transform 0.2s, box-shadow 0.2s;
+  transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
   cursor: pointer;
 }
 
 .work-card:hover {
+  box-shadow: 0 16px 40px rgba(0,0,0,.12);
   transform: translateY(-4px);
-  box-shadow: 0 8px 24px rgba(0,0,0,0.1);
 }
 
 .card-cover {
-  position: relative;
   height: 180px;
+  position: relative;
   overflow: hidden;
+  cursor: pointer;
+  background: #F2EDE6;
 }
 
 .cover-img {
@@ -747,14 +967,17 @@ export default {
   width: 100%;
   height: 100%;
   display: flex;
+  flex-direction: column;
   align-items: center;
   justify-content: center;
+  gap: 6px;
+  font-size: 13px;
+  color: rgba(255,255,255,0.9);
 }
 
-.file-ext {
-  font-size: 24px;
-  font-weight: 600;
-  color: rgba(255,255,255,0.9);
+.cover-placeholder .file-icon {
+  font-size: 48px;
+  opacity: 0.8;
 }
 
 .category-tag {
@@ -788,44 +1011,6 @@ export default {
   color: #fff;
 }
 
-.card-overlay {
-  position: absolute;
-  inset: 0;
-  background: rgba(45, 138, 110, 0.8);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 12px;
-  opacity: 0;
-  transition: opacity 0.2s;
-}
-
-.work-card:hover .card-overlay {
-  opacity: 1;
-}
-
-.overlay-btn {
-  width: 44px;
-  height: 44px;
-  border-radius: 50%;
-  background: #fff;
-  border: none;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  cursor: pointer;
-  transition: transform 0.2s;
-}
-
-.overlay-btn:hover {
-  transform: scale(1.1);
-}
-
-.overlay-btn i {
-  font-size: 18px;
-  color: #2D8A6E;
-}
-
 .card-body {
   padding: 16px;
 }
@@ -833,20 +1018,57 @@ export default {
 .card-title {
   font-size: 15px;
   font-weight: 600;
-  color: #1a1a1a;
-  margin: 0 0 10px;
+  color: #1A1A1A;
+  margin-bottom: 6px;
+  white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-  white-space: nowrap;
+  cursor: pointer;
+  transition: color 0.18s;
 }
 
-.card-meta {
+.work-card:hover .card-title {
+  color: #2D8A6E;
+}
+
+.card-author {
+  font-size: 12px;
+  color: #888888;
+  margin-bottom: 12px;
   display: flex;
   align-items: center;
+  gap: 6px;
+}
+
+.author-avatar {
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: #EDF5F0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 10px;
+  font-weight: 600;
+  color: #2D8A6E;
+}
+
+.card-date {
+  color: #AAAAAA;
+}
+
+.card-stats {
+  display: flex;
   gap: 12px;
-  margin-bottom: 12px;
   font-size: 12px;
-  color: #888;
+  color: #888888;
+  margin-bottom: 12px;
+}
+
+.stat-item {
+  display: flex;
+  align-items: center;
+  gap: 4px;
 }
 
 .card-actions {
@@ -884,6 +1106,17 @@ export default {
 .action-btn.primary:hover {
   background: #1D7A5E;
   border-color: #1D7A5E;
+}
+
+.action-btn.favorite-btn.active {
+  border-color: #FFB300;
+  color: #FFB300;
+  background: #FFF8E1;
+}
+
+.action-btn.favorite-btn.active:hover {
+  border-color: #FFA000;
+  color: #FFA000;
 }
 
 /* 分页 */
@@ -1002,129 +1235,138 @@ export default {
 }
 
 /* 详情对话框 */
-.detail-content {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  min-height: 300px;
+::v-deep .detail-dialog {
+  border-radius: 18px;
+  overflow: hidden;
 }
 
-.detail-preview {
-  background: #f5f7fa;
+::v-deep .detail-dialog .el-dialog__header {
+  padding: 20px 24px 0;
+  font-size: 20px;
+  font-weight: 700;
+}
+
+::v-deep .detail-dialog .el-dialog__body {
+  padding: 20px 24px;
+}
+
+.detail-header {
   display: flex;
-  align-items: center;
-  justify-content: center;
+  gap: 20px;
+  padding-bottom: 20px;
+  border-bottom: 1px solid #E8E2D8;
 }
 
-.detail-image {
+.detail-cover {
+  width: 160px;
+  height: 160px;
+  border-radius: 14px;
+  overflow: hidden;
+  flex-shrink: 0;
+  background: #F2EDE6;
+}
+
+.detail-cover-img {
   width: 100%;
   height: 100%;
   object-fit: cover;
 }
 
-.detail-placeholder {
+.detail-cover-placeholder {
   width: 100%;
   height: 100%;
   display: flex;
+  flex-direction: column;
   align-items: center;
   justify-content: center;
-  color: rgba(255,255,255,0.9);
-  font-size: 18px;
-  font-weight: 600;
+  gap: 6px;
+  font-size: 13px;
+  color: #888888;
 }
 
-.detail-info {
-  padding: 20px;
-}
-
-.detail-title {
-  font-size: 20px;
-  font-weight: 700;
-  color: #333;
-  margin: 0 0 16px;
+.detail-meta {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
 }
 
 .detail-author {
   display: flex;
   align-items: center;
-  gap: 12px;
-  margin-bottom: 16px;
+  gap: 10px;
 }
 
-.author-avatar {
-  width: 40px;
-  height: 40px;
+.author-avatar-lg {
+  width: 32px;
+  height: 32px;
   border-radius: 50%;
-  background: #e8e8e8;
-  display: flex;
+  background: #EDF5F0;
+  display: inline-flex;
   align-items: center;
   justify-content: center;
-  font-size: 18px;
-  color: #666;
-}
-
-.author-meta {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-}
-
-.author-name {
   font-size: 14px;
-  font-weight: 500;
-  color: #333;
-}
-
-.upload-time {
-  font-size: 12px;
-  color: #999;
-}
-
-.detail-desc {
-  font-size: 14px;
-  color: #666;
-  line-height: 1.6;
-  margin-bottom: 16px;
-}
-
-.detail-meta-section {
-  margin-bottom: 16px;
-}
-
-.detail-meta-row {
-  display: flex;
-  gap: 24px;
-  margin-bottom: 12px;
-}
-
-.detail-meta-item {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  font-size: 13px;
-  color: #666;
-}
-
-.detail-meta-item span:nth-child(2) {
   font-weight: 600;
-  color: #333;
+  color: #2D8A6E;
 }
 
-.detail-file-row {
+.detail-author-name {
+  font-size: 16px;
+  font-weight: 600;
+  color: #1A1A1A;
+}
+
+.detail-stats {
   display: flex;
-  gap: 12px;
+  gap: 16px;
+  font-size: 13px;
+  color: #555555;
+}
+
+.detail-date {
+  font-size: 12px;
+  color: #888888;
+}
+
+.detail-description {
+  padding: 20px 0;
+  border-bottom: 1px solid #E8E2D8;
+}
+
+.detail-description h4,
+.detail-file h4 {
+  font-size: 15px;
+  font-weight: 600;
+  color: #1A1A1A;
+  margin: 0 0 12px;
+}
+
+.detail-description p {
+  font-size: 14px;
+  line-height: 1.7;
+  color: #555555;
+  white-space: pre-wrap;
+}
+
+.detail-file {
+  padding-top: 20px;
+}
+
+.file-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
 }
 
 .file-tag {
-  padding: 4px 10px;
-  background: #f0f0f0;
-  border-radius: 4px;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 6px 12px;
+  border-radius: 9999px;
+  background: #EDF5F0;
   font-size: 12px;
-  color: #666;
-}
-
-.detail-actions {
-  display: flex;
-  justify-content: flex-end;
+  color: #2D8A6E;
 }
 
 @media (max-width: 768px) {

@@ -125,7 +125,8 @@ export default {
         { label: '总作品数', value: 60, icon: 'el-icon-document', color: '#e6f7ff' },
         { label: '总用户数', value: 35, icon: 'el-icon-user', color: '#f6ffed' },
         { label: '今日上传', value: 9, icon: 'el-icon-upload', color: '#fff0f6' },
-        { label: '总浏览量', value: 1200, icon: 'el-icon-view', color: '#f0f5ff' }
+        { label: '总收藏数', value: 150, icon: 'el-icon-star-on', color: '#fff7e6' },
+        { label: '优秀作品数', value: 5, icon: 'el-icon-medal', color: '#f0f5ff' }
       ]
     }
   },
@@ -206,7 +207,8 @@ export default {
       this.stats[0].value = data.totalWorks || 60
       this.stats[1].value = data.totalUsers || 35
       this.stats[2].value = data.todayWorks || 9
-      this.stats[3].value = data.totalViews || 1200
+      this.stats[3].value = data.totalFavorites || 150
+      this.stats[4].value = data.excellentWorks || 5
     },
     
     async fetchOverview() {

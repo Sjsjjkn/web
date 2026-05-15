@@ -37,3 +37,13 @@ export function getFileTypeLabel(fileType) {
   }
   return labelMap[fileType] || '其他'
 }
+
+/**
+ * 获取头像URL
+ * @param {string|null} avatar - 头像文件名
+ * @returns {string} 头像URL或空字符串
+ */
+export function getAvatarUrl(avatar) {
+  if (!avatar) return ''
+  return `/api/File/download?fileName=${encodeURIComponent(avatar)}`
+}

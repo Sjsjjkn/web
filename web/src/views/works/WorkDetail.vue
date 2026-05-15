@@ -29,8 +29,8 @@
         <div class="preview-section">
           <div class="preview-container">
             <img 
-              v-if="work.coverImage"
-              :src="`/api/File/download?fileName=${encodeURIComponent(work.coverImage)}`"
+              v-if="getPreviewUrl()"
+              :src="getPreviewUrl()"
               :alt="work.title"
               class="preview-image"
             />
@@ -72,7 +72,7 @@
             <div class="author-avatar-wrap">
               <img 
                 v-if="work.authorAvatar"
-                :src="`/api/File/download?fileName=${encodeURIComponent(work.authorAvatar)}`"
+                :src="getAuthorAvatarUrl()"
                 :alt="work.author"
                 class="author-avatar"
               />
@@ -116,8 +116,8 @@
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                 <path stroke-linecap="round" stroke-linejoin="round" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
               </svg>
-              <div class="stat-value">{{ formatDateShort(work.createdAt) }}</div>
-              <div class="stat-label">{{ formatYear(work.createdAt) }}</div>
+              <div class="stat-value">{{ formatDateShort(getDateField()) }}</div>
+              <div class="stat-label">{{ formatYear(getDateField()) }}</div>
             </div>
           </div>
 
@@ -198,7 +198,8 @@ export default {
       loading: true,
       work: null,
       isFavorited: false,
-      fileSize: ''
+      fileSize: '',
+      _ts: Date.now()
     }
   },
   mounted() {
@@ -213,6 +214,11 @@ export default {
         const res = await workApi.getWorkById(id)
         this.work = res.data
         
+        // 映射后端的 uploadUserAvatar 到前端模板使用的 authorAvatar
+        if (this.work.uploadUserAvatar) {
+          this.work.authorAvatar = this.work.uploadUserAvatar
+        }
+
         // 处理文件大小
         if (this.work.fileSize) {
           const size = parseInt(this.work.fileSize)
@@ -238,11 +244,57 @@ export default {
           this.work.tags = []
         }
 
+        // 检查收藏状态
+        await this.checkFavoriteStatus()
+
         this.loading = false
       } catch (error) {
         console.error('加载作品失败:', error)
         this.$message.error('加载作品失败')
         this.loading = false
+      }
+    },
+
+    getAuthorAvatarUrl() {
+      if (!this.work || !this.work.authorAvatar) return ''
+      return `/api/File/download?fileName=${encodeURIComponent(this.work.authorAvatar)}&t=${this._ts}`
+    },
+
+    getPreviewUrl() {
+      if (!this.work) return null
+      
+      // 优先使用封面图
+      if (this.work.coverImage) {
+        return `/api/File/download?fileName=${encodeURIComponent(this.work.coverImage)}`
+      }
+      // 使用缩略图路径
+      if (this.work.thumbnailPath) {
+        return `/api/File/download?fileName=${encodeURIComponent(this.work.thumbnailPath)}`
+      }
+      // 如果文件是图片类型，直接显示文件
+      if (this.work.filePath) {
+        const ext = (this.work.filePath || '').toLowerCase().split('.').pop()
+        const imageExts = ['jpg', 'jpeg', 'png', 'gif', 'bmp', 'webp']
+        if (imageExts.includes(ext)) {
+          return `/api/File/download?fileName=${encodeURIComponent(this.work.filePath)}`
+        }
+      }
+      // 尝试预览图字段
+      if (this.work.previewImage) {
+        return `/api/File/download?fileName=${encodeURIComponent(this.work.previewImage)}`
+      }
+      return null
+    },
+
+    async checkFavoriteStatus() {
+      const id = this.$route.params.id
+      try {
+        const http = (await import('../../utils/http')).default
+        const response = await http.get(`/api/Work/${id}/is-favorite`)
+        this.isFavorited = response.data.isFavorite || false
+      } catch (error) {
+        console.error('检查收藏状态失败:', error)
+        this.isFavorited = false
       }
     },
 
@@ -264,14 +316,25 @@ export default {
       return roles[role] || role || '未知身份'
     },
 
+    getDateField() {
+      if (!this.work) return null
+      // 尝试多种可能的日期字段名
+      return this.work.createdAt || this.work.created_at || this.work.uploadDate || 
+             this.work.upload_date || this.work.fileUploadTime || this.work.file_upload_time ||
+             this.work.createTime || this.work.create_time || this.work.time || null
+    },
+
     formatDateShort(dateString) {
       if (!dateString) return '--'
       const date = new Date(dateString)
+      if (isNaN(date.getTime())) return '--'
       return `${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`
     },
 
     formatYear(dateString) {
       if (!dateString) return '--'
+      const date = new Date(dateString)
+      if (isNaN(date.getTime())) return '--'
       return new Date(dateString).getFullYear()
     },
 
@@ -296,33 +359,34 @@ export default {
     },
 
     handleViewProfile() {
-      console.log('handleViewProfile called', {
-        work: this.work,
-        allKeys: this.work ? Object.keys(this.work) : [],
-        userId: this.work?.UserId,
-        userId_lower: this.work?.userId,
-        uploadUserId: this.work?.uploadUserId,
-        profilePublic: this.work?.uploadUserProfilePublic
-      })
-      const userId = this.work?.UserId || this.work?.userId || this.work?.uploadUserId || this.work?.user_id || this.work?.id
+      // 优先从作品对象中提取作者的用户ID，不要回退到作品ID
+      const userId = this.work?.UserId 
+        || this.work?.userId 
+        || this.work?.uploadUserId 
+        || this.work?.user_id
       if (this.work && userId) {
         this.$router.push(`/profile/${userId}`)
       } else {
-        this.$message.warning('无法查看主页')
+        this.$message.warning('无法查看主页（缺少作者信息）')
       }
     },
 
     async handleFavorite() {
       try {
-        await workApi.toggleFavorite(this.work.id)
-        this.isFavorited = !this.isFavorited
+        const http = (await import('../../utils/http')).default
         if (this.isFavorited) {
-          this.work.favoriteCount = (this.work.favoriteCount || 0) + 1
-          this.$message.success('收藏成功')
+          await http.delete(`/api/Work/${this.work.id}/favorite`)
         } else {
-          this.work.favoriteCount = Math.max(0, (this.work.favoriteCount || 0) - 1)
-          this.$message.success('取消收藏')
+          await http.post(`/api/Work/${this.work.id}/favorite`)
         }
+        this.isFavorited = !this.isFavorited
+        if (this.work.favorites !== undefined) {
+          this.work.favorites = this.isFavorited ? (this.work.favorites || 0) + 1 : Math.max(0, (this.work.favorites || 0) - 1)
+        }
+        if (this.work.favoriteCount !== undefined) {
+          this.work.favoriteCount = this.isFavorited ? (this.work.favoriteCount || 0) + 1 : Math.max(0, (this.work.favoriteCount || 0) - 1)
+        }
+        this.$message.success(this.isFavorited ? '收藏成功' : '取消收藏成功')
       } catch (error) {
         console.error('收藏失败:', error)
         this.$message.error('操作失败')

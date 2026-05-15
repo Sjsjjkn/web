@@ -320,7 +320,8 @@ body::before {
 }
 
 /* 确保对话框遮罩层和内容都显示在最顶层 */
-.el-dialog__wrapper {
+/* 模态遮罩必须在对话框下方 */
+.v-modal {
   z-index: 2000 !important;
 }
 
