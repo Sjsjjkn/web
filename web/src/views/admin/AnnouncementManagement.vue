@@ -125,6 +125,8 @@
       :visible.sync="showModal"
       width="600px"
       class="modern-dialog"
+      :modal="false"
+      :close-on-click-modal="false"
     >
       <el-form :model="form" label-width="80px">
         <el-form-item label="标题" required>

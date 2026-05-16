@@ -116,6 +116,11 @@ const routes = [
     meta: { roles: ['Admin'] }
   },
   {
+    path: '/announcements',
+    name: 'Announcements',
+    component: () => import('../views/announcement/AnnouncementList.vue')
+  },
+  {
     path: '/teaching/overview',
     name: 'TeachingOverview',
     component: () => import('../views/teaching/TeachingOverview.vue'),

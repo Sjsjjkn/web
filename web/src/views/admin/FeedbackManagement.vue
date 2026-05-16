@@ -100,7 +100,14 @@
     <div class="modal-overlay" v-if="showDetailModal" @click.self="showDetailModal = false">
       <div class="modal-content">
         <div class="modal-header">
-          <h3>{{ selectedFeedback?.title }}</h3>
+          <div class="header-info">
+            <div class="header-icon">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z"/>
+              </svg>
+            </div>
+            <h3>{{ selectedFeedback?.title }}</h3>
+          </div>
           <button class="close-btn" @click="showDetailModal = false">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
@@ -108,49 +115,107 @@
           </button>
         </div>
         <div class="modal-body">
-          <div class="detail-row">
-            <span class="detail-label">反馈类型：</span>
-            <span :class="['detail-value', 'type', selectedFeedback?.type]">{{ getTypeLabel(selectedFeedback?.type) }}</span>
+          <!-- 基本信息卡片 -->
+          <div class="info-card">
+            <div class="card-title">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+              </svg>
+              <span>基本信息</span>
+            </div>
+            <div class="info-grid">
+              <div class="info-item">
+                <span class="info-label">类型</span>
+                <span :class="['info-tag', 'type', selectedFeedback?.type]">{{ getTypeLabel(selectedFeedback?.type) }}</span>
+              </div>
+              <div class="info-item">
+                <span class="info-label">状态</span>
+                <span :class="['info-tag', 'status', selectedFeedback?.status]">{{ getStatusLabel(selectedFeedback?.status) }}</span>
+              </div>
+              <div class="info-item">
+                <span class="info-label">用户</span>
+                <span class="info-text">{{ selectedFeedback?.userName }}</span>
+              </div>
+              <div class="info-item">
+                <span class="info-label">联系</span>
+                <span class="info-text">{{ selectedFeedback?.contact || '未提供' }}</span>
+              </div>
+              <div class="info-item full">
+                <span class="info-label">时间</span>
+                <span class="info-text">{{ formatTime(selectedFeedback?.createdAt) }}</span>
+              </div>
+            </div>
           </div>
-          <div class="detail-row">
-            <span class="detail-label">提交用户：</span>
-            <span class="detail-value">{{ selectedFeedback?.userName }}</span>
+
+          <!-- 反馈内容卡片 -->
+          <div class="content-card">
+            <div class="card-title">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+              </svg>
+              <span>反馈内容</span>
+            </div>
+            <div class="content-body">
+              {{ selectedFeedback?.content }}
+            </div>
           </div>
-          <div class="detail-row">
-            <span class="detail-label">联系方式：</span>
-            <span class="detail-value">{{ selectedFeedback?.contact || '未提供' }}</span>
-          </div>
-          <div class="detail-row">
-            <span class="detail-label">提交时间：</span>
-            <span class="detail-value">{{ formatTime(selectedFeedback?.createdAt) }}</span>
-          </div>
-          <div class="detail-row">
-            <span class="detail-label">当前状态：</span>
-            <span :class="['detail-value', 'status', selectedFeedback?.status]">{{ getStatusLabel(selectedFeedback?.status) }}</span>
-          </div>
-          <div class="detail-row full-width">
-            <span class="detail-label">反馈内容：</span>
-            <div class="detail-content">{{ selectedFeedback?.content }}</div>
-          </div>
-          <div v-if="selectedFeedback?.reply" class="detail-row full-width">
-            <span class="detail-label">管理员回复：</span>
-            <div class="detail-content reply">{{ selectedFeedback?.reply }}</div>
+
+          <!-- 回复内容卡片 -->
+          <div v-if="selectedFeedback?.reply" class="reply-card">
+            <div class="card-title">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z"/>
+              </svg>
+              <span>管理员回复</span>
+            </div>
+            <div class="reply-body">
+              <div class="reply-badge">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/>
+                </svg>
+                <span>管理员</span>
+              </div>
+              <p>{{ selectedFeedback?.reply }}</p>
+            </div>
           </div>
         </div>
         <div class="modal-footer">
           <div class="status-actions" v-if="selectedFeedback?.status !== 'resolved' && selectedFeedback?.status !== 'rejected'">
-            <button class="btn btn-secondary" @click="updateStatus('processing')">标记为处理中</button>
-            <button class="btn btn-warning" @click="updateStatus('rejected')">驳回</button>
+            <button class="btn btn-secondary" @click="updateStatus('processing')">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
+              </svg>
+              处理中
+            </button>
+            <button class="btn btn-warning" @click="updateStatus('rejected')">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z"/>
+              </svg>
+              驳回
+            </button>
           </div>
           <div v-if="selectedFeedback?.status !== 'resolved'">
-            <button class="btn btn-primary" @click="showReplyForm = true">回复反馈</button>
+            <button class="btn btn-primary" @click="showReplyForm = true">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z"/>
+              </svg>
+              回复
+            </button>
           </div>
-          <button class="btn btn-secondary" @click="showDetailModal = false">关闭</button>
+          <button class="btn btn-secondary" @click="showDetailModal = false">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+            </svg>
+            关闭
+          </button>
         </div>
 
         <!-- 回复表单 -->
         <div v-if="showReplyForm" class="reply-section">
           <div class="reply-header">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/>
+            </svg>
             <h4>回复反馈</h4>
           </div>
           <textarea
@@ -485,45 +550,99 @@ export default {
   left: 0;
   right: 0;
   bottom: 0;
-  background: rgba(0, 0, 0, 0.5);
+  background: rgba(26, 26, 26, 0.5);
+  backdrop-filter: blur(8px);
   display: flex;
   align-items: center;
   justify-content: center;
   z-index: 1000;
+  animation: fadeIn 0.25s var(--ease-out-expo);
+  padding: 20px;
 }
 
 .modal-content {
-  background: #fff;
-  border-radius: 12px;
-  width: 90%;
-  max-width: 600px;
+  background: var(--bg-card);
+  border-radius: var(--radius-xl);
+  width: 100%;
+  max-width: 620px;
   max-height: 90vh;
   overflow: hidden;
+  box-shadow: var(--shadow-popup);
+  animation: slideUp 0.3s var(--ease-out-back);
 }
 
 .modal-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 16px 20px;
-  border-bottom: 1px solid #eee;
+  padding: 24px 28px;
+  background: linear-gradient(135deg, var(--primary) 0%, var(--primary-light) 100%);
+  position: relative;
+  overflow: hidden;
+}
+
+.modal-header::before {
+  content: '';
+  position: absolute;
+  top: -50%;
+  right: -20%;
+  width: 140px;
+  height: 140px;
+  background: rgba(255, 255, 255, 0.15);
+  border-radius: 50%;
+}
+
+.header-info {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  position: relative;
+  z-index: 1;
+}
+
+.header-icon {
+  width: 40px;
+  height: 40px;
+  background: rgba(255, 255, 255, 0.2);
+  border-radius: var(--radius-md);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.header-icon svg {
+  width: 20px;
+  height: 20px;
+  color: #fff;
 }
 
 .modal-header h3 {
   margin: 0;
-  font-size: 16px;
+  font-size: 18px;
+  font-weight: 700;
+  color: #fff;
+  position: relative;
+  z-index: 1;
 }
 
 .close-btn {
-  background: none;
+  background: rgba(255, 255, 255, 0.2);
   border: none;
   cursor: pointer;
-  color: #999;
-  padding: 4px;
+  color: #fff;
+  padding: 8px;
+  border-radius: var(--radius-md);
+  transition: all var(--duration-fast);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  z-index: 1;
 }
 
 .close-btn:hover {
-  color: #666;
+  background: rgba(255, 255, 255, 0.35);
+  transform: rotate(90deg);
 }
 
 .close-btn svg {
@@ -532,108 +651,323 @@ export default {
 }
 
 .modal-body {
-  padding: 20px;
-  max-height: 300px;
+  padding: 24px;
+  max-height: 500px;
   overflow-y: auto;
 }
 
-.detail-row {
-  margin-bottom: 12px;
+/* 卡片通用样式 */
+.info-card,
+.content-card,
+.reply-card {
+  background: var(--bg-card);
+  border-radius: var(--radius-lg);
+  padding: 20px;
+  margin-bottom: 20px;
+  border: 1px solid var(--border-light);
+  box-shadow: var(--shadow-xs);
+}
+
+.card-title {
   display: flex;
-  align-items: flex-start;
+  align-items: center;
+  gap: 8px;
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--text-main);
+  margin-bottom: 16px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid var(--border-light);
 }
 
-.detail-row.full-width {
+.card-title svg {
+  width: 18px;
+  height: 18px;
+  color: var(--primary);
+}
+
+/* 信息卡片网格 */
+.info-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 14px;
+}
+
+.info-item {
+  display: flex;
   flex-direction: column;
+  gap: 6px;
 }
 
-.detail-label {
-  font-size: 13px;
-  color: #999;
-  min-width: 80px;
-  flex-shrink: 0;
+.info-item.full {
+  grid-column: span 2;
 }
 
-.detail-value {
-  font-size: 13px;
-  color: #333;
+.info-label {
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--text-light);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
 }
 
-.detail-value.type.suggestion { color: #1890ff; }
-.detail-value.type.complaint { color: #ff4d4f; }
-.detail-value.type.question { color: #52c41a; }
-.detail-value.type.other { color: #666; }
-
-.detail-value.status.pending { color: #d48806; }
-.detail-value.status.processing { color: #1890ff; }
-.detail-value.status.resolved { color: #52c41a; }
-.detail-value.status.rejected { color: #ff4d4f; }
-
-.detail-content {
-  margin-top: 4px;
-  padding: 12px;
-  background: #f9f9f9;
-  border-radius: 8px;
+.info-text {
   font-size: 14px;
-  line-height: 1.6;
-  color: #333;
+  font-weight: 500;
+  color: var(--text-main);
 }
 
-.detail-content.reply {
-  background: #f6ffed;
-  color: #52c41a;
+/* 标签样式 */
+.info-tag {
+  display: inline-flex;
+  align-items: center;
+  padding: 6px 14px;
+  border-radius: var(--radius-full);
+  font-size: 12px;
+  font-weight: 600;
+  width: fit-content;
+}
+
+.info-tag.type.suggestion { 
+  background: linear-gradient(135deg, #E6F7FF 0%, #B3DFFF 100%); 
+  color: var(--info); 
+}
+.info-tag.type.complaint { 
+  background: linear-gradient(135deg, #FFF2F0 0%, #FFCCC7 100%); 
+  color: var(--danger); 
+}
+.info-tag.type.question { 
+  background: linear-gradient(135deg, #F6FFED 0%, #D9F7BE 100%); 
+  color: var(--success); 
+}
+.info-tag.type.other { 
+  background: linear-gradient(135deg, #F5F5F5 0%, #E8E8E8 100%); 
+  color: var(--text-secondary); 
+}
+
+.info-tag.status.pending { 
+  background: linear-gradient(135deg, #FFF7E6 0%, #FFE0B2 100%); 
+  color: #D48806; 
+}
+.info-tag.status.processing { 
+  background: linear-gradient(135deg, #E6F7FF 0%, #91D5FF 100%); 
+  color: var(--info); 
+}
+.info-tag.status.resolved { 
+  background: linear-gradient(135deg, #F6FFED 0%, #B7EB8F 100%); 
+  color: var(--success); 
+}
+.info-tag.status.rejected { 
+  background: linear-gradient(135deg, #FFF2F0 0%, #FFCCC7 100%); 
+  color: var(--danger); 
+}
+
+/* 内容卡片 */
+.content-body {
+  font-size: 14px;
+  line-height: 1.8;
+  color: var(--text-regular);
+  padding: 16px;
+  background: var(--bg-hover);
+  border-radius: var(--radius-md);
+  border-left: 3px solid var(--primary);
+}
+
+/* 回复卡片 */
+.reply-body {
+  padding: 16px;
+  background: linear-gradient(135deg, var(--primary-bg) 0%, #E0F0E8 100%);
+  border-radius: var(--radius-md);
+  border: 1px solid var(--primary-bg);
+  position: relative;
+}
+
+.reply-body::before {
+  content: '';
+  position: absolute;
+  left: 20px;
+  top: -8px;
+  width: 0;
+  height: 0;
+  border-left: 8px solid transparent;
+  border-right: 8px solid transparent;
+  border-bottom: 8px solid var(--primary-bg);
+}
+
+.reply-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: rgba(45, 138, 110, 0.15);
+  padding: 4px 10px;
+  border-radius: var(--radius-full);
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--primary);
+  margin-bottom: 10px;
+}
+
+.reply-badge svg {
+  width: 12px;
+  height: 12px;
+}
+
+.reply-body p {
+  margin: 0;
+  font-size: 14px;
+  line-height: 1.7;
+  color: var(--text-regular);
 }
 
 .modal-footer {
-  padding: 16px 20px;
-  border-top: 1px solid #eee;
+  padding: 20px 28px;
+  border-top: 1px solid var(--border-color);
   display: flex;
   gap: 12px;
   justify-content: flex-end;
   flex-wrap: wrap;
+  background: var(--bg-page);
 }
 
 .status-actions {
   display: flex;
-  gap: 8px;
+  gap: 10px;
+}
+
+.status-actions .btn svg {
+  width: 14px;
+  height: 14px;
+}
+
+.modal-footer .btn svg {
+  width: 14px;
+  height: 14px;
 }
 
 .reply-section {
-  padding: 0 20px 20px;
-  border-top: 1px solid #eee;
-  margin-top: 16px;
+  padding: 0 28px 24px;
+  border-top: 1px dashed var(--border-color);
+  margin-top: 20px;
 }
 
 .reply-header {
-  padding: 16px 0 8px;
+  padding: 20px 0 12px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.reply-header svg {
+  width: 18px;
+  height: 18px;
+  color: var(--primary);
 }
 
 .reply-header h4 {
   margin: 0;
-  font-size: 14px;
+  font-size: 16px;
   font-weight: 600;
+  color: var(--text-main);
 }
 
 .reply-textarea {
   width: 100%;
-  min-height: 100px;
-  padding: 12px;
-  border: 1px solid #e6e6e6;
-  border-radius: 8px;
+  min-height: 120px;
+  padding: 16px;
+  border: 2px solid var(--border-color);
+  border-radius: var(--radius-lg);
   resize: vertical;
   font-size: 14px;
+  line-height: 1.6;
   box-sizing: border-box;
+  color: var(--text-main);
+  background: var(--input-bg);
+  transition: all var(--duration-fast);
+  font-family: var(--font-main);
 }
 
 .reply-textarea:focus {
   outline: none;
-  border-color: #409eff;
+  border-color: var(--primary);
+  box-shadow: 0 0 0 4px var(--primary-glow);
+  background: var(--bg-card);
 }
 
 .reply-actions {
   display: flex;
   justify-content: flex-end;
-  gap: 12px;
-  margin-top: 12px;
+  gap: 14px;
+  margin-top: 16px;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes slideUp {
+  from { 
+    opacity: 0; 
+    transform: translateY(30px) scale(0.98); 
+  }
+  to { 
+    opacity: 1; 
+    transform: translateY(0) scale(1); 
+  }
+}
+
+/* 按钮样式优化 */
+.btn {
+  padding: 10px 20px;
+  border-radius: var(--radius-md);
+  border: none;
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 500;
+  transition: all var(--duration-fast);
+  font-family: var(--font-main);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+}
+
+.btn-primary {
+  background: linear-gradient(135deg, var(--primary) 0%, var(--primary-light) 100%);
+  color: #fff;
+  box-shadow: 0 4px 14px var(--primary-glow);
+}
+
+.btn-primary:hover {
+  background: linear-gradient(135deg, var(--primary-hover) 0%, var(--primary) 100%);
+  transform: translateY(-1px);
+  box-shadow: 0 6px 20px var(--primary-glow);
+}
+
+.btn-secondary {
+  background: var(--bg-hover);
+  color: var(--text-secondary);
+  border: 1px solid var(--border-color);
+}
+
+.btn-secondary:hover {
+  background: var(--border-light);
+  color: var(--text-main);
+}
+
+.btn-sm {
+  padding: 6px 14px;
+  font-size: 12px;
+}
+
+.btn-warning {
+  background: linear-gradient(135deg, var(--warning) 0%, #E88535 100%);
+  color: #fff;
+  box-shadow: 0 4px 14px rgba(240, 147, 66, 0.3);
+}
+
+.btn-warning:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 6px 20px rgba(240, 147, 66, 0.4);
 }
 </style>

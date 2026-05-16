@@ -39,6 +39,46 @@ namespace Backend.Services
         }
 
         /// <summary>
+        /// 发送作品评语通知（教师评语通知学生）
+        /// </summary>
+        public async Task SendWorkReviewNotification(int userId, int workId, string workTitle, string reviewComment, string reviewerName)
+        {
+            var notification = new Notification
+            {
+                UserId = userId,
+                Type = "work_review",
+                WorkId = workId,
+                Title = "收到作品评语",
+                Content = $"您的作品「{workTitle}」收到了来自{reviewerName}的评语：{reviewComment}",
+                IsRead = false,
+                CreatedAt = DateTime.Now
+            };
+
+            _context.Notifications.Add(notification);
+            await _context.SaveChangesAsync();
+        }
+
+        /// <summary>
+        /// 发送学生重新提交通知（通知教师）
+        /// </summary>
+        public async Task SendWorkResubmitNotification(int userId, int workId, string workTitle, string studentName)
+        {
+            var notification = new Notification
+            {
+                UserId = userId,
+                Type = "work_resubmit",
+                WorkId = workId,
+                Title = "学生重新提交作品",
+                Content = $"学生{studentName}重新提交了作品「{workTitle}」，请查看审核。",
+                IsRead = false,
+                CreatedAt = DateTime.Now
+            };
+
+            _context.Notifications.Add(notification);
+            await _context.SaveChangesAsync();
+        }
+
+        /// <summary>
         /// 发送系统公告
         /// </summary>
         public async Task SendSystemAnnouncement(string title, string content, List<int>? targetUserIds = null)

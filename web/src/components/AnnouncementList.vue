@@ -7,7 +7,7 @@
         </svg>
         最新公告
       </h3>
-      <a href="#" v-if="announcements.length > 3" class="view-more">查看更多</a>
+      <router-link to="/announcements" v-if="announcements.length > 0" class="view-more">查看更多 →</router-link>
     </div>
 
     <div class="announcement-items">

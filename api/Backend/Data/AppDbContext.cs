@@ -18,6 +18,7 @@ namespace Backend.Data
         public DbSet<Notification> Notifications { get; set; }
         public DbSet<Announcement> Announcements { get; set; }
         public DbSet<Feedback> Feedbacks { get; set; }
+        public DbSet<WorkReview> WorkReviews { get; set; }
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
@@ -87,6 +88,22 @@ namespace Backend.Data
                 entity.HasOne(st => st.Teacher)
                     .WithMany(u => u.SupervisedStudents)
                     .HasForeignKey(st => st.TeacherId)
+                    .OnDelete(DeleteBehavior.Restrict);
+            });
+
+            // ===== WorkReview 配置 =====
+            modelBuilder.Entity<WorkReview>(entity =>
+            {
+                // WorkReview.WorkId → Work.Id
+                entity.HasOne(r => r.Work)
+                    .WithMany()
+                    .HasForeignKey(r => r.WorkId)
+                    .OnDelete(DeleteBehavior.Cascade);
+
+                // WorkReview.ReviewerId → User.Id
+                entity.HasOne(r => r.Reviewer)
+                    .WithMany()
+                    .HasForeignKey(r => r.ReviewerId)
                     .OnDelete(DeleteBehavior.Restrict);
             });
 

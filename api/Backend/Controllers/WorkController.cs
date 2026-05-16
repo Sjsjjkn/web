@@ -1,6 +1,7 @@
 using Backend.Data;
 using Backend.Models;
 using Backend.Models.DTO;
+using Backend.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
@@ -14,10 +15,12 @@ namespace Backend.Controllers
     public class WorkController : ControllerBase
     {
         private readonly AppDbContext _context;
+        private readonly NotificationService _notificationService;
 
-        public WorkController(AppDbContext context)
+        public WorkController(AppDbContext context, NotificationService notificationService)
         {
             _context = context;
+            _notificationService = notificationService;
         }
 
         /// <summary>
@@ -874,6 +877,96 @@ namespace Backend.Controllers
             }
         }
 
+        // POST: api/Work/{id}/resubmit
+        /// <summary>
+        /// 学生重新提交作品（附修改说明，通知教师）
+        /// </summary>
+        [HttpPost("{id}/resubmit")]
+        public async Task<IActionResult> ResubmitWork(int id, [FromBody] ResubmitRequest request)
+        {
+            try
+            {
+                var userId = GetCurrentUserId();
+                if (userId == null)
+                {
+                    return Unauthorized(new { message = "未授权" });
+                }
+
+                var work = await _context.Works.FindAsync(id);
+                if (work == null)
+                {
+                    return NotFound(new { message = "作品不存在" });
+                }
+
+                if (work.UserId != userId.Value)
+                {
+                    return Forbid();
+                }
+
+                // 更新作品状态为待审核
+                work.Status = "待审核";
+                work.FileUploadTime = DateTime.Now;
+
+                // 保存学生的修改说明
+                if (!string.IsNullOrWhiteSpace(request.Comment))
+                {
+                    var review = new WorkReview
+                    {
+                        WorkId = work.Id,
+                        ReviewerId = userId.Value,
+                        Comment = request.Comment,
+                        Type = "resubmit",
+                        CreatedAt = DateTime.Now
+                    };
+                    _context.WorkReviews.Add(review);
+                }
+
+                // 通知所有管理员和该学生的指导教师
+                var user = await _context.Users.FindAsync(userId.Value);
+                var studentName = user?.Name ?? user?.Username ?? "学生";
+
+                // 通知管理员
+                var adminUsers = await _context.Users
+                    .Where(u => u.Role == "Admin")
+                    .ToListAsync();
+
+                foreach (var admin in adminUsers)
+                {
+                    await _notificationService.SendWorkResubmitNotification(
+                        admin.Id, work.Id, work.Title, studentName);
+                }
+
+                // 通知指导教师
+                var teacherIds = await _context.StudentTeachers
+                    .Where(st => st.StudentId == userId.Value)
+                    .Select(st => st.TeacherId)
+                    .ToListAsync();
+
+                foreach (var teacherId in teacherIds)
+                {
+                    await _notificationService.SendWorkResubmitNotification(
+                        teacherId, work.Id, work.Title, studentName);
+                }
+
+                await _context.SaveChangesAsync();
+
+                return Ok(new
+                {
+                    message = "作品已重新提交审核",
+                    work = new
+                    {
+                        id = work.Id,
+                        status = work.Status
+                    }
+                });
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"重新提交作品失败: {ex.Message}");
+                return StatusCode(500, new { message = "重新提交作品失败", error = ex.Message });
+            }
+        }
+
         // GET: api/Work/{id}/is-favorite
         [HttpGet("{id}/is-favorite")]
         public async Task<ActionResult> CheckIsFavorite(int id)
@@ -983,5 +1076,13 @@ namespace Backend.Controllers
     public class ReviewRequest
     {
         public string Status { get; set; } = string.Empty;
+    }
+
+    /// <summary>
+    /// 重新提交作品请求模型
+    /// </summary>
+    public class ResubmitRequest
+    {
+        public string? Comment { get; set; }
     }
 }

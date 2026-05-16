@@ -97,19 +97,13 @@
                 <span class="stat-item">⭐ {{ work.favorites || 0 }}</span>
               </div>
               <div class="card-actions">
+                <button class="action-btn" @click.stop="handleOpenReview(work)">
+                  <i class="el-icon-s-management"></i>
+                  <span>管理</span>
+                </button>
                 <button class="action-btn" @click.stop="handleEditWork(work)">
                   <i class="el-icon-edit"></i>
                   <span>编辑</span>
-                </button>
-                <button
-                  class="action-btn favorite-btn"
-                  @click.stop="handleFavoriteWork(work)"
-                  :class="{ active: work.isFavorited }"
-                  :title="work.isFavorited ? '取消收藏' : '收藏'"
-                >
-                  <i class="el-icon-star-off" v-if="!work.isFavorited"></i>
-                  <i class="el-icon-star-on" v-else></i>
-                  <span>{{ work.isFavorited ? '已收藏' : '收藏' }}</span>
                 </button>
                 <button class="action-btn primary" @click.stop="handleViewWork(work)">
                   <i class="el-icon-view"></i>
@@ -295,6 +289,75 @@
         </el-button>
       </span>
     </el-dialog>
+
+    <!-- 作品管理/反馈对话框（学生视角） -->
+    <el-dialog
+      title="作品管理"
+      :visible.sync="reviewDialogVisible"
+      width="680px"
+      :close-on-click-modal="false"
+      :append-to-body="true"
+      :modal-append-to-body="true"
+    >
+      <div v-if="reviewWork" class="review-dialog-content">
+        <!-- 作品基本信息 -->
+        <div class="review-header">
+          <h3>{{ reviewWork.title }}</h3>
+          <div class="review-meta">
+            <span>分类：{{ reviewWork.category || '未分类' }}</span>
+            <span>状态：<el-tag :type="reviewStatusTag(reviewWork.status)" size="small">{{ getStatusLabel(reviewWork.status) }}</el-tag></span>
+            <span>上传时间：{{ formatDate(reviewWork.fileUploadTime || reviewWork.uploadDate) }}</span>
+          </div>
+        </div>
+
+        <!-- 教师评语 / 反馈历史 -->
+        <div class="review-history-section">
+          <h4>评语 / 反馈历史</h4>
+          <div v-if="reviewHistory.length > 0" class="review-history-list">
+            <div
+              v-for="item in reviewHistory"
+              :key="item.id"
+              class="history-item"
+            >
+              <div class="history-header">
+                <span class="history-author">{{ item.reviewerName }}（{{ item.reviewerRole === 'Admin' ? '管理员' : item.reviewerRole === 'Teacher' ? '教师' : '学生' }}）</span>
+                <el-tag
+                  size="mini"
+                  :type="item.type === 'resubmit' ? 'warning' : 'info'"
+                >
+                  {{ item.type === 'review' ? '教师评语' : '修改说明' }}
+                </el-tag>
+                <span class="history-time">{{ formatDateTime(item.createdAt) }}</span>
+              </div>
+              <div class="history-content">{{ item.comment }}</div>
+            </div>
+          </div>
+          <div v-else class="review-history-empty">
+            <p>暂无评语记录。等待教师审核后给出反馈。</p>
+          </div>
+        </div>
+
+        <!-- 学生重新提交区域 -->
+        <div class="resubmit-section">
+          <h4>修改后重新提交</h4>
+          <p class="resubmit-hint">如需根据教师建议修改作品后可在此说明修改内容并标记为待审核。</p>
+          <el-input
+            v-model="resubmitComment"
+            type="textarea"
+            :rows="3"
+            placeholder="请说明你做了哪些修改..."
+            show-word-limit
+            maxlength="500"
+          />
+          <div class="resubmit-actions">
+            <el-button @click="reviewDialogVisible = false">关闭</el-button>
+            <el-button type="primary" :loading="resubmitting" @click="handleResubmit">
+              重新提交审核
+            </el-button>
+          </div>
+        </div>
+      </div>
+    </el-dialog>
   </div>
 </template>
 
@@ -343,7 +406,13 @@ export default {
         { label: '草稿', value: '草稿' },
         { label: '审核中', value: '待审核' },
         { label: '已发布', value: '已发布' }
-      ]
+      ],
+      // 作品管理/反馈
+      reviewDialogVisible: false,
+      reviewWork: null,
+      reviewHistory: [],
+      resubmitComment: '',
+      resubmitting: false
     }
   },
   computed: {
@@ -771,6 +840,56 @@ export default {
         'md': 'Markdown 文件'
       }
       return typeMap[ext] || `${ext.toUpperCase()} 文件`
+    },
+
+    // ========== 作品管理/反馈（学生查看评语 & 重新提交） ==========
+    async handleOpenReview(work) {
+      this.reviewWork = work
+      this.resubmitComment = ''
+      this.reviewHistory = []
+      this.reviewDialogVisible = true
+      await this.loadReviewHistory(work.id)
+    },
+
+    async loadReviewHistory(workId) {
+      try {
+        const { data } = await http.get(`/api/TeachingCollaboration/works/${workId}/reviews`)
+        this.reviewHistory = data.reviews || []
+      } catch (error) {
+        console.error('加载评语历史失败:', error)
+        this.reviewHistory = []
+      }
+    },
+
+    async handleResubmit() {
+      if (!this.reviewWork) return
+      this.resubmitting = true
+      try {
+        const { data } = await http.post(`/api/Work/${this.reviewWork.id}/resubmit`, {
+          comment: this.resubmitComment
+        })
+        this.$message.success(data.message || '作品已重新提交审核')
+        this.reviewDialogVisible = false
+        await this.loadWorks()
+      } catch (error) {
+        this.$message.error(error.response?.data?.message || '重新提交失败')
+      } finally {
+        this.resubmitting = false
+      }
+    },
+
+    reviewStatusTag(status) {
+      switch (status) {
+        case '已发布': return 'success'
+        case '待审核': return 'warning'
+        case '已归档': return 'info'
+        default: return ''
+      }
+    },
+
+    formatDateTime(value) {
+      if (!value) return '暂无'
+      return new Date(value).toLocaleString('zh-CN')
     }
   }
 }
@@ -1731,5 +1850,107 @@ export default {
     grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
     gap: 16px;
   }
+}
+
+/* ========== 管理/反馈对话框样式（学生视角） ========== */
+.review-dialog-content {
+  max-height: 60vh;
+  overflow-y: auto;
+  padding-right: 4px;
+}
+
+.review-header {
+  margin-bottom: 20px;
+  padding-bottom: 16px;
+  border-bottom: 1px solid #e4e7ed;
+}
+
+.review-header h3 {
+  margin: 0 0 10px;
+  color: #182a3a;
+  font-size: 18px;
+}
+
+.review-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px;
+  color: #606266;
+  font-size: 13px;
+}
+
+.review-history-section {
+  margin-bottom: 20px;
+  padding-bottom: 16px;
+  border-bottom: 1px solid #e4e7ed;
+}
+
+.review-history-section h4,
+.resubmit-section h4 {
+  margin: 0 0 12px;
+  color: #303133;
+  font-size: 15px;
+  font-weight: 600;
+}
+
+.review-history-list {
+  max-height: 240px;
+  overflow-y: auto;
+}
+
+.history-item {
+  padding: 12px;
+  margin-bottom: 8px;
+  background: #f5f7fa;
+  border-radius: 8px;
+}
+
+.history-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 6px;
+}
+
+.history-author {
+  font-weight: 600;
+  color: #303133;
+  font-size: 13px;
+}
+
+.history-time {
+  color: #909399;
+  font-size: 12px;
+  margin-left: auto;
+}
+
+.history-content {
+  color: #606266;
+  font-size: 14px;
+  line-height: 1.6;
+  white-space: pre-wrap;
+}
+
+.review-history-empty {
+  text-align: center;
+  color: #c0c4cc;
+  padding: 20px 0;
+}
+
+.resubmit-section {
+  margin-top: 16px;
+}
+
+.resubmit-hint {
+  margin: 0 0 12px;
+  color: #909399;
+  font-size: 13px;
+}
+
+.resubmit-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+  margin-top: 16px;
 }
 </style>

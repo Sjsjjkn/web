@@ -12,6 +12,21 @@ namespace Backend
         {
             Console.WriteLine("开始初始化数据库...");
 
+            // 确保 WorkReviews 表存在（EnsureCreated 不会为后期新增的 Model 建表）
+            await context.Database.ExecuteSqlRawAsync(@"
+                CREATE TABLE IF NOT EXISTS WorkReviews (
+                    Id INT NOT NULL AUTO_INCREMENT,
+                    WorkId INT NOT NULL,
+                    ReviewerId INT NOT NULL,
+                    Comment VARCHAR(2000) NOT NULL,
+                    Type VARCHAR(20) NOT NULL DEFAULT 'review',
+                    CreatedAt DATETIME(6) NOT NULL,
+                    PRIMARY KEY (Id),
+                    FOREIGN KEY (WorkId) REFERENCES Works(Id) ON DELETE CASCADE,
+                    FOREIGN KEY (ReviewerId) REFERENCES Users(Id) ON DELETE RESTRICT
+                ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;");
+            Console.WriteLine("WorkReviews 表检查/创建完成");
+
             // 检查admin用户是否存在
             var adminExists = await context.Users.AnyAsync(u => u.Username == "admin");
             if (!adminExists)

@@ -14,6 +14,10 @@
           <i class="el-icon-s-home"></i>首页
         </router-link>
 
+        <router-link to="/announcements" class="nav-item">
+          <i class="el-icon-bell"></i>公告
+        </router-link>
+
         <router-link to="/works" class="nav-item">
           <i class="el-icon-picture-outline"></i>作品展厅
         </router-link>

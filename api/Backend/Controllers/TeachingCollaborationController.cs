@@ -1,5 +1,6 @@
 using Backend.Data;
 using Backend.Models;
+using Backend.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
@@ -13,10 +14,12 @@ namespace Backend.Controllers
     public class TeachingCollaborationController : ControllerBase
     {
         private readonly AppDbContext _context;
+        private readonly NotificationService _notificationService;
 
-        public TeachingCollaborationController(AppDbContext context)
+        public TeachingCollaborationController(AppDbContext context, NotificationService notificationService)
         {
             _context = context;
+            _notificationService = notificationService;
         }
 
         private int? GetCurrentUserId()
@@ -28,6 +31,12 @@ namespace Backend.Controllers
             }
 
             return userId;
+        }
+
+        private string? GetCurrentUserName()
+        {
+            var claim = User.FindFirst(ClaimTypes.Name);
+            return claim?.Value;
         }
 
         private async Task<List<int>> GetManagedStudentIdsAsync()
@@ -259,6 +268,9 @@ namespace Backend.Controllers
             try
             {
                 var studentIds = await GetManagedStudentIdsAsync();
+                var reviewerId = GetCurrentUserId();
+                var reviewerName = GetCurrentUserName() ?? "教师";
+
                 var work = await BuildManagedWorksQuery(studentIds)
                     .FirstOrDefaultAsync(w => w.Id == id);
 
@@ -275,6 +287,29 @@ namespace Backend.Controllers
                 if (request.IsExcellent.HasValue)
                 {
                     work.IsExcellent = request.IsExcellent.Value;
+                }
+
+                // 保存教师评语
+                if (!string.IsNullOrWhiteSpace(request.Comment) && reviewerId.HasValue)
+                {
+                    var review = new WorkReview
+                    {
+                        WorkId = work.Id,
+                        ReviewerId = reviewerId.Value,
+                        Comment = request.Comment,
+                        Type = "review",
+                        CreatedAt = DateTime.Now
+                    };
+                    _context.WorkReviews.Add(review);
+
+                    // 发送评语通知给学生
+                    await _notificationService.SendWorkReviewNotification(
+                        work.UserId,
+                        work.Id,
+                        work.Title,
+                        request.Comment,
+                        reviewerName
+                    );
                 }
 
                 await _context.SaveChangesAsync();
@@ -296,11 +331,79 @@ namespace Backend.Controllers
                 return StatusCode(500, new { message = "更新学生作品失败" });
             }
         }
+
+        /// <summary>
+        /// 获取作品评语/反馈历史（教师和学生都可查看）
+        /// </summary>
+        [HttpGet("works/{workId}/reviews")]
+        [AllowAnonymous]  // 内部做权限检查
+        public async Task<IActionResult> GetWorkReviews(int workId)
+        {
+            try
+            {
+                var userId = GetCurrentUserId();
+                if (userId == null)
+                {
+                    return Unauthorized(new { message = "未登录" });
+                }
+
+                var work = await _context.Works.FirstOrDefaultAsync(w => w.Id == workId);
+                if (work == null)
+                {
+                    return NotFound(new { message = "作品不存在" });
+                }
+
+                // 权限：教师/管理员可以查看管理的学生的作品评语；学生只能看自己的
+                bool isAuthorized;
+                if (User.IsInRole("Admin") || User.IsInRole("Teacher"))
+                {
+                    var studentIds = await GetManagedStudentIdsAsync();
+                    isAuthorized = studentIds.Contains(work.UserId);
+                }
+                else
+                {
+                    isAuthorized = work.UserId == userId.Value;
+                }
+
+                if (!isAuthorized)
+                {
+                    return Forbid();
+                }
+
+                var reviews = await _context.WorkReviews
+                    .Where(r => r.WorkId == workId)
+                    .OrderByDescending(r => r.CreatedAt)
+                    .Join(
+                        _context.Users,
+                        r => r.ReviewerId,
+                        u => u.Id,
+                        (r, u) => new
+                        {
+                            id = r.Id,
+                            workId = r.WorkId,
+                            comment = r.Comment,
+                            type = r.Type,
+                            createdAt = r.CreatedAt,
+                            reviewerId = r.ReviewerId,
+                            reviewerName = string.IsNullOrWhiteSpace(u.Name) ? u.Username : u.Name,
+                            reviewerRole = u.Role
+                        })
+                    .ToListAsync();
+
+                return Ok(new { reviews });
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"获取作品评语失败: {ex.Message}");
+                return StatusCode(500, new { message = "获取作品评语失败" });
+            }
+        }
     }
 
     public class TeachingWorkReviewRequest
     {
         public string? Status { get; set; }
         public bool? IsExcellent { get; set; }
+        public string? Comment { get; set; }
     }
 }

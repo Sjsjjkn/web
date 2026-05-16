@@ -62,6 +62,7 @@
           <template slot-scope="{ row }">
             <el-button type="text" @click="openReview(row)">管理</el-button>
             <el-button type="text" @click="download(row)">下载</el-button>
+            <el-button type="text" @click="viewWork(row)">查看</el-button>
           </template>
         </el-table-column>
       </el-table>
@@ -79,24 +80,77 @@
       <el-empty v-if="!loading && works.length === 0" description="当前筛选条件下没有作品" />
     </section>
 
-    <el-dialog title="管理学生作品" :visible.sync="dialogVisible" width="420px">
-      <el-form label-width="100px">
-        <el-form-item label="作品标题">
-          <span>{{ currentWork?.title || '-' }}</span>
-        </el-form-item>
-        <el-form-item label="状态">
-          <el-select v-model="reviewForm.status" placeholder="请选择状态" style="width: 100%">
-            <el-option v-for="item in statusOptions" :key="item" :label="item" :value="item" />
-          </el-select>
-        </el-form-item>
-        <el-form-item label="优秀推荐">
-          <el-switch v-model="reviewForm.isExcellent" active-text="是" inactive-text="否" />
-        </el-form-item>
-      </el-form>
+    <!-- 管理学生作品弹窗 -->
+    <el-dialog
+      title="管理学生作品"
+      :visible.sync="dialogVisible"
+      width="680px"
+      :close-on-click-modal="false"
+      :append-to-body="true"
+      :modal-append-to-body="true"
+    >
+      <div v-if="currentWork" class="review-dialog-content">
+        <!-- 作品基本信息 -->
+        <div class="review-header">
+          <h3>{{ currentWork.title }}</h3>
+          <div class="review-meta">
+            <span>学生：{{ currentWork.studentName }}</span>
+            <span>分类：{{ currentWork.category || '未分类' }}</span>
+            <span>上传时间：{{ formatDateTime(currentWork.fileUploadTime || currentWork.uploadDate) }}</span>
+          </div>
+        </div>
 
-      <div slot="footer">
+        <!-- 评语区域 -->
+        <el-form label-width="100px" class="review-form">
+          <el-form-item label="作品状态">
+            <el-select v-model="reviewForm.status" placeholder="请选择状态" style="width: 100%">
+              <el-option v-for="item in statusOptions" :key="item" :label="item" :value="item" />
+            </el-select>
+          </el-form-item>
+          <el-form-item label="优秀推荐">
+            <el-switch v-model="reviewForm.isExcellent" active-text="是" inactive-text="否" />
+          </el-form-item>
+          <el-form-item label="评语/建议">
+            <el-input
+              v-model="reviewForm.comment"
+              type="textarea"
+              :rows="4"
+              placeholder="请为学生写评语或修改建议，学生将收到通知"
+              show-word-limit
+              maxlength="1000"
+            />
+          </el-form-item>
+        </el-form>
+
+        <!-- 历史评语 -->
+        <div class="review-history" v-if="reviewHistory.length > 0">
+          <h4>评语 / 反馈历史</h4>
+          <div
+            v-for="item in reviewHistory"
+            :key="item.id"
+            class="history-item"
+          >
+            <div class="history-header">
+              <span class="history-author">{{ item.reviewerName }}（{{ item.reviewerRole === 'Admin' ? '管理员' : item.reviewerRole === 'Teacher' ? '教师' : '学生' }}）</span>
+              <el-tag
+                size="mini"
+                :type="item.type === 'resubmit' ? 'warning' : 'info'"
+              >
+                {{ item.type === 'review' ? '教师评语' : '修改说明' }}
+              </el-tag>
+              <span class="history-time">{{ formatDateTime(item.createdAt) }}</span>
+            </div>
+            <div class="history-content">{{ item.comment }}</div>
+          </div>
+        </div>
+        <div v-else class="review-history-empty">
+          <p>暂无评语记录</p>
+        </div>
+      </div>
+
+      <div slot="footer" class="dialog-footer">
         <el-button @click="dialogVisible = false">取消</el-button>
-        <el-button type="primary" :loading="saving" @click="saveReview">保存</el-button>
+        <el-button type="primary" :loading="saving" @click="saveReview">保存评语</el-button>
       </div>
     </el-dialog>
   </div>
@@ -116,6 +170,8 @@ export default {
       saving: false,
       dialogVisible: false,
       currentWork: null,
+      reviewHistory: [],
+      loadingHistory: false,
       filters: {
         search: '',
         studentId: '',
@@ -129,7 +185,8 @@ export default {
       },
       reviewForm: {
         status: '已发布',
-        isExcellent: false
+        isExcellent: false,
+        comment: ''
       },
       statusOptions: ['草稿', '待审核', '已发布', '已归档']
     }
@@ -186,20 +243,38 @@ export default {
       this.pagination.page = page
       this.loadWorks()
     },
-    openReview(work) {
+    async openReview(work) {
       this.currentWork = work
       this.reviewForm = {
         status: work.status,
-        isExcellent: !!work.isExcellent
+        isExcellent: !!work.isExcellent,
+        comment: ''
       }
       this.dialogVisible = true
+      // 加载评语历史
+      await this.loadReviewHistory(work.id)
+    },
+    async loadReviewHistory(workId) {
+      this.loadingHistory = true
+      try {
+        const { data } = await http.get(`/api/TeachingCollaboration/works/${workId}/reviews`)
+        this.reviewHistory = data.reviews || []
+      } catch (error) {
+        console.error('加载评语历史失败:', error)
+        this.reviewHistory = []
+      } finally {
+        this.loadingHistory = false
+      }
     },
     async saveReview() {
       if (!this.currentWork) return
 
       this.saving = true
       try {
-        const { data } = await http.put(`/api/TeachingCollaboration/works/${this.currentWork.id}/review`, this.reviewForm)
+        const { data } = await http.put(
+          `/api/TeachingCollaboration/works/${this.currentWork.id}/review`,
+          this.reviewForm
+        )
         this.$message.success(data.message || '作品更新成功')
         this.dialogVisible = false
         await this.loadWorks()
@@ -209,6 +284,9 @@ export default {
         this.saving = false
       }
     },
+    viewWork(work) {
+      this.$router.push(`/works/${work.id}`)
+    },
     async download(work) {
       if (!work?.filePath) {
         this.$message.error('当前作品没有可下载文件')
@@ -216,7 +294,10 @@ export default {
       }
 
       try {
-        const res = await http.get('/api/File/download', { params: { fileName: work.filePath }, responseType: 'blob' })
+        const res = await http.get('/api/File/download', {
+          params: { fileName: work.filePath },
+          responseType: 'blob'
+        })
         const blob = res.data
         const url = window.URL.createObjectURL(blob)
         const link = document.createElement('a')
@@ -305,6 +386,93 @@ export default {
   display: flex;
   justify-content: flex-end;
   margin-top: 20px;
+}
+
+/* 管理弹窗样式 */
+.review-dialog-content {
+  max-height: 60vh;
+  overflow-y: auto;
+  padding-right: 4px;
+}
+
+.review-header {
+  margin-bottom: 20px;
+  padding-bottom: 16px;
+  border-bottom: 1px solid #e4e7ed;
+}
+
+.review-header h3 {
+  margin: 0 0 10px;
+  color: #182a3a;
+  font-size: 18px;
+}
+
+.review-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px;
+  color: #606266;
+  font-size: 13px;
+}
+
+.review-form {
+  margin-bottom: 20px;
+  padding-bottom: 16px;
+  border-bottom: 1px solid #e4e7ed;
+}
+
+.review-history {
+  margin-top: 16px;
+}
+
+.review-history h4 {
+  margin: 0 0 12px;
+  color: #303133;
+  font-size: 15px;
+  font-weight: 600;
+}
+
+.history-item {
+  padding: 12px;
+  margin-bottom: 8px;
+  background: #f5f7fa;
+  border-radius: 8px;
+}
+
+.history-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 6px;
+}
+
+.history-author {
+  font-weight: 600;
+  color: #303133;
+  font-size: 13px;
+}
+
+.history-time {
+  color: #909399;
+  font-size: 12px;
+  margin-left: auto;
+}
+
+.history-content {
+  color: #606266;
+  font-size: 14px;
+  line-height: 1.6;
+  white-space: pre-wrap;
+}
+
+.review-history-empty {
+  text-align: center;
+  color: #c0c4cc;
+  padding: 20px 0;
+}
+
+.dialog-footer {
+  text-align: right;
 }
 
 @media (max-width: 980px) {
