@@ -110,8 +110,8 @@
               <h3 class="card-title">{{ work.title }}</h3>
               <p class="card-desc">{{ work.description || '暂无描述' }}</p>
               <div class="card-meta">
-                <span>👁 {{ work.viewCount || 0 }}</span>
-                <span>⭐ {{ work.favoriteCount || 0 }}</span>
+                <span>👁 {{ work.views || 0 }}</span>
+                <span>⭐ {{ work.favorites || 0 }}</span>
                 <span>🕐 {{ formatDate(work.createdAt) }}</span>
               </div>
             </div>
@@ -150,8 +150,10 @@
             <div class="card-body">
               <h3 class="card-title">{{ fw.title }}</h3>
               <div class="card-meta">
+                <span>👁 {{ fw.views || 0 }}</span>
+                <span>⭐ {{ fw.favorites || 0 }}</span>
                 <span>👤 {{ fw.authorName }}</span>
-                <span>🕐 {{ formatDate(fw.favoritedAt) }}</span>
+                <span>🕐 {{ formatDate(fw.collectionDate) }}</span>
               </div>
             </div>
           </div>
@@ -184,6 +186,8 @@
             <div class="card-body">
               <h3 class="card-title">{{ hw.title }}</h3>
               <div class="card-meta">
+                <span>👁 {{ hw.views || 0 }}</span>
+                <span>⭐ {{ hw.favorites || 0 }}</span>
                 <span>👤 {{ hw.authorName }}</span>
                 <span>🕐 {{ formatDate(hw.viewedAt) }}</span>
               </div>
@@ -491,12 +495,16 @@ export default {
       try {
         const currentUser = getUser()
         if (!currentUser || !currentUser.id) return
-        // 正确调用收藏接口（后端从JWT获取用户ID，无需传参）
         const res = await this.$axios.get('/api/Collection')
         const items = Array.isArray(res.data) ? res.data : (res.data.items || [])
-        // 后端返回的是 { id, workId, userId, collectionDate, work: {...} }，需要展平
+        // 后端使用显式 camelCase 字段名，直接展平 work 子对象
         this.favoriteWorks = items.map(item => ({
           ...(item.work || {}),
+          id: item.work?.id,
+          title: item.work?.title,
+          views: item.work?.views ?? 0,
+          favorites: item.work?.favorites ?? 0,
+          authorName: item.work?.uploadUserName,
           favoriteId: item.id,
           workId: item.workId,
           collectionDate: item.collectionDate
@@ -535,8 +543,8 @@ export default {
     },
     async unfavoriteWork(fw) {
       try {
-        // 使用收藏控制器 toggle 取消收藏
-        await this.$axios.post(`/api/Collection/toggle/${fw.workId || fw.id}`)
+        // 后端取消收藏接口：DELETE /api/Collection/{workId}
+        await this.$axios.delete(`/api/Collection/${fw.workId || fw.id}`)
         this.$message.success('已取消收藏')
         this.favoriteWorks = this.favoriteWorks.filter(w => (w.favoriteId || w.id) !== (fw.favoriteId || fw.id))
         this.loadStats()

@@ -1056,6 +1056,8 @@ namespace Backend.Controllers
                         fileType = Path.GetExtension(w.FileName ?? "").TrimStart('.').ToLower(),
                         coverImage = w.PreviewImage ?? w.FilePath,
                         authorName = w.Uploader.Name ?? w.Uploader.Username,
+                        views = (int?)w.Views ?? 0,
+                        favorites = (int?)w.Favorites ?? 0,
                         viewedAt = w.UploadDate
                     })
                     .ToListAsync();

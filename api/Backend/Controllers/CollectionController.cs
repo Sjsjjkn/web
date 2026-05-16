@@ -73,21 +73,23 @@ namespace Backend.Controllers
                     .Take(pageSize)
                     .Select(f => new
                     {
-                        f.Id,
-                        f.WorkId,
-                        f.UserId,
+                        id = f.Id,
+                        workId = f.WorkId,
+                        userId = f.UserId,
                         collectionDate = f.FavoriteDate,
                         work = f.Work == null ? null : new
                         {
-                            f.Work.Id,
-                            f.Work.Title,
-                            f.Work.Category,
-                            f.Work.Description,
-                            f.Work.Status,
-                            f.Work.FilePath,
-                            f.Work.FileName,
-                            f.Work.PreviewImage,
-                            f.Work.UserId,
+                            id = f.Work.Id,
+                            title = f.Work.Title,
+                            category = f.Work.Category,
+                            description = f.Work.Description,
+                            status = f.Work.Status,
+                            filePath = f.Work.FilePath,
+                            fileName = f.Work.FileName,
+                            previewImage = f.Work.PreviewImage,
+                            userId = f.Work.UserId,
+                            views = f.Work.Views,
+                            favorites = f.Work.Favorites,
                             uploadUserName = _context.Users
                                 .Where(u => u.Id == f.Work.UserId)
                                 .Select(u => u.Name)
@@ -211,8 +213,9 @@ namespace Backend.Controllers
         /// </summary>
         private int? GetCurrentUserId()
         {
-            var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier);
-            if (userIdClaim == null || !int.TryParse(userIdClaim.Value, out int userId))
+            var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value
+                           ?? User.FindFirst("sub")?.Value;
+            if (string.IsNullOrEmpty(userIdClaim) || !int.TryParse(userIdClaim, out int userId))
                 return null;
             return userId;
         }
