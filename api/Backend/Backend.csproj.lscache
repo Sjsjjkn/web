@@ -66,7 +66,6 @@ Controllers/
  TeachingCollaborationController.cs
  WorkController.cs
 Data/AppDbContext.cs
-InitializeDatabase.cs
 Models/
  Announcement.cs
  DTO/
@@ -86,10 +85,7 @@ obj/Debug/net8.0/
  Backend.AssemblyInfo.cs
  Backend.GlobalUsings.g.cs
 Program.cs
-Security/PasswordHasher.cs
-SeedModerationData.cs
 Services/NotificationService.cs
-TestLogin.cs
 
 [metadataReferences]
 <DOTNET>/packs/Microsoft.AspNetCore.App.Ref/8.0.1/ref/net8.0/

@@ -85,26 +85,30 @@
 
         <div class="works-grid" v-if="filteredWorks.length > 0">
           <div
-            v-for="work in filteredWorks"
+            v-for="(work, idx) in filteredWorks"
             :key="work.id"
             class="work-card"
             @click="$router.push(`/works/${work.id}`)"
           >
             <div class="card-cover">
-              <img v-if="getWorkThumb(work)" :src="getWorkThumb(work)" :alt="work.title" class="cover-img" />
-              <div v-else class="cover-placeholder" :style="{ background: getGradient(work.id, 0) }">
-                <span class="cover-icon">{{ getWorkIconText(work.fileType) }}</span>
-                <span class="cover-ext">{{ getFileTypeLabel(work.fileType) }}</span>
-              </div>
-              <span class="category-badge">{{ (work.category || '未分类') }}</span>
-              <div class="cover-overlay">
-                <button class="cover-btn" @click.stop="$router.push(`/works/${work.id}`)" title="查看">
-                  👁
-                </button>
-                <button class="cover-btn cover-btn-danger" @click.stop="deleteWork(work)" title="删除">
-                  🗑
-                </button>
-              </div>
+              <ModelCardCover
+                :work="work"
+                :gradient="getGradient(work.id, idx)"
+                :file-icon="getWorkIconText(work.fileType || (work.fileName || '').split('.').pop())"
+                :file-ext="((work.fileName || '').split('.').pop() || '').toUpperCase()"
+              >
+                <template #badge>
+                  <span class="category-badge">{{ (work.category || '未分类') }}</span>
+                </template>
+                <template #overlay>
+                  <button class="cover-btn" @click.stop="$router.push(`/works/${work.id}`)" title="查看">
+                    👁
+                  </button>
+                  <button class="cover-btn cover-btn-danger" @click.stop="deleteWork(work)" title="删除">
+                    🗑
+                  </button>
+                </template>
+              </ModelCardCover>
             </div>
             <div class="card-body">
               <h3 class="card-title">{{ work.title }}</h3>
@@ -129,23 +133,27 @@
       <section v-if="activeTab === 'favorites'" class="works-section">
         <div class="works-grid" v-if="favoriteWorks.length > 0">
           <div
-            v-for="fw in favoriteWorks"
+            v-for="(fw, idx) in favoriteWorks"
             :key="fw.id"
             class="work-card"
             @click="$router.push(`/works/${fw.workId}`)"
           >
             <div class="card-cover">
-              <img v-if="getWorkThumb(fw)" :src="getWorkThumb(fw)" :alt="fw.title" class="cover-img" />
-              <div v-else class="cover-placeholder" :style="{ background: getGradient(fw.workId || fw.id, 0) }">
-                <span class="cover-icon">{{ getWorkIconText(fw.fileType) }}</span>
-                <span class="cover-ext">{{ getFileTypeLabel(fw.fileType) }}</span>
-              </div>
-              <span class="category-badge favorite-badge">⭐ 已收藏</span>
-              <div class="cover-overlay">
-                <button class="cover-btn cover-btn-warning" @click.stop="unfavoriteWork(fw)" title="取消收藏">
-                  ⭐
-                </button>
-              </div>
+              <ModelCardCover
+                :work="fw"
+                :gradient="getGradient(fw.workId || fw.id, idx + 100)"
+                :file-icon="getWorkIconText(fw.fileType || (fw.fileName || '').split('.').pop())"
+                :file-ext="((fw.fileName || '').split('.').pop() || '').toUpperCase()"
+              >
+                <template #badge>
+                  <span class="category-badge favorite-badge">⭐ 已收藏</span>
+                </template>
+                <template #overlay>
+                  <button class="cover-btn cover-btn-warning" @click.stop="unfavoriteWork(fw)" title="取消收藏">
+                    ⭐
+                  </button>
+                </template>
+              </ModelCardCover>
             </div>
             <div class="card-body">
               <h3 class="card-title">{{ fw.title }}</h3>
@@ -170,18 +178,22 @@
       <section v-if="activeTab === 'history'" class="works-section">
         <div class="works-grid" v-if="historyWorks.length > 0">
           <div
-            v-for="hw in historyWorks"
+            v-for="(hw, idx) in historyWorks"
             :key="hw.id"
             class="work-card"
             @click="$router.push(`/works/${hw.workId}`)"
           >
             <div class="card-cover">
-              <img v-if="getWorkThumb(hw)" :src="getWorkThumb(hw)" :alt="hw.title" class="cover-img" />
-              <div v-else class="cover-placeholder" :style="{ background: getGradient(hw.workId || hw.id, 0) }">
-                <span class="cover-icon">{{ getWorkIconText(hw.fileType) }}</span>
-                <span class="cover-ext">{{ getFileTypeLabel(hw.fileType) }}</span>
-              </div>
-              <span class="category-badge history-badge">🕐 已浏览</span>
+              <ModelCardCover
+                :work="hw"
+                :gradient="getGradient(hw.workId || hw.id, idx + 200)"
+                :file-icon="getWorkIconText(hw.fileType || (hw.fileName || '').split('.').pop())"
+                :file-ext="((hw.fileName || '').split('.').pop() || '').toUpperCase()"
+              >
+                <template #badge>
+                  <span class="category-badge history-badge">🕐 已浏览</span>
+                </template>
+              </ModelCardCover>
             </div>
             <div class="card-body">
               <h3 class="card-title">{{ hw.title }}</h3>
@@ -273,7 +285,7 @@
       </section>
     </div>
 
-    <!-- 头像上传对话框（修复遮罩层 bug） -->
+    <!-- 头像上传对话框 -->
     <el-dialog
       title="上传头像"
       :visible.sync="showAvatarUpload"
@@ -313,9 +325,13 @@
 import { getToken, getUser } from '../../utils/auth'
 import { getAvatarUrl } from '../../utils/fileUtils'
 import eventBus from '../../utils/eventBus'
+import ModelCardCover from '../../components/ModelCardCover.vue'
 
 export default {
   name: 'PersonalSpace',
+  components: {
+    ModelCardCover
+  },
   data() {
     return {
       pageLoading: false,
@@ -412,25 +428,9 @@ export default {
       const map = { image: '图片', video: '视频', model: '3D模型', music: '音乐', document: '文档', other: '其他' }
       return map[fileType] || '其他'
     },
-    getWorkIcon(fileType) {
-      const map = { image: 'el-icon-picture', video: 'el-icon-video-camera', model: 'el-icon-cpu', music: 'el-icon-headset', document: 'el-icon-document', other: 'el-icon-files' }
-      return map[fileType] || 'el-icon-files'
-    },
     getWorkIconText(fileType) {
-      const map = { image: '🖼', video: '🎬', model: '🧊', music: '🎵', document: '📄', other: '📁' }
-      return map[fileType] || '📁'
-    },
-    getWorkThumb(work) {
-      if (!work) return ''
-      if (work.previewImage) return `/api/File/download?fileName=${encodeURIComponent(work.previewImage)}`
-      if (!work.filePath && !work.fileName) return ''
-      const fp = work.filePath || work.fileName || ''
-      const ext = fp.toLowerCase().substring(fp.lastIndexOf('.'))
-      const imageExts = ['.jpg', '.jpeg', '.png', '.gif', '.bmp', '.webp']
-      if (imageExts.includes(ext)) {
-        return `/api/File/download?fileName=${encodeURIComponent(fp)}`
-      }
-      return ''
+      const map = { image: '🖼', video: '🎬', model: '🧊', music: '🎵', document: '📄', other: '📁', pdf: '📕', word: '📝', excel: '📊', ppt: '📽', zip: '📦', rar: '📦', code: '💻' }
+      return map[fileType] || '📄'
     },
     getGradient(id, idx) {
       const gradients = [
@@ -484,9 +484,16 @@ export default {
       try {
         const currentUser = getUser()
         if (!currentUser || !currentUser.id) return
-        // 后端参数名是 user_id 不是 userId，必须严格匹配
         const res = await this.$axios.get('/api/Work', { params: { user_id: currentUser.id } })
-        this.works = Array.isArray(res.data) ? res.data : (res.data.items || [])
+        const items = Array.isArray(res.data) ? res.data : (res.data.items || [])
+        this.works = items.map(w => ({
+          ...w,
+          previewImage: w.previewImage || w.coverImage || '',
+          fileName: w.fileName || (w.filePath || '').split('/').pop() || '',
+          views: w.views ?? 0,
+          favorites: w.favorites ?? 0,
+          category: w.category || ''
+        }))
       } catch (e) {
         console.error('加载作品失败', e)
       }
@@ -496,19 +503,25 @@ export default {
         const currentUser = getUser()
         if (!currentUser || !currentUser.id) return
         const res = await this.$axios.get('/api/Collection')
-        const items = Array.isArray(res.data) ? res.data : (res.data.items || [])
-        // 后端使用显式 camelCase 字段名，直接展平 work 子对象
-        this.favoriteWorks = items.map(item => ({
-          ...(item.work || {}),
-          id: item.work?.id,
-          title: item.work?.title,
-          views: item.work?.views ?? 0,
-          favorites: item.work?.favorites ?? 0,
-          authorName: item.work?.uploadUserName,
-          favoriteId: item.id,
-          workId: item.workId,
-          collectionDate: item.collectionDate
-        }))
+        const data = res.data || {}
+        const items = data.items || (Array.isArray(res.data) ? res.data : [])
+        this.favoriteWorks = items.map(item => {
+          const w = item.work || {}
+          return {
+            ...w,
+            id: item.id,
+            workId: item.workId,
+            title: w.title || '',
+            previewImage: w.previewImage || w.coverImage || '',
+            fileName: w.fileName || (w.filePath || '').split('/').pop() || '',
+            fileType: w.fileType || (w.fileName || '').split('.').pop() || '',
+            views: w.views ?? 0,
+            favorites: w.favorites ?? 0,
+            authorName: w.uploadUserName || '',
+            favoriteId: item.id,
+            collectionDate: item.collectionDate
+          }
+        })
       } catch (e) {
         console.error('加载收藏失败', e)
       }
@@ -517,9 +530,16 @@ export default {
       try {
         const currentUser = getUser()
         if (!currentUser || !currentUser.id) return
-        // 正确调用浏览历史接口（后端从JWT获取用户ID，无需传参）
         const res = await this.$axios.get('/api/Work/history')
-        this.historyWorks = Array.isArray(res.data) ? res.data : (res.data.items || [])
+        const items = Array.isArray(res.data) ? res.data : (res.data.items || [])
+        this.historyWorks = items.map(w => ({
+          ...w,
+          previewImage: w.previewImage || w.coverImage || '',
+          fileName: w.fileName || (w.filePath || '').split('/').pop() || '',
+          fileType: w.fileType || (w.fileName || '').split('.').pop() || '',
+          views: w.views ?? 0,
+          favorites: w.favorites ?? 0
+        }))
       } catch (e) {
         console.error('加载浏览历史失败', e)
       }
@@ -543,7 +563,6 @@ export default {
     },
     async unfavoriteWork(fw) {
       try {
-        // 后端取消收藏接口：DELETE /api/Collection/{workId}
         await this.$axios.delete(`/api/Collection/${fw.workId || fw.id}`)
         this.$message.success('已取消收藏')
         this.favoriteWorks = this.favoriteWorks.filter(w => (w.favoriteId || w.id) !== (fw.favoriteId || fw.id))

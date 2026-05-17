@@ -51,23 +51,12 @@
           :style="{ animationDelay: idx * 0.08 + 's' }"
         >
           <div class="card-cover" @click="handleViewWork(work)">
-            <!-- 真实缩略图 -->
-            <img
-              v-if="getThumbnailUrl(work)"
-              :src="getThumbnailUrl(work)"
-              class="thumbnail-image"
-              :alt="work.title"
+            <ModelCardCover
+              :work="work"
+              :file-icon="getFileEmoji(work)"
+              :file-ext="getFileExtension(work)"
+              :gradient="getGradient(work.id, idx)"
             />
-            <!-- 无缩略图时：带渐变的占位符 -->
-            <div
-              v-else
-              class="cover-placeholder"
-              :style="{ background: getGradient(work.id, idx) }"
-            >
-              <span class="file-icon">{{ getFileEmoji(work) }}</span>
-              <span>{{ getFileExtension(work) }}</span>
-            </div>
-            <!-- 分类标签 -->
             <span class="category-badge">{{ work.category || '未分类' }}</span>
           </div>
           <div class="card-body">
@@ -106,20 +95,12 @@
           :style="{ animationDelay: idx * 0.08 + 's' }"
         >
           <div class="card-cover" @click="handleViewWork(work)">
-            <img
-              v-if="getThumbnailUrl(work)"
-              :src="getThumbnailUrl(work)"
-              class="thumbnail-image"
-              :alt="work.title"
+            <ModelCardCover
+              :work="work"
+              :file-icon="getFileEmoji(work)"
+              :file-ext="getFileExtension(work)"
+              :gradient="getGradient(work.id, idx + 10)"
             />
-            <div
-              v-else
-              class="cover-placeholder"
-              :style="{ background: getGradient(work.id, idx + 10) }"
-            >
-              <span class="file-icon">{{ getFileEmoji(work) }}</span>
-              <span>{{ getFileExtension(work) }}</span>
-            </div>
             <span class="category-badge">{{ work.category || '未分类' }}</span>
             <span class="featured-badge">⭐ 优秀</span>
           </div>
@@ -223,10 +204,14 @@
 </template>
 
 <script>
+import ModelCardCover from '../../components/ModelCardCover.vue'
 import { getUser } from '../../utils/auth'
 
 export default {
   name: 'Home',
+  components: {
+    ModelCardCover
+  },
   data() {
     return {
       stats: [],

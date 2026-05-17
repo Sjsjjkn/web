@@ -9,6 +9,7 @@ using System.Security.Claims;
 using System.Security.Cryptography;
 using System.Text;
 using System.Collections.Generic;
+using System.Linq;
 
 namespace Backend.Controllers
 {
@@ -337,15 +338,27 @@ namespace Backend.Controllers
                 if (string.IsNullOrEmpty(fileName))
                     return BadRequest(new { message = "文件名不能为空" });
 
-                // 先在 Uploads 根目录查找，找不到则递归搜索子目录（如 Uploads/avatars/）
                 var filePath = Path.Combine(_uploadPath, fileName);
                 if (!System.IO.File.Exists(filePath))
                 {
-                    // 递归搜索子目录
+                    // 精确匹配失败，尝试递归搜索子目录中的精确匹配
                     var foundFile = Directory.GetFiles(_uploadPath, fileName, SearchOption.AllDirectories).FirstOrDefault();
                     if (foundFile == null)
-                        return NotFound(new { message = "文件不存在" });
-                    filePath = foundFile;
+                    {
+                        // 仍然找不到，尝试模糊匹配（文件名包含请求的文件名）
+                        var nameWithoutExt = Path.GetFileNameWithoutExtension(fileName);
+                        var allFiles = Directory.GetFiles(_uploadPath, "*.*", SearchOption.AllDirectories)
+                            .Where(f => Path.GetFileNameWithoutExtension(f).Contains(nameWithoutExt))
+                            .FirstOrDefault();
+                        if (allFiles != null)
+                            filePath = allFiles;
+                        else
+                            return NotFound(new { message = "文件不存在" });
+                    }
+                    else
+                    {
+                        filePath = foundFile;
+                    }
                 }
 
                 // 获取文件MIME类型

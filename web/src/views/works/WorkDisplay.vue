@@ -63,35 +63,30 @@
             class="work-card"
             @click="handleViewWork(work.id)"
           >
-            <div class="card-cover">
-              <img v-if="getThumbnailUrl(work)" :src="getThumbnailUrl(work)" :alt="work.title" class="cover-img">
-              <div v-else class="cover-placeholder" :style="{ background: getGradient(work.id) }">
-                <span class="file-icon">{{ getFileEmoji(work) }}</span>
-                <span class="file-ext">{{ getFileExtension(work) }}</span>
-              </div>
-              <span class="category-tag">{{ work.category || '未分类' }}</span>
+            <div class="card-cover" @click="handleViewWork(work.id)">
+              <ModelCardCover :work="work" :file-icon="getFileEmoji(work)" :file-ext="getFileExtension(work)" :gradient="getGradient(work.id)">
+                <template #badge>
+                  <span class="category-badge">{{ work.category || '未分类' }}</span>
+                </template>
+              </ModelCardCover>
             </div>
             <div class="card-body">
-              <h3 class="card-title">{{ work.title }}</h3>
-              <div class="card-meta">
-                <span class="author">{{ work.uploadUserName || '未知作者' }}</span>
-                <span class="views">👁 {{ work.views || 0 }}</span>
-                <span class="favorites">⭐ {{ work.favorites || 0 }}</span>
+              <div class="card-title" @click="handleViewWork(work.id)">{{ work.title }}</div>
+              <div class="card-author">
+                <span class="author-avatar">{{ (work.uploadUserName || '未')[0] }}</span>
+                {{ work.uploadUserName || '未知作者' }}
+                <span class="card-date" v-if="work.fileUploadTime || work.uploadDate">
+                  · {{ formatDate(work.fileUploadTime || work.uploadDate) }}
+                </span>
               </div>
               <div class="card-actions">
                 <button
-                  class="action-btn"
+                  class="btn btn-favorite"
                   :class="{ active: work.isFavorited }"
                   @click.stop="handleToggleFavorite(work)"
-                  title="收藏"
-                >
-                  <i :class="work.isFavorited ? 'el-icon-star-on' : 'el-icon-star-off'"></i>
-                  <span>{{ work.isFavorited ? '已收藏' : '收藏' }}</span>
-                </button>
-                <button class="action-btn" @click.stop="handleDownloadFile(work)" title="下载">
-                  <i class="el-icon-download"></i>
-                  <span>下载</span>
-                </button>
+                  :title="work.isFavorited ? '取消收藏' : '收藏'"
+                >{{ work.isFavorited ? '⭐' : '☆' }}</button>
+                <button class="btn btn-primary" @click.stop="handleViewWork(work.id)">查看详情</button>
               </div>
             </div>
           </div>
@@ -158,8 +153,13 @@
 </template>
 
 <script>
+import ModelCardCover from '../../components/ModelCardCover.vue'
+
 export default {
   name: 'WorkDisplay',
+  components: {
+    ModelCardCover
+  },
   data() {
     return {
       works: [],
@@ -350,6 +350,15 @@ export default {
         }
       }
     },
+    formatDate(date) {
+      if (!date) return ''
+      const d = new Date(date)
+      return d.toLocaleDateString('zh-CN', {
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit'
+      })
+    },
     handleSizeChange(val) {
       this.pageSize = val
       this.currentPage = 1
@@ -493,31 +502,36 @@ export default {
 }
 
 .work-card {
-  background: linear-gradient(145deg, #ffffff, #f8f9f5);
-  border-radius: 18px;
+  background: var(--bg-card, #FFFFFF);
+  border-radius: var(--radius-lg, 18px);
+  border: 1px solid var(--border-color, #E8E2D8);
   overflow: hidden;
+  transition: all var(--duration-normal, .3s) var(--ease-out-expo, cubic-bezier(0.16, 1, 0.3, 1));
   cursor: pointer;
-  transition: all 0.35s cubic-bezier(0.16, 1, 0.3, 1);
-  border: 1px solid #E8E2D8;
 }
 
 .work-card:hover {
-  transform: translateY(-8px) scale(1.02);
-  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.12);
-  border-color: #D4CEC6;
+  box-shadow: var(--shadow-card-hover, 0 16px 40px rgba(0,0,0,.12));
+  transform: translateY(-4px);
 }
 
 .card-cover {
+  height: 180px;
   position: relative;
-  height: 220px;
   overflow: hidden;
-  background: #F8F9F5;
+  cursor: pointer;
+  background: var(--border-light, #F2EDE6);
 }
 
-.cover-img {
+.thumbnail-image {
   width: 100%;
   height: 100%;
   object-fit: cover;
+  transition: transform var(--duration-slow, .5s) var(--ease-out-expo);
+}
+
+.work-card:hover .thumbnail-image {
+  transform: scale(1.06);
 }
 
 .cover-placeholder {
@@ -527,8 +541,11 @@ export default {
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  color: white;
-  gap: 8px;
+  transition: transform var(--duration-slow, .5s) var(--ease-out-expo);
+}
+
+.work-card:hover .cover-placeholder {
+  transform: scale(1.06);
 }
 
 .cover-placeholder .file-icon {
@@ -537,103 +554,105 @@ export default {
 }
 
 .cover-placeholder .file-ext {
-  font-size: 14px;
+  font-size: 12px;
   font-weight: 600;
   opacity: 0.9;
+  color: #fff;
 }
 
-.category-tag {
+.category-badge {
   position: absolute;
   top: 12px;
   left: 12px;
-  padding: 6px 14px;
-  background: rgba(255, 255, 255, 0.95);
-  border-radius: 9999px;
+  padding: 4px 12px;
+  background: rgba(255, 255, 255, 0.9);
+  border-radius: var(--radius-full, 9999px);
   font-size: 12px;
   font-weight: 600;
-  color: #667eea;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  color: var(--primary, #2D8A6E);
+  box-shadow: var(--shadow-sm, 0 2px 8px rgba(0, 0, 0, 0.1));
 }
 
 .card-body {
-  padding: 20px;
+  padding: 16px;
 }
 
 .card-title {
-  font-size: 16px;
-  font-weight: 700;
-  color: #1A1A1A;
-  margin: 0 0 12px;
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--text-primary, #1A1A1A);
+  margin: 0 0 8px;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+  cursor: pointer;
+  transition: color var(--duration-fast, .18s);
 }
 
-.card-meta {
-  display: flex;
-  align-items: center;
-  gap: 16px;
-  font-size: 13px;
-  color: #666666;
-  margin-bottom: 16px;
+.card-title:hover {
+  color: var(--primary, #2D8A6E);
 }
 
-.card-meta .author {
+.card-author {
+  font-size: 12px;
+  color: var(--text-secondary, #666666);
+  margin: 0 0 12px;
   display: flex;
   align-items: center;
   gap: 6px;
 }
 
-.card-meta .author::before {
-  content: '👤';
-  font-size: 14px;
+.author-avatar {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: var(--primary-light, #e8f5f0);
+  color: var(--primary, #2D8A6E);
+  font-size: 10px;
+  font-weight: 600;
 }
 
-.card-meta .views {
-  display: flex;
-  align-items: center;
-  gap: 4px;
-}
-
-.card-meta .favorites {
-  display: flex;
-  align-items: center;
-  gap: 4px;
+.card-date {
+  color: var(--text-tertiary, #999999);
 }
 
 .card-actions {
   display: flex;
-  gap: 10px;
+  gap: 8px;
+  margin-top: 12px;
 }
 
-.action-btn {
-  flex: 1;
-  padding: 10px 14px;
-  border: 1px solid #E8E2D8;
-  border-radius: 10px;
-  background: white;
+.btn {
+  padding: 6px 14px;
+  border-radius: var(--radius-md, 8px);
+  font-size: 12px;
+  font-weight: 500;
   cursor: pointer;
-  transition: all 0.25s;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 4px;
-  color: #888888;
-  font-size: 13px;
+  border: none;
+  transition: all var(--duration-fast, .18s);
 }
 
-.action-btn:hover {
-  border-color: #667eea;
-  color: #667eea;
-  background: #F5F7FF;
-  transform: translateY(-1px);
+.btn-primary {
+  background: var(--primary, #2D8A6E);
+  color: white;
 }
 
-.action-btn.active {
-  background: linear-gradient(135deg, #FFF8E1 0%, #FFF0C6 100%);
-  border-color: #F5A623;
-  color: #B8860B;
-  box-shadow: 0 2px 8px rgba(245, 166, 35, 0.2);
+.btn-primary:hover {
+  background: var(--primary-dark, #236b54);
+}
+
+.btn-favorite {
+  background: var(--bg-secondary, #f5f5f5);
+  color: var(--text-secondary, #666666);
+}
+
+.btn-favorite:hover,
+.btn-favorite.active {
+  background: #fff3e0;
+  color: #ff9800;
 }
 
 .pagination-wrapper {

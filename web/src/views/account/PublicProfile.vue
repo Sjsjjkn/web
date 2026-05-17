@@ -176,7 +176,6 @@ export default {
       this.loading = true
       try {
         const userId = this.$route.params.userId
-        console.log('尝试获取用户', userId, '的作品')
         const worksRes = await http.get('/api/Work', {
           params: {
             user_id: userId,
@@ -185,7 +184,6 @@ export default {
           }
         })
         
-        console.log('后端返回:', worksRes.data)
         if (worksRes.data && worksRes.data.items) {
           this.works = worksRes.data.items
           this.total = worksRes.data.total || 0
@@ -229,11 +227,12 @@ export default {
         return `/api/File/download?fileName=${encodeURIComponent(work.previewImage)}`
       }
       
-      if (!work.filePath) return null
+      const filePath = work.filePath || work.fileName || ''
+      if (!filePath) return null
       
-      const ext = work.filePath.toLowerCase().substring(work.filePath.lastIndexOf('.'))
+      const ext = filePath.toLowerCase().substring(filePath.lastIndexOf('.'))
       if (['.jpg', '.jpeg', '.png', '.gif', '.bmp', '.webp'].includes(ext)) {
-        return `/api/File/download?fileName=${encodeURIComponent(work.filePath)}`
+        return `/api/File/download?fileName=${encodeURIComponent(filePath)}`
       }
       
       return null

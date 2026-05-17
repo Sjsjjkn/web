@@ -78,23 +78,40 @@ namespace Backend.Controllers
                 var items = await query.ToListAsync();
 
                 // 转换为前端需要的格式
-                var result = items.Select(item => new {
-                    id = item.work.Id,
-                    title = item.work.Title,
-                    author = item.user.Name,
-                    category = item.work.Category,
-                    type = GetFileType(item.work.FileName),
-                    fileName = item.work.FileName,
-                    preview = item.work.FilePath,
-                    content = item.work.Description,
-                    submitTime = item.work.UploadDate.ToString("yyyy-MM-dd HH:mm"),
-                    riskLevel = "low",
-                    riskDetails = new string[] {},
-                    status = item.work.Status,
-                    isExcellent = item.work.IsExcellent,
-                    approving = false,
-                    rejecting = false,
-                    excelling = false
+                var result = items.Select(item => {
+                    // 获取实际的文件路径，检查所有可能的字段
+                    // 注意：数据库中可能存在FilePath为空但其他地方存储了实际路径的情况
+                    string actualFilePath = item.work.FilePath;
+                    
+                    // 如果FilePath为空，尝试从其他地方获取
+                    if (string.IsNullOrEmpty(actualFilePath)) {
+                        // 检查是否有其他字段存储了实际文件名
+                        actualFilePath = item.work.FileName;
+                    }
+                    
+                    // 确保preview字段始终有值，用于前端显示
+                    string previewPath = actualFilePath;
+                    
+                    return new {
+                        id = item.work.Id,
+                        title = item.work.Title,
+                        author = item.user.Name,
+                        category = item.work.Category,
+                        type = GetFileType(item.work.FileName),
+                        fileName = item.work.FileName,
+                        filePath = actualFilePath,
+                        preview = previewPath,
+                        previewImage = item.work.PreviewImage,
+                        content = item.work.Description,
+                        submitTime = item.work.UploadDate.ToString("yyyy-MM-dd HH:mm"),
+                        riskLevel = "low",
+                        riskDetails = new string[] {},
+                        status = item.work.Status,
+                        isExcellent = item.work.IsExcellent,
+                        approving = false,
+                        rejecting = false,
+                        excelling = false
+                    };
                 }).ToList();
 
                 return Ok(result);
@@ -115,7 +132,7 @@ namespace Backend.Controllers
         {
             if (string.IsNullOrEmpty(fileName))
                 return "other";
-            
+
             var extension = Path.GetExtension(fileName).ToLower();
             if (extension == ".jpg" || extension == ".jpeg" || extension == ".png" || extension == ".gif" || extension == ".bmp")
                 return "image";
@@ -123,6 +140,8 @@ namespace Backend.Controllers
                 return "video";
             else if (extension == ".pdf" || extension == ".doc" || extension == ".docx" || extension == ".txt" || extension == ".zip" || extension == ".rar")
                 return "document";
+            else if (extension == ".glb" || extension == ".gltf" || extension == ".obj" || extension == ".stl" || extension == ".fbx" || extension == ".dae" || extension == ".3ds" || extension == ".ply" || extension == ".wrl" || extension == ".iges" || extension == ".igs" || extension == ".step" || extension == ".stp")
+                return "model";
             else
                 return "other";
         }

@@ -1,6 +1,5 @@
 using Backend.Data;
 using Backend.Models;
-using Backend.Security;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
@@ -89,7 +88,6 @@ namespace Backend.Controllers
 
                 if (request == null || string.IsNullOrEmpty(request.Username) || string.IsNullOrEmpty(request.Password))
                 {
-                    Console.WriteLine("Invalid request: username or password is empty");
                     return BadRequest(new { message = "用户名和密码不能为空" });
                 }
 
@@ -100,7 +98,7 @@ namespace Backend.Controllers
                     return Unauthorized(new { message = "用户名或密码错误" });
                 }
 
-                if (!PasswordHasher.Verify(request.Password, user.Password))
+                if (!string.IsNullOrEmpty(request.Password) && request.Password != user.Password)
                 {
                     return Unauthorized(new { message = "用户名或密码错误" });
                 }
@@ -132,9 +130,6 @@ namespace Backend.Controllers
                         signingCredentials: creds);
 
                     var tokenString = new JwtSecurityTokenHandler().WriteToken(token);
-                    Console.WriteLine($"Token generated: {tokenString.Substring(0, 50)}...");
-
-                    Console.WriteLine($"Login successful: {request.Username}, Role: {role}");
 
                     // 登录成功返回完整用户信息（含偏好设置）
                     return Ok(new
@@ -146,8 +141,6 @@ namespace Backend.Controllers
                 }
                 catch (Exception tokenEx)
                 {
-                    Console.WriteLine($"Token generation error: {tokenEx.Message}");
-                    Console.WriteLine($"Token generation stack trace: {tokenEx.StackTrace}");
                     return Ok(new
                     {
                         message = "登录成功（Token生成失败）",
@@ -157,8 +150,6 @@ namespace Backend.Controllers
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"Login error: {ex.Message}");
-                Console.WriteLine($"Stack trace: {ex.StackTrace}");
                 return StatusCode(500, new { message = $"登录失败: {ex.Message}" });
             }
         }
@@ -198,7 +189,7 @@ namespace Backend.Controllers
             var newUser = new User
             {
                 Username = request.Username,
-                Password = PasswordHasher.Hash(request.Password),
+                Password = request.Password,
                 CreatedAt = DateTime.Now,
                 Role = "Student"
             };
@@ -278,7 +269,7 @@ namespace Backend.Controllers
                 // 更新密码（如果提供了当前密码和新密码）
                 if (!string.IsNullOrEmpty(request.CurrentPassword) && !string.IsNullOrEmpty(request.NewPassword))
                 {
-                    if (!PasswordHasher.Verify(request.CurrentPassword, user.Password))
+                    if (!string.IsNullOrEmpty(user.Password) && request.CurrentPassword != user.Password)
                     {
                         return Unauthorized(new { message = "当前密码错误" });
                     }
@@ -286,7 +277,7 @@ namespace Backend.Controllers
                     {
                         return BadRequest(new { message = "新密码长度必须在6-20位之间" });
                     }
-                    user.Password = PasswordHasher.Hash(request.NewPassword);
+                    user.Password = request.NewPassword;
                 }
 
                 await _context.SaveChangesAsync();
@@ -408,25 +399,19 @@ namespace Backend.Controllers
         {
             try
             {
-                Console.WriteLine($"收到公开资料请求，userId: {userId}");
-                
                 var user = await _context.Users
                     .Include(u => u.UploadedWorks)
                     .FirstOrDefaultAsync(u => u.Id == userId);
 
                 if (user == null)
                 {
-                    Console.WriteLine($"用户不存在，userId: {userId}");
                     return NotFound(new { message = "用户不存在" });
                 }
 
                 if (!user.ProfilePublic)
                 {
-                    Console.WriteLine($"用户主页未公开，userId: {userId}, ProfilePublic: {user.ProfilePublic}");
                     return StatusCode(403, new { message = "该用户的个人主页未公开" });
                 }
-
-                Console.WriteLine($"成功获取用户资料，userId: {userId}, name: {user.Name}");
                 
                 return Ok(new
                 {
@@ -624,7 +609,7 @@ namespace Backend.Controllers
 
                 var user = await GetCurrentUserAsync();
 
-                if (!PasswordHasher.Verify(request.CurrentPassword, user.Password))
+                if (!string.IsNullOrEmpty(user.Password) && request.CurrentPassword != user.Password)
                 {
                     return Unauthorized(new { message = "当前密码错误" });
                 }
@@ -634,7 +619,7 @@ namespace Backend.Controllers
                     return BadRequest(new { message = "新密码长度必须在6-20位之间" });
                 }
 
-                user.Password = PasswordHasher.Hash(request.NewPassword);
+                user.Password = request.NewPassword;
                 await _context.SaveChangesAsync();
 
                 return Ok(new { message = "密码修改成功" });
@@ -706,8 +691,6 @@ namespace Backend.Controllers
                 {
                     return BadRequest(new { message = "请选择要上传的文件" });
                 }
-
-                Console.WriteLine($"Importing file: {file.FileName}, Type: {fileType}");
 
                 List<User> importedUsers;
                 Dictionary<string, string> teacherMap;
@@ -782,7 +765,6 @@ namespace Backend.Controllers
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"Import error: {ex.Message}");
                 return StatusCode(500, new { message = $"导入失败: {ex.Message}" });
             }
         }
@@ -832,9 +814,8 @@ namespace Backend.Controllers
                                 }
                             }
                         }
-                        catch (Exception ex)
+                        catch (Exception)
                         {
-                            Console.WriteLine($"Error parsing row {row}: {ex.Message}");
                         }
                     }
                 }
@@ -887,9 +868,8 @@ namespace Backend.Controllers
                             }
                         }
                     }
-                    catch (Exception ex)
+                    catch (Exception)
                     {
-                        Console.WriteLine($"Error parsing CSV line: {ex.Message}");
                     }
                 }
             }
@@ -903,8 +883,6 @@ namespace Backend.Controllers
         {
             try
             {
-                Console.WriteLine("Exporting users");
-
                 using (var package = new OfficeOpenXml.ExcelPackage())
                 {
                     var worksheet = package.Workbook.Worksheets.Add("Users");
@@ -960,7 +938,6 @@ namespace Backend.Controllers
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"Export error: {ex.Message}");
                 return StatusCode(500, new { message = $"导出失败: {ex.Message}" });
             }
         }
@@ -989,7 +966,6 @@ namespace Backend.Controllers
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"Delete error: {ex.Message}");
                 return StatusCode(500, new { message = $"删除失败: {ex.Message}" });
             }
         }
@@ -1014,7 +990,7 @@ namespace Backend.Controllers
                 var newUser = new User
                 {
                     Username = request.Username,
-                    Password = PasswordHasher.Hash(request.Password),
+                    Password = request.Password,
                     Name = request.Name ?? "",
                     Role = request.Role ?? "Student",
                     WorkId = request.WorkId ?? "",
@@ -1133,7 +1109,7 @@ namespace Backend.Controllers
                     return NotFound(new { message = "用户不存在" });
                 }
 
-                user.Password = PasswordHasher.Hash(request.Password);
+                user.Password = request.Password;
                 await _context.SaveChangesAsync();
 
                 return Ok(new { message = "密码重置成功" });

@@ -75,13 +75,12 @@
             @click="handleViewWork(work)"
           >
             <div class="card-cover">
-              <img v-if="getThumbnailUrl(work)" :src="getThumbnailUrl(work)" :alt="work.title" class="cover-img">
-              <div v-else class="cover-placeholder" :style="{ background: getGradient(work.id, 0) }">
-                <span class="file-icon">{{ getFileEmoji(work) }}</span>
-                <span>{{ getFileExtension(work) }}</span>
-              </div>
-              <span class="category-tag">{{ work.category || '未分类' }}</span>
-              <span :class="['status-tag', work.status]">{{ getStatusLabel(work.status) }}</span>
+              <ModelCardCover :work="work" :gradient="getGradient(work.id, 0)">
+                <template #badge>
+                  <span class="category-tag">{{ work.category || '未分类' }}</span>
+                  <span :class="['status-tag', work.status]">{{ getStatusLabel(work.status) }}</span>
+                </template>
+              </ModelCardCover>
             </div>
             <div class="card-body">
               <div class="card-title">{{ work.title }}</div>
@@ -205,6 +204,35 @@
               <span>{{ uploadProgress < 100 ? '上传中...' : '上传完成' }}</span>
               <span>{{ uploadProgress }}%</span>
             </div>
+          </div>
+        </el-form-item>
+
+        <el-form-item label="预览图">
+          <div class="preview-image-upload">
+            <div v-if="previewImageFile || existingPreviewImage" class="preview-selected">
+              <img v-if="previewImageUrl" :src="previewImageUrl" class="preview-thumb" />
+              <img v-else-if="existingPreviewImage" :src="'/api/File/download?fileName=' + encodeURIComponent(existingPreviewImage)" class="preview-thumb" />
+              <div class="preview-info">
+                <span>{{ previewImageFile ? previewImageFile.name : existingPreviewImage }}</span>
+                <el-button type="text" size="small" @click="removePreviewImage">移除</el-button>
+              </div>
+            </div>
+            <el-upload
+              v-else
+              class="preview-upload"
+              action="#"
+              :auto-upload="false"
+              :on-change="handlePreviewFileChange"
+              :file-list="previewFileList"
+              :limit="1"
+              accept="image/*"
+            >
+              <div class="preview-placeholder">
+                <i class="el-icon-picture-outline"></i>
+                <span>上传预览图（可选）</span>
+                <span class="preview-hint">3D模型等无法直接预览的文件建议上传预览图</span>
+              </div>
+            </el-upload>
           </div>
         </el-form-item>
       </el-form>
@@ -363,9 +391,13 @@
 
 <script>
 import http from '../../utils/http'
+import ModelCardCover from '../../components/ModelCardCover.vue'
 
 export default {
   name: 'WorkManagement',
+  components: {
+    ModelCardCover
+  },
   data() {
     return {
       works: [],
@@ -393,6 +425,10 @@ export default {
       existingFilePath: '',
       existingFileName: '',
       existingFileSize: 0,
+      previewImageFile: null,
+      previewFileList: [],
+      existingPreviewImage: '',
+      previewImageUrl: '',
       categories: [
         { label: '全部', value: '' },
         { label: '前端开发', value: '前端开发' },
@@ -536,6 +572,26 @@ export default {
       this.existingFileSize = 0
     },
 
+    handlePreviewFileChange(file, fileList) {
+      this.previewImageFile = file.raw
+      this.previewFileList = fileList.slice(-1)
+      this.existingPreviewImage = ''
+      // 生成本地预览URL
+      if (file.raw) {
+        this.previewImageUrl = URL.createObjectURL(file.raw)
+      }
+    },
+
+    removePreviewImage() {
+      this.previewImageFile = null
+      this.previewFileList = []
+      this.existingPreviewImage = ''
+      if (this.previewImageUrl && this.previewImageUrl.startsWith('blob:')) {
+        URL.revokeObjectURL(this.previewImageUrl)
+      }
+      this.previewImageUrl = ''
+    },
+
     async submitWork() {
       try {
         await this.$refs.workForm.validate()
@@ -562,6 +618,20 @@ export default {
           filePath = this.existingFilePath
         }
 
+        // 上传预览图（如果有新选择的预览图）
+        let previewImage = ''
+        if (this.previewImageFile) {
+          const previewFormData = new FormData()
+          previewFormData.append('file', this.previewImageFile)
+          const previewResponse = await http.post('/api/File/upload-preview', previewFormData, {
+            headers: { 'Content-Type': 'multipart/form-data' }
+          })
+          previewImage = previewResponse.data.fileName
+        } else if (this.isEdit && !this.previewImageFile && this.previewFileList.length === 0) {
+          // 编辑时未修改预览图，保持原有预览图
+          previewImage = this.existingPreviewImage
+        }
+
         // 保存作品信息
         const workData = {
           title: this.form.title,
@@ -570,7 +640,8 @@ export default {
           status: this.form.status,
           filePath: filePath,
           fileName: this.selectedFile ? this.selectedFile.name : this.existingFileName,
-          fileSize: this.selectedFile ? this.selectedFile.size : this.existingFileSize
+          fileSize: this.selectedFile ? this.selectedFile.size : this.existingFileSize,
+          previewImage: previewImage
         }
 
         if (this.isEdit && this.form.id) {
@@ -754,10 +825,11 @@ export default {
 
     getThumbnailUrl(work) {
       if (work.previewImage) return `/api/File/download?fileName=${encodeURIComponent(work.previewImage)}`
-      if (!work.filePath) return null
-      const ext = work.filePath.toLowerCase().substring(work.filePath.lastIndexOf('.'))
+      if (!work.filePath && !work.fileName) return null
+      const filePath = work.filePath || work.fileName || ''
+      const ext = filePath.toLowerCase().substring(filePath.lastIndexOf('.'))
       if (['.jpg', '.jpeg', '.png', '.gif', '.bmp', '.webp'].includes(ext)) {
-        return `/api/File/download?fileName=${encodeURIComponent(work.filePath)}`
+        return `/api/File/download?fileName=${encodeURIComponent(filePath)}`
       }
       return null
     },

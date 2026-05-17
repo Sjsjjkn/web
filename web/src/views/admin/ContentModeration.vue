@@ -93,6 +93,9 @@
                 <div v-if="item.type === 'image'" class="image-preview">
                   <img :src="getPreviewUrl(item)" :alt="item.title" class="preview-image">
                 </div>
+                <div v-else-if="item.type === 'model'" class="model-preview">
+                  <ModelCardCover :work="item" />
+                </div>
                 <div v-else-if="item.type === 'video'" class="video-preview">
                   <div class="video-placeholder">
                     <i class="el-icon-video-camera"></i>
@@ -106,7 +109,7 @@
                   </div>
                 </div>
                 <div v-else class="text-preview">
-                  <p>{{ item.content.substring(0, 100) }}...</p>
+                  <p>{{ item.content ? item.content.substring(0, 100) : item.description ? item.description.substring(0, 100) : '' }}...</p>
                 </div>
               </div>
               
@@ -283,9 +286,13 @@
 
 <script>
 import http from '../../utils/http'
+import ModelCardCover from '../../components/ModelCardCover.vue'
 
 export default {
   name: 'ContentModeration',
+  components: {
+    ModelCardCover
+  },
   data() {
     return {
       loading: false,
@@ -847,6 +854,12 @@ export default {
 
 .moderation-card:hover .preview-image {
   transform: scale(1.04);
+}
+
+.model-preview {
+  height: 180px;
+  border-radius: var(--radius-md, 14px);
+  overflow: hidden;
 }
 
 .video-preview,

@@ -47,3 +47,110 @@ export function getAvatarUrl(avatar) {
   if (!avatar) return ''
   return `/api/File/download?fileName=${encodeURIComponent(avatar)}`
 }
+
+/**
+ * 根据文件扩展名返回文件图标（Emoji形式）
+ * @param {string} fileName - 文件名
+ * @returns {string} 文件图标
+ */
+export function getFileIcon(fileName) {
+  if (!fileName) return '📄'
+  const ext = fileName.toLowerCase().split('.').pop()
+  const iconMap = {
+    'pdf': '📕',
+    'doc': '📘',
+    'docx': '📘',
+    'ppt': '📗',
+    'pptx': '📗',
+    'xls': '📙',
+    'xlsx': '📙',
+    'zip': '📦',
+    'rar': '📦',
+    '7z': '📦',
+    'jpg': '🖼️',
+    'jpeg': '🖼️',
+    'png': '🖼️',
+    'gif': '🖼️',
+    'bmp': '🖼️',
+    'webp': '🖼️',
+    'svg': '🖼️',
+    'mp4': '🎬',
+    'avi': '🎬',
+    'mov': '🎬',
+    'wmv': '🎬',
+    'mp3': '🎵',
+    'wav': '🎵',
+    'flac': '🎵',
+    'txt': '📝',
+    'md': '📝',
+    'html': '🌐',
+    'css': '🎨',
+    'js': '📜',
+    'ts': '📜',
+    'json': '📋',
+    'py': '🐍',
+    'java': '☕',
+    'c': '⚙️',
+    'cpp': '⚙️',
+    'h': '⚙️',
+    'glb': '🎲',
+    'gltf': '🎲',
+    'obj': '🎲',
+    'fbx': '🎲',
+    'stl': '🎲',
+    'dae': '🎲',
+    '3ds': '🎲',
+    'blend': '🎲'
+  }
+  return iconMap[ext] || '📄'
+}
+
+/**
+ * 获取文件扩展名
+ * @param {string} fileName - 文件名
+ * @returns {string} 扩展名（不含点）
+ */
+export function getFileExtension(fileName) {
+  if (!fileName) return ''
+  return fileName.toLowerCase().split('.').pop() || ''
+}
+
+/**
+ * 3D 模型文件扩展名列表
+ */
+export const MODEL_EXTENSIONS = ['.glb', '.gltf', '.obj', '.stl', '.fbx', '.dae', '.3ds', '.ply', '.wrl', '.iges', '.igs', '.step', '.stp']
+
+/**
+ * 判断文件是否为 3D 模型格式
+ * @param {string} fileName - 文件名
+ * @returns {boolean}
+ */
+export function isModelFile(fileName) {
+  if (!fileName) return false
+  const ext = fileName.substring(fileName.lastIndexOf('.')).toLowerCase()
+  return MODEL_EXTENSIONS.includes(ext)
+}
+
+/**
+ * 获取预览图 URL（若有）
+ * @param {object} work - 作品对象
+ * @returns {string|null}
+ */
+export function getPreviewImageUrl(work) {
+  if (!work) return null
+  const previewFile = work.previewImage || work.preview || null
+  if (!previewFile) return null
+  return `/api/File/download?fileName=${encodeURIComponent(previewFile)}`
+}
+
+/**
+ * 获取文件下载 URL
+ * @param {object} work - 作品对象
+ * @returns {string|null}
+ */
+export function getFileDownloadUrl(work) {
+  if (!work) return null
+  const fileName = work.fileName || work.filePath || work.preview || null
+  if (!fileName) return null
+  return `/api/File/download?fileName=${encodeURIComponent(fileName)}`
+}

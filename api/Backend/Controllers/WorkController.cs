@@ -158,23 +158,15 @@ namespace Backend.Controllers
         {
             try
             {
-                Console.WriteLine("=== GetMyWorks 请求开始 ===");
-                Console.WriteLine($"用户是否认证: {User.Identity?.IsAuthenticated ?? false}");
-                Console.WriteLine($"用户名: {User.Identity?.Name ?? "null"}");
-                
                 var userId = GetCurrentUserId();
-                Console.WriteLine($"获取到的用户ID: {(userId.HasValue ? userId.Value.ToString() : "null")}");
                 
                 if (userId == null)
                 {
-                    Console.WriteLine("用户ID为空，返回未授权");
                     return Unauthorized(new { message = "未授权" });
                 }
 
                 var isAdmin = User.IsInRole("Admin");
                 var isTeacher = User.IsInRole("Teacher");
-                Console.WriteLine($"是否管理员: {isAdmin}, 是否教师: {isTeacher}");
-                Console.WriteLine($"用户角色声明: {string.Join(", ", User.Claims.Where(c => c.Type.Contains("role", StringComparison.OrdinalIgnoreCase)).Select(c => $"{c.Type}: {c.Value}"))}");
                 IQueryable<Work> query;
 
                 if (isAdmin)
@@ -443,6 +435,7 @@ namespace Backend.Controllers
                 existingWork.FileSize = request.FileSize;
                 existingWork.FileMD5 = request.FileMD5;
                 existingWork.FileUploadTime = request.FileUploadTime ?? DateTime.Now;
+                existingWork.PreviewImage = request.PreviewImage;
                 // 保持原始的UserId
                 // existingWork.UserId = work.UserId;
 
@@ -498,14 +491,18 @@ namespace Backend.Controllers
                 return Unauthorized(new { message = "用户不存在" });
             }
 
+            // 确保 FilePath 和 FileName 有值，互相补充
+            string filePath = request.FilePath ?? request.FileName ?? string.Empty;
+            string fileName = request.FileName ?? request.FilePath ?? string.Empty;
+
             var work = new Work
             {
                 Title = request.Title,
                 Category = request.Category,
                 Description = request.Description,
                 Status = request.Status,
-                FilePath = request.FilePath,
-                FileName = request.FileName,
+                FilePath = filePath,
+                FileName = fileName,
                 FileSize = request.FileSize,
                 FileMD5 = request.FileMD5,
                 PreviewImage = request.PreviewImage,
@@ -708,15 +705,9 @@ namespace Backend.Controllers
 
                 // 筛选最近hours小时内上传的作品
                 var cutoffTime = DateTime.Now.AddHours(-hours);
-                Console.WriteLine($"获取最近{hours}小时上传的作品，截止时间: {cutoffTime}");
                 
                 // 先获取所有作品，查看FileUploadTime字段
                 var allWorks = await query.ToListAsync();
-                Console.WriteLine($"所有作品数量: {allWorks.Count}");
-                foreach (var work in allWorks)
-                {
-                    Console.WriteLine($"作品ID: {work.Id}, FileUploadTime: {work.FileUploadTime}");
-                }
                 
                 // 筛选最近hours小时内上传的作品
                 query = query.Where(w => w.FileUploadTime.HasValue && w.FileUploadTime >= cutoffTime);
@@ -726,8 +717,6 @@ namespace Backend.Controllers
                     .OrderByDescending(w => w.FileUploadTime)
                     .ToListAsync();
                 
-                Console.WriteLine($"最近{hours}小时上传的作品数量: {works.Count}");
-
                 return Ok(new {
                     items = works,
                     count = works.Count,
@@ -737,7 +726,6 @@ namespace Backend.Controllers
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"获取最近作品失败: {ex.Message}");
                 return StatusCode(500, new { message = "获取最近作品失败" });
             }
         }
@@ -1015,8 +1003,12 @@ namespace Backend.Controllers
                         title = fw.Work.Title,
                         description = fw.Work.Description,
                         fileType = Path.GetExtension(fw.Work.FileName ?? "").TrimStart('.').ToLower(),
-                        coverImage = fw.Work.PreviewImage ?? fw.Work.FilePath,
+                        previewImage = fw.Work.PreviewImage,
+                        fileName = fw.Work.FileName,
+                        filePath = fw.Work.FilePath,
                         authorName = fw.Work.Uploader.Name ?? fw.Work.Uploader.Username,
+                        views = (int?)fw.Work.Views ?? 0,
+                        favorites = (int?)fw.Work.Favorites ?? 0,
                         favoritedAt = fw.FavoriteDate
                     })
                     .ToListAsync();
@@ -1054,7 +1046,9 @@ namespace Backend.Controllers
                         title = w.Title,
                         description = w.Description,
                         fileType = Path.GetExtension(w.FileName ?? "").TrimStart('.').ToLower(),
-                        coverImage = w.PreviewImage ?? w.FilePath,
+                        previewImage = w.PreviewImage,
+                        fileName = w.FileName,
+                        filePath = w.FilePath,
                         authorName = w.Uploader.Name ?? w.Uploader.Username,
                         views = (int?)w.Views ?? 0,
                         favorites = (int?)w.Favorites ?? 0,

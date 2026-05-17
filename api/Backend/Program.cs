@@ -1,9 +1,7 @@
 using Backend.Data;
 using Backend.Models;
-using Backend.Security;
 using Backend.Services;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
-using Microsoft.AspNetCore.DataProtection;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using System.Security.Claims;
@@ -22,12 +20,6 @@ builder.Services.AddControllers().AddJsonOptions(options =>
 });
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
-
-var dataProtectionPath = Path.Combine(builder.Environment.ContentRootPath, "DataProtection-Keys");
-Directory.CreateDirectory(dataProtectionPath);
-builder.Services.AddDataProtection()
-    .PersistKeysToFileSystem(new DirectoryInfo(dataProtectionPath))
-    .SetApplicationName("Backend");
 
 builder.Services.AddCors(options =>
 {
@@ -76,15 +68,6 @@ builder.Services.AddAuthorization();
 builder.Services.AddScoped<NotificationService>();
 
 var app = builder.Build();
-
-// 数据库初始化
-var scope = app.Services.CreateScope();
-var dbContext = scope.ServiceProvider.GetRequiredService<AppDbContext>();
-// 创建数据库表结构（如果不存在）
-await dbContext.Database.EnsureCreatedAsync();
-
-// 初始化种子数据
-await Backend.InitializeDatabase.Initialize(dbContext);
 
 if (app.Environment.IsDevelopment())
 {
