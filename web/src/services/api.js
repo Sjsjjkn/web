@@ -182,6 +182,9 @@ export const announcementApi = {
   getAnnouncements(params) {
     return http.get('/api/Announcement', { params })
   },
+  getAllAnnouncements(params) {
+    return http.get('/api/Announcement/admin/list', { params })
+  },
   getAnnouncementById(id) {
     return http.get(`/api/Announcement/${id}`)
   },

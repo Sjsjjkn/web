@@ -25,7 +25,14 @@
             class="search-input"
             @clear="loadAnnouncements"
             @keyup.enter.native="loadAnnouncements"
-          ></el-input>
+          >
+            <el-button
+              slot="append"
+              icon="el-icon-search"
+              @click="loadAnnouncements"
+              class="search-btn"
+            ></el-button>
+          </el-input>
         </div>
       </section>
 

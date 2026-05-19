@@ -19,6 +19,7 @@ namespace Backend.Data
         public DbSet<Announcement> Announcements { get; set; }
         public DbSet<Feedback> Feedbacks { get; set; }
         public DbSet<WorkReview> WorkReviews { get; set; }
+        public DbSet<ViewHistory> ViewHistories { get; set; }
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
@@ -105,6 +106,22 @@ namespace Backend.Data
                     .WithMany()
                     .HasForeignKey(r => r.ReviewerId)
                     .OnDelete(DeleteBehavior.Restrict);
+            });
+
+            // ===== ViewHistory 配置 =====
+            modelBuilder.Entity<ViewHistory>(entity =>
+            {
+                // ViewHistory.UserId → User.Id
+                entity.HasOne(vh => vh.User)
+                    .WithMany(u => u.ViewHistories)
+                    .HasForeignKey(vh => vh.UserId)
+                    .OnDelete(DeleteBehavior.Cascade);
+
+                // ViewHistory.WorkId → Work.Id
+                entity.HasOne(vh => vh.Work)
+                    .WithMany(w => w.ViewHistories)
+                    .HasForeignKey(vh => vh.WorkId)
+                    .OnDelete(DeleteBehavior.Cascade);
             });
 
             // ===== ModerationItem 配置 =====

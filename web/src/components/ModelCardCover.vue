@@ -135,14 +135,6 @@ export default {
 
   methods: {
     init() {
-      // 优先使用预览图
-      const previewFile = this.work.previewImage || this.work.preview
-      if (previewFile) {
-        this.previewUrl = `/api/File/download?fileName=${encodeURIComponent(previewFile)}`
-        this.isModel = false
-        return
-      }
-
       // 获取文件路径（兼容多个可能的字段）
       const filePath = this.work.filePath || this.work.fileName || this.work.preview || this.work.url || ''
       if (!filePath) {
@@ -151,12 +143,15 @@ export default {
         return
       }
 
-      // 检查是否为图片文件
-      const ext = filePath.toLowerCase().substring(filePath.lastIndexOf('.'))
+      // 检查是否为图片文件（优先使用 previewImage 或图片类型的 preview）
+      const previewFile = this.work.previewImage
+      const previewExt = previewFile ? previewFile.toLowerCase().substring(previewFile.lastIndexOf('.')) : ''
       const imageExts = ['.jpg', '.jpeg', '.png', '.gif', '.bmp', '.webp', '.svg']
-      if (imageExts.includes(ext)) {
+      
+      // 只有当 previewImage 存在且是图片格式时，才使用预览图
+      if (previewFile && imageExts.includes(previewExt)) {
+        this.previewUrl = `/api/File/download?fileName=${encodeURIComponent(previewFile)}`
         this.isModel = false
-        this.previewUrl = `/api/File/download?fileName=${encodeURIComponent(filePath)}`
         return
       }
 
@@ -164,6 +159,14 @@ export default {
       if (isModelFile(filePath)) {
         this.isModel = true
         this.previewUrl = null
+        return
+      }
+
+      // 如果是图片文件，显示图片预览
+      const ext = filePath.toLowerCase().substring(filePath.lastIndexOf('.'))
+      if (imageExts.includes(ext)) {
+        this.isModel = false
+        this.previewUrl = `/api/File/download?fileName=${encodeURIComponent(filePath)}`
         return
       }
 

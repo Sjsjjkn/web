@@ -107,6 +107,9 @@ namespace Backend.Models
         /// <summary>收藏记录（User m↔n Work）</summary>
         public ICollection<WorkFavorite> WorkFavorites { get; set; } = new List<WorkFavorite>();
 
+        /// <summary>浏览历史（User m↔n Work）</summary>
+        public ICollection<ViewHistory> ViewHistories { get; set; } = new List<ViewHistory>();
+
         /// <summary>参与团队作品记录（Student m↔n Work）</summary>
         public ICollection<WorkStudent> WorkStudents { get; set; } = new List<WorkStudent>();
 

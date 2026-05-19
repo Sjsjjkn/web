@@ -21,6 +21,27 @@
       </div>
     </header>
 
+    <!-- 搜索区域 -->
+    <section class="search-section">
+      <el-input
+        v-model="searchKeyword"
+        placeholder="搜索公告标题..."
+        prefix-icon="el-icon-search"
+        size="medium"
+        clearable
+        class="search-input"
+        @clear="loadAnnouncements"
+        @keyup.enter.native="loadAnnouncements"
+      >
+        <el-button
+          slot="append"
+          icon="el-icon-search"
+          @click="loadAnnouncements"
+          class="search-btn"
+        ></el-button>
+      </el-input>
+    </section>
+
     <!-- 公告表格区域 -->
     <section class="announcements-section">
       <el-table
@@ -168,6 +189,7 @@ export default {
       announcements: [],
       showModal: false,
       isEdit: false,
+      searchKeyword: '',
       form: {
         id: null,
         title: '',
@@ -187,9 +209,10 @@ export default {
   methods: {
     async loadAnnouncements() {
       try {
-        const res = await announcementApi.getAnnouncements({
+        const res = await announcementApi.getAllAnnouncements({
           page: this.pagination.page,
-          limit: this.pagination.limit
+          limit: this.pagination.limit,
+          search: this.searchKeyword
         })
         this.announcements = res.data.items || []
         this.pagination.total = res.data.total || 0

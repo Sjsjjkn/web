@@ -22,15 +22,22 @@
 
     <section class="filter-section fade-in-up">
       <div class="search-bar">
-        <el-input 
-          placeholder="搜索作品标题或作者..." 
-          v-model="filterForm.search"
-          prefix-icon="el-icon-search"
-          clearable
-          class="animated-input"
-          @keyup.enter="loadModerationItems"
-        >
-        </el-input>
+        <div class="search-input-wrapper">
+          <el-input 
+            placeholder="搜索作品标题或作者..." 
+            v-model="filterForm.search"
+            prefix-icon="el-icon-search"
+            clearable
+            class="animated-input"
+            @keyup.enter="loadModerationItems"
+          ></el-input>
+          <el-button 
+            type="primary" 
+            icon="el-icon-search" 
+            @click="loadModerationItems"
+            class="search-btn"
+          ></el-button>
+        </div>
       </div>
       
       <div class="filter-tags">
@@ -197,16 +204,7 @@
                 {{ currentItem.submitTime || '未知时间' }}
               </span>
             </div>
-            <!-- 风险等级条 -->
-            <div class="risk-bar" :class="'risk-bar--' + (currentItem.riskLevel || 'low')">
-              <div class="risk-bar-icon">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" /></svg>
-              </div>
-              <div class="risk-bar-body">
-                <span class="risk-bar-label">风险等级</span>
-                <span class="risk-bar-value">{{ getRiskText(currentItem.riskLevel) }}</span>
-              </div>
-            </div>
+
           </div>
         </div>
 
@@ -216,6 +214,10 @@
           <div class="preview-card">
             <div v-if="currentItem.type === 'image'" class="preview-image-wrap">
               <img :src="getPreviewUrl(currentItem)" :alt="currentItem.title" class="preview-img" />
+            </div>
+            <!-- 3D模型预览 -->
+            <div v-else-if="currentItem.type === 'model'" class="preview-model-wrap">
+              <ModelCardCover :work="currentItem" />
             </div>
             <div v-else-if="currentItem.type === 'video'" class="preview-empty-state">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" class="empty-icon"><path stroke-linecap="round" stroke-linejoin="round" d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" /></svg>
@@ -231,16 +233,67 @@
           </div>
         </div>
 
-        <!-- 风险详情 -->
-        <div class="detail-section" v-if="currentItem.riskDetails && currentItem.riskDetails.length > 0">
-          <h3 class="section-heading">风险详情</h3>
-          <div class="risk-items">
-            <div class="risk-item" v-for="(risk, idx) in currentItem.riskDetails" :key="idx">
-              <div class="risk-item-dot"></div>
-              <span class="risk-item-text">{{ risk }}</span>
+        <!-- 评语历史 -->
+        <div class="detail-section">
+          <h3 class="section-heading">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="section-icon"><path stroke-linecap="round" stroke-linejoin="round" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-3.582 8-8 8a8.013 8.013 0 01-5.73-2.28L3 16l-.35-1.05A6.014 6.014 0 012 12c0-4.418 3.582-8 8-8s8 3.582 8 8z" /></svg>
+            评语 / 反馈历史
+          </h3>
+          <div v-if="reviewHistory.length > 0" class="review-history-list">
+            <div v-for="item in reviewHistory" :key="item.id" class="review-card">
+              <div class="review-card-header">
+                <div class="reviewer-info">
+                  <span class="reviewer-avatar">{{ (item.reviewerName || '?')[0] }}</span>
+                  <div class="reviewer-details">
+                    <span class="reviewer-name">{{ item.reviewerName }}</span>
+                    <span class="reviewer-role">
+                      {{ item.reviewerRole === 'Admin' ? '管理员' : item.reviewerRole === 'Teacher' ? '教师' : '学生' }}
+                    </span>
+                  </div>
+                </div>
+                <div class="review-meta">
+                  <span v-if="item.type" class="review-type-tag">{{ item.type === 'review' ? '评语' : '反馈' }}</span>
+                  <span class="review-time">{{ formatTime(item.createdAt) }}</span>
+                </div>
+              </div>
+              <div class="review-card-body">
+                <p class="review-text">{{ item.comment }}</p>
+              </div>
+            </div>
+          </div>
+          <div v-else class="review-empty">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" class="empty-icon"><path stroke-linecap="round" stroke-linejoin="round" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-3.582 8-8 8a8.013 8.013 0 01-5.73-2.28L3 16l-.35-1.05A6.014 6.014 0 012 12c0-4.418 3.582-8 8-8s8 3.582 8 8z" /></svg>
+            <span>暂无评语记录</span>
+          </div>
+
+          <!-- 添加评语 -->
+          <div class="add-review-section">
+            <h4 class="add-review-title">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="section-icon"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4" /></svg>
+              添加评语
+            </h4>
+            <el-input
+              v-model="reviewComment"
+              type="textarea"
+              placeholder="输入评语或反馈内容..."
+              :rows="3"
+              class="review-textarea"
+            ></el-input>
+            <div class="review-actions">
+              <el-button
+                type="primary"
+                icon="el-icon-s-comment"
+                @click="submitReview"
+                :loading="submittingReview"
+                :disabled="!reviewComment.trim()"
+                class="btn-submit-review"
+              >
+                提交评语
+              </el-button>
             </div>
           </div>
         </div>
+
       </div>
 
       <span slot="footer" class="dialog-footer">
@@ -299,6 +352,9 @@ export default {
       dialogVisible: false,
       rejectDialogVisible: false,
       rejectReason: '',
+      reviewHistory: [],
+      reviewComment: '',
+      submittingReview: false,
       filterForm: {
         search: '',
         status: '待审核'
@@ -462,7 +518,55 @@ export default {
         item.riskDetails = []
       }
       this.currentItem = item
+      this.reviewComment = ''
+      this.reviewHistory = []
       this.dialogVisible = true
+      this.loadReviewHistory(item.id)
+    },
+
+    async loadReviewHistory(workId) {
+      try {
+        const res = await http.get(`/api/TeachingCollaboration/works/${workId}/reviews`)
+        this.reviewHistory = res.data?.reviews || []
+      } catch (error) {
+        console.error('加载评语历史失败:', error)
+        this.reviewHistory = []
+      }
+    },
+
+    async submitReview() {
+      if (!this.reviewComment.trim()) {
+        this.$message.warning('请输入评语')
+        return
+      }
+
+      this.submittingReview = true
+      try {
+        await http.put(`/api/TeachingCollaboration/works/${this.currentItem.id}/review`, {
+          status: this.currentItem.status,
+          comment: this.reviewComment
+        })
+
+        this.$message.success('评语提交成功')
+        this.reviewComment = ''
+        await this.loadReviewHistory(this.currentItem.id)
+      } catch (error) {
+        this.$message.error(error.response?.data?.message || '提交评语失败')
+        console.error('提交评语失败:', error)
+      } finally {
+        this.submittingReview = false
+      }
+    },
+
+    formatTime(time) {
+      if (!time) return ''
+      const date = new Date(time)
+      const year = date.getFullYear()
+      const month = String(date.getMonth() + 1).padStart(2, '0')
+      const day = String(date.getDate()).padStart(2, '0')
+      const hours = String(date.getHours()).padStart(2, '0')
+      const minutes = String(date.getMinutes()).padStart(2, '0')
+      return `${year}-${month}-${day} ${hours}:${minutes}`
     },
 
     getRiskClass(riskLevel) {
@@ -474,14 +578,7 @@ export default {
       }
     },
 
-    getRiskText(riskLevel) {
-      switch (riskLevel) {
-        case 'high': return '高风险'
-        case 'medium': return '中风险'
-        case 'low': return '低风险'
-        default: return riskLevel || '未知'
-      }
-    },
+
 
     updateStats() {
       const pending = this.moderationItems.filter(item => item.status === '待审核').length
@@ -612,6 +709,39 @@ export default {
 
 .search-bar {
   margin-bottom: 20px;
+}
+
+.search-input-wrapper {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  max-width: 600px;
+}
+
+.search-input-wrapper .animated-input {
+  flex: 1;
+}
+
+.search-btn {
+  padding: 0;
+  width: 44px;
+  height: 44px;
+  border-radius: var(--radius-full);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all var(--duration-fast, .18s);
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  color: var(--text-secondary);
+}
+
+.search-btn:hover {
+  background: var(--primary, #2D8A6E);
+  border-color: var(--primary, #2D8A6E);
+  color: #fff;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px var(--primary-glow, rgba(45, 138, 110, 0.3));
 }
 
 .animated-input :deep(.el-input__inner) {
@@ -923,17 +1053,20 @@ export default {
 
 :deep(.review-detail-dialog) {
   border-radius: var(--radius-xl, 24px);
-  overflow: hidden;
+  /* 移除 overflow: hidden，避免关闭按钮被裁剪 */
 }
 
 :deep(.review-detail-dialog .el-dialog__header) {
-  padding: 0;
+  padding: 16px 24px;
   border-bottom: none;
+  background: var(--bg-page, #F8F9F5);
+  border-radius: var(--radius-xl, 24px) var(--radius-xl, 24px) 0 0;
 }
 
 :deep(.review-detail-dialog .el-dialog__headerbtn) {
-  top: 20px;
-  right: 20px;
+  top: 50%;
+  right: 12px;
+  transform: translateY(-50%);
   z-index: 10;
   width: 36px;
   height: 36px;
@@ -1176,6 +1309,185 @@ export default {
   border-left: 3px solid var(--primary, #2D8A6E);
 }
 
+.section-icon {
+  width: 16px;
+  height: 16px;
+  margin-right: 8px;
+  vertical-align: middle;
+}
+
+/* Review History Styles */
+.review-history-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-bottom: 20px;
+}
+
+.review-card {
+  background: var(--bg-page, #F8F9F5);
+  border-radius: var(--radius-md, 12px);
+  padding: 16px;
+  border: 1px solid var(--border-color, #E8E2D8);
+  transition: all var(--duration-fast, .18s);
+}
+
+.review-card:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-card, 0 2px 12px rgba(0, 0, 0, .08));
+}
+
+.review-card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12px;
+}
+
+.reviewer-info {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.reviewer-avatar {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: var(--primary, #2D8A6E);
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 600;
+  font-size: 14px;
+}
+
+.reviewer-details {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.reviewer-name {
+  font-weight: 600;
+  font-size: 13px;
+  color: var(--text-main, #1A1A1A);
+}
+
+.reviewer-role {
+  font-size: 11px;
+  color: var(--text-secondary, #555555);
+}
+
+.review-meta {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.review-type-tag {
+  padding: 2px 8px;
+  border-radius: var(--radius-full, 9999px);
+  font-size: 11px;
+  font-weight: 500;
+  background: var(--primary-light, rgba(45, 138, 110, .1));
+  color: var(--primary, #2D8A6E);
+}
+
+.review-time {
+  font-size: 12px;
+  color: var(--text-secondary, #555555);
+}
+
+.review-card-body {
+  padding-left: 42px;
+}
+
+.review-text {
+  margin: 0;
+  font-size: 14px;
+  color: var(--text-main, #1A1A1A);
+  line-height: 1.6;
+}
+
+.review-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  padding: 32px 24px;
+  background: var(--bg-page, #F8F9F5);
+  border-radius: var(--radius-lg, 18px);
+  margin-bottom: 20px;
+  color: var(--text-secondary, #555555);
+}
+
+.review-empty .empty-icon {
+  width: 36px;
+  height: 36px;
+  opacity: 0.5;
+}
+
+/* Add Review Section */
+.add-review-section {
+  background: var(--bg-card, #FFFFFF);
+  border-radius: var(--radius-lg, 18px);
+  padding: 20px;
+  border: 1px solid var(--border-color, #E8E2D8);
+}
+
+.add-review-title {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-main, #1A1A1A);
+  margin: 0 0 14px 0;
+  display: flex;
+  align-items: center;
+}
+
+.review-textarea :deep(.el-textarea__inner) {
+  border-radius: var(--radius-md, 12px);
+  border-color: var(--border-color, #E8E2D8);
+  padding: 12px 16px;
+  font-size: 14px;
+  transition: all var(--duration-normal, .3s);
+}
+
+.review-textarea :deep(.el-textarea__inner):focus {
+  border-color: var(--primary, #2D8A6E);
+  box-shadow: 0 0 0 3px var(--primary-glow, rgba(45, 138, 110, .2));
+}
+
+.review-actions {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 12px;
+}
+
+.btn-submit-review {
+  background: var(--primary, #2D8A6E) !important;
+  border-color: var(--primary, #2D8A6E) !important;
+  border-radius: var(--radius-full, 9999px);
+  padding: 10px 24px;
+  font-weight: 500;
+  transition: all var(--duration-fast, .18s);
+}
+
+.btn-submit-review:hover:not(:disabled) {
+  background: var(--primary-dark, #257a5e) !important;
+  border-color: var(--primary-dark, #257a5e) !important;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px var(--primary-glow, rgba(45, 138, 110, 0.3));
+}
+
+.btn-submit-review:disabled {
+  background: var(--bg-page, #F8F9F5) !important;
+  border-color: var(--border-color, #E8E2D8) !important;
+  color: var(--text-secondary, #555555) !important;
+}
+
 /* Preview Card */
 .preview-card {
   border-radius: var(--radius-lg, 18px);
@@ -1188,6 +1500,17 @@ export default {
   width: 100%;
   max-height: 360px;
   overflow: hidden;
+}
+
+.preview-model-wrap {
+  width: 100%;
+  height: 320px;
+  background: #f5f5f5;
+}
+
+.preview-model-wrap :deep(.model-card-cover) {
+  width: 100%;
+  height: 100%;
 }
 
 .preview-img {

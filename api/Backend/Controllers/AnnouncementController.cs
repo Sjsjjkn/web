@@ -26,12 +26,19 @@ namespace Backend.Controllers
         /// </summary>
         [HttpGet]
         [AllowAnonymous]
-        public async Task<ActionResult> GetAnnouncements([FromQuery] int page = 1, [FromQuery] int limit = 10)
+        public async Task<ActionResult> GetAnnouncements([FromQuery] int page = 1, [FromQuery] int limit = 10, [FromQuery] string? search = null)
         {
             var query = _dbContext.Announcements
                 .Include(a => a.Publisher)
-                .Where(a => a.IsEnabled)
-                .OrderByDescending(a => a.IsPinned)
+                .Where(a => a.IsEnabled);
+
+            // 搜索过滤
+            if (!string.IsNullOrEmpty(search))
+            {
+                query = query.Where(a => a.Title.Contains(search));
+            }
+
+            query = query.OrderByDescending(a => a.IsPinned)
                 .ThenByDescending(a => a.CreatedAt);
 
             var total = await query.CountAsync();
@@ -57,6 +64,58 @@ namespace Backend.Controllers
                 .ToListAsync();
 
             return Ok(new { items, total });
+        }
+
+        /// <summary>
+        /// 获取所有公告列表（管理员专用，包括禁用的）
+        /// </summary>
+        [HttpGet("admin/list")]
+        [Authorize(Roles = "Admin")]
+        public async Task<ActionResult> GetAllAnnouncements([FromQuery] int page = 1, [FromQuery] int limit = 10, [FromQuery] string? search = null)
+        {
+            try
+            {
+                IQueryable<Announcement> query = _dbContext.Announcements
+                    .Include(a => a.Publisher);
+
+                // 搜索过滤
+                if (!string.IsNullOrEmpty(search))
+                {
+                    query = query.Where(a => a.Title.Contains(search));
+                }
+
+                query = query.OrderByDescending(a => a.IsPinned)
+                    .ThenByDescending(a => a.CreatedAt);
+
+                var total = await query.CountAsync();
+                var items = await query
+                    .Skip((page - 1) * limit)
+                    .Take(limit)
+                    .Select(a => new
+                    {
+                        a.Id,
+                        a.Title,
+                        a.Content,
+                        a.IsPinned,
+                        a.IsEnabled,
+                        a.CreatedAt,
+                        Publisher = new
+                        {
+                            a.Publisher.Id,
+                            a.Publisher.Name,
+                            a.Publisher.Username,
+                            a.Publisher.Role
+                        }
+                    })
+                    .ToListAsync();
+
+                return Ok(new { items, total });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "获取管理员公告列表失败");
+                return StatusCode(500, new { message = "获取公告列表失败" });
+            }
         }
 
         /// <summary>

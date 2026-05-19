@@ -50,7 +50,8 @@ namespace Backend.Controllers
         public async Task<ActionResult> GetFeedbacks(
             [FromQuery] int page = 1,
             [FromQuery] int pageSize = 10,
-            [FromQuery] string? status = null)
+            [FromQuery] string? status = null,
+            [FromQuery] string? type = null)
         {
             try
             {
@@ -74,6 +75,12 @@ namespace Backend.Controllers
                 if (!string.IsNullOrEmpty(status))
                 {
                     query = query.Where(f => f.Status == status);
+                }
+
+                // 类型筛选
+                if (!string.IsNullOrEmpty(type))
+                {
+                    query = query.Where(f => f.Type == type);
                 }
 
                 var total = await query.CountAsync();

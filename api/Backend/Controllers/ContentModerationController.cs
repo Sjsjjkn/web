@@ -60,11 +60,7 @@ namespace Backend.Controllers
                         query = query.Where(item => item.work.Status == status);
                     }
                 }
-                else
-                {
-                    // 默认只显示待审核的作品
-                    query = query.Where(item => item.work.Status == "待审核");
-                }
+                // status为空时显示所有作品，不做筛选
 
                 // 搜索筛选
                 if (!string.IsNullOrEmpty(search))

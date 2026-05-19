@@ -75,6 +75,9 @@ namespace Backend.Models
         /// <summary>收藏记录（User ↔ Work 多对多）</summary>
         public ICollection<WorkFavorite> WorkFavorites { get; set; } = new List<WorkFavorite>();
 
+        /// <summary>浏览历史（User ↔ Work 多对多）</summary>
+        public ICollection<ViewHistory> ViewHistories { get; set; } = new List<ViewHistory>();
+
         /// <summary>参与记录（Student ↔ Work 多对多）</summary>
         public ICollection<WorkStudent> WorkStudents { get; set; } = new List<WorkStudent>();
     }

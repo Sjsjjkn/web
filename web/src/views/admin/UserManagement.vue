@@ -50,22 +50,21 @@
     <section class="filter-section fade-in-up">
       <div class="filter-bar">
         <div class="search-bar">
-          <el-input 
-            placeholder="搜索用户名或姓名..." 
-            v-model="searchQuery"
-            prefix-icon="el-icon-search"
-            clearable
-            class="animated-input"
-            @keyup.enter="searchUsers"
-          >
-            <template slot="suffix">
-              <el-button 
-                icon="el-icon-search" 
-                @click="searchUsers"
-                class="search-btn"
-              ></el-button>
-            </template>
-          </el-input>
+          <div class="search-input-wrapper">
+            <el-input 
+              placeholder="搜索用户名或姓名..." 
+              v-model="searchQuery"
+              prefix-icon="el-icon-search"
+              clearable
+              class="animated-input"
+              @keyup.enter="searchUsers"
+            ></el-input>
+            <el-button 
+              icon="el-icon-search" 
+              @click="searchUsers"
+              class="search-btn"
+            ></el-button>
+          </div>
         </div>
         
         <div class="role-filter">
@@ -844,7 +843,17 @@ export default {
 .search-bar { flex: 1; min-width: 300px; }
 .role-filter { min-width: 150px; }
 
-::v-deep .animated-input .el-input__inner {
+.search-input-wrapper {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.search-input-wrapper .animated-input {
+  flex: 1;
+}
+
+::v-deep .search-input-wrapper .animated-input .el-input__inner {
   border-radius: var(--radius-full);
   border: 1px solid var(--border-color);
   background: var(--bg-card);
@@ -852,32 +861,29 @@ export default {
   box-shadow: var(--shadow-xs);
   height: 44px;
 }
-::v-deep .animated-input .el-input__inner:focus {
+::v-deep .search-input-wrapper .animated-input .el-input__inner:focus {
   box-shadow: 0 4px 20px rgba(45, 138, 110, 0.15);
   border-color: var(--primary);
 }
 
-::v-deep .search-btn {
+.search-input-wrapper .search-btn {
   padding: 0;
-  width: 32px;
-  height: 32px;
-  border-radius: 50%;
+  width: 44px;
+  height: 44px;
+  border-radius: var(--radius-full);
   display: flex;
   align-items: center;
   justify-content: center;
   transition: all 0.3s var(--ease-out-expo);
-  margin-top: -4px;
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  color: var(--text-secondary);
 }
 
-::v-deep .search-btn:hover {
+.search-input-wrapper .search-btn:hover {
   background-color: rgba(45, 138, 110, 0.1);
-  transform: scale(1.1);
-}
-
-::v-deep .animated-input .el-input__suffix {
-  display: flex;
-  align-items: center;
-  height: 100%;
+  border-color: var(--primary);
+  color: var(--primary);
 }
 
 .users-section {

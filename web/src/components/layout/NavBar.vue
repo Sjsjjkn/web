@@ -30,7 +30,6 @@
             <div class="dropdown-divider" v-if="hasPermission(['Admin', 'Teacher', 'Student'])"></div>
             <router-link v-if="hasPermission(['Admin', 'Teacher', 'Student'])" to="/works/manage" class="dropdown-link">作品管理</router-link>
             <router-link to="/account/feedback" class="dropdown-link">意见反馈</router-link>
-            <router-link to="/account/settings" class="dropdown-link">偏好设置</router-link>
           </div>
         </div>
 
@@ -113,7 +112,6 @@
           </div>
           <el-dropdown-menu slot="dropdown" class="modern-dropdown-menu">
             <el-dropdown-item command="profile" icon="el-icon-user">个人中心</el-dropdown-item>
-            <el-dropdown-item command="settings" icon="el-icon-setting">偏好设置</el-dropdown-item>
             <el-dropdown-item divided command="logout" icon="el-icon-switch-button" class="danger-text">退出登录</el-dropdown-item>
           </el-dropdown-menu>
         </el-dropdown>
@@ -222,10 +220,6 @@ export default {
     handleCommand(command) {
       if (command === 'profile') {
         this.$router.push('/account/space')
-        return
-      }
-      if (command === 'settings') {
-        this.$router.push('/account/settings')
         return
       }
       if (command === 'logout') {

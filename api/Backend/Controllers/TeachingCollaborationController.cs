@@ -267,16 +267,24 @@ namespace Backend.Controllers
         {
             try
             {
-                var studentIds = await GetManagedStudentIdsAsync();
                 var reviewerId = GetCurrentUserId();
                 var reviewerName = GetCurrentUserName() ?? "教师";
 
-                var work = await BuildManagedWorksQuery(studentIds)
-                    .FirstOrDefaultAsync(w => w.Id == id);
+                Work work;
+                if (User.IsInRole("Admin"))
+                {
+                    work = await _context.Works.FirstOrDefaultAsync(w => w.Id == id);
+                }
+                else
+                {
+                    var studentIds = await GetManagedStudentIdsAsync();
+                    work = await BuildManagedWorksQuery(studentIds)
+                        .FirstOrDefaultAsync(w => w.Id == id);
+                }
 
                 if (work == null)
                 {
-                    return NotFound(new { message = "作品不存在或不属于你的学生" });
+                    return NotFound(new { message = "作品不存在或无权评价此作品" });
                 }
 
                 if (!string.IsNullOrWhiteSpace(request.Status))
@@ -336,7 +344,7 @@ namespace Backend.Controllers
         /// 获取作品评语/反馈历史（教师和学生都可查看）
         /// </summary>
         [HttpGet("works/{workId}/reviews")]
-        [AllowAnonymous]  // 内部做权限检查
+        [AllowAnonymous]
         public async Task<IActionResult> GetWorkReviews(int workId)
         {
             try
@@ -353,21 +361,25 @@ namespace Backend.Controllers
                     return NotFound(new { message = "作品不存在" });
                 }
 
-                // 权限：教师/管理员可以查看管理的学生的作品评语；学生只能看自己的
-                bool isAuthorized;
-                if (User.IsInRole("Admin") || User.IsInRole("Teacher"))
+                bool isAuthorized = false;
+
+                if (User.IsInRole("Admin"))
+                {
+                    isAuthorized = true;
+                }
+                else if (User.IsInRole("Teacher"))
                 {
                     var studentIds = await GetManagedStudentIdsAsync();
                     isAuthorized = studentIds.Contains(work.UserId);
                 }
-                else
+                else if (work.UserId == userId.Value)
                 {
-                    isAuthorized = work.UserId == userId.Value;
+                    isAuthorized = true;
                 }
 
                 if (!isAuthorized)
                 {
-                    return Forbid();
+                    return Ok(new { reviews = new List<object>() });
                 }
 
                 var reviews = await _context.WorkReviews

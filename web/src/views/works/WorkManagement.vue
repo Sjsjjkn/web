@@ -249,137 +249,214 @@
     <el-dialog
       :visible.sync="detailDialogVisible"
       :title="currentWork ? currentWork.title : '作品详情'"
-      width="720px"
+      width="800px"
       :close-on-click-modal="true"
       custom-class="detail-dialog"
       destroy-on-close
       append-to-body
     >
       <div v-if="currentWork" class="detail-content">
-        <!-- 顶部封面区 -->
+        <!-- 顶部预览区 -->
         <div class="detail-header">
-          <div class="detail-cover">
+          <div class="detail-preview">
+            <!-- 模型预览 -->
+            <div v-if="isModelFile(currentWork.filePath || currentWork.fileName)" class="preview-model-wrap">
+              <ModelCardCover :work="currentWork" />
+            </div>
+            <!-- 图片预览 -->
             <img
-              v-if="getThumbnailUrl(currentWork)"
+              v-else-if="getThumbnailUrl(currentWork)"
               :src="getThumbnailUrl(currentWork)"
-              class="detail-cover-img"
+              class="detail-preview-img"
             />
+            <!-- 占位符 -->
             <div
               v-else
-              class="detail-cover-placeholder"
+              class="detail-preview-placeholder"
               :style="{ background: getGradient(currentWork.id, 0) }"
             >
-              <span style="font-size: 48px; opacity: 0.5;">{{ getFileEmoji(currentWork) }}</span>
-              <span>{{ getFileExtension(currentWork) }}</span>
+              <span class="file-emoji">{{ getFileEmoji(currentWork) }}</span>
+              <span class="file-ext">{{ getFileExtension(currentWork) }}</span>
             </div>
           </div>
-          <div class="detail-meta">
+        </div>
+
+        <!-- 作品信息 -->
+        <div class="detail-info">
+          <div class="detail-author-section">
             <div class="detail-author">
               <span class="author-avatar-lg">{{ (currentWork.uploadUserName || '?')[0] }}</span>
-              <span class="detail-author-name">{{ currentWork.uploadUserName || '未知作者' }}</span>
-            </div>
-            <div class="detail-stats">
-              <span>👁 {{ currentWork.views || 0 }}</span>
-              <span>⭐ {{ currentWork.favorites || 0 }}</span>
-              <span>📁 {{ currentWork.category || '未分类' }}</span>
-            </div>
-            <div class="detail-date" v-if="currentWork.fileUploadTime || currentWork.uploadDate">
-              上传于 {{ formatDate(currentWork.fileUploadTime || currentWork.uploadDate) }}
+              <div class="author-info">
+                <span class="detail-author-name">{{ currentWork.uploadUserName || '未知作者' }}</span>
+                <span class="detail-date" v-if="currentWork.fileUploadTime || currentWork.uploadDate">
+                  上传于 {{ formatDate(currentWork.fileUploadTime || currentWork.uploadDate) }}
+                </span>
+              </div>
             </div>
           </div>
-        </div>
 
-        <!-- 描述 -->
-        <div class="detail-description" v-if="currentWork.description">
-          <h4>作品描述</h4>
-          <p>{{ currentWork.description }}</p>
-        </div>
+          <div class="detail-stats-row">
+            <div class="stat-item">
+              <i class="el-icon-view"></i>
+              <span>{{ currentWork.views || 0 }}</span>
+              <span class="stat-label">浏览</span>
+            </div>
+            <div class="stat-item">
+              <i class="el-icon-star"></i>
+              <span>{{ currentWork.favorites || 0 }}</span>
+              <span class="stat-label">收藏</span>
+            </div>
+            <div class="stat-item">
+              <i class="el-icon-folder"></i>
+              <span>{{ currentWork.category || '未分类' }}</span>
+              <span class="stat-label">分类</span>
+            </div>
+            <div class="stat-item">
+              <i class="el-icon-tag"></i>
+              <span :class="['status-badge', currentWork.status]">{{ getStatusLabel(currentWork.status) }}</span>
+              <span class="stat-label">状态</span>
+            </div>
+          </div>
 
-        <!-- 文件信息 -->
-        <div class="detail-file">
-          <h4>文件信息</h4>
-          <div class="file-tags">
-            <span class="file-tag">📄 {{ currentWork.fileName || currentWork.filePath || '未知' }}</span>
-            <span class="file-tag">🏷 {{ formatFileType(currentWork.filePath) }}</span>
+          <!-- 描述 -->
+          <div class="detail-description" v-if="currentWork.description">
+            <h4><i class="el-icon-file-text"></i> 作品描述</h4>
+            <p>{{ currentWork.description }}</p>
+          </div>
+
+          <!-- 文件信息 -->
+          <div class="detail-file">
+            <h4><i class="el-icon-document"></i> 文件信息</h4>
+            <div class="file-info-grid">
+              <div class="file-info-item">
+                <span class="info-label">文件名</span>
+                <span class="info-value">{{ currentWork.fileName || currentWork.filePath || '未知' }}</span>
+              </div>
+              <div class="file-info-item">
+                <span class="info-label">文件类型</span>
+                <span class="info-value">{{ formatFileType(currentWork.filePath) }}</span>
+              </div>
+              <div class="file-info-item">
+                <span class="info-label">文件大小</span>
+                <span class="info-value">{{ formatFileSize(currentWork.fileSize) }}</span>
+              </div>
+            </div>
           </div>
         </div>
       </div>
 
       <span slot="footer" class="dialog-footer">
-        <el-button @click="detailDialogVisible = false" class="btn-cancel">关闭</el-button>
+        <el-button @click="detailDialogVisible = false" round>关闭</el-button>
         <el-button
           v-if="currentWork && currentWork.filePath"
           type="primary"
           @click="handleDownloadFile(currentWork)"
-          class="btn-download"
+          round
         >
           <i class="el-icon-download"></i> 下载文件
         </el-button>
       </span>
     </el-dialog>
 
-    <!-- 作品管理/反馈对话框（学生视角） -->
+    <!-- 作品管理/反馈对话框 -->
     <el-dialog
       title="作品管理"
       :visible.sync="reviewDialogVisible"
-      width="680px"
+      width="720px"
       :close-on-click-modal="false"
-      :append-to-body="true"
-      :modal-append-to-body="true"
+      custom-class="review-dialog"
+      append-to-body
+      destroy-on-close
     >
       <div v-if="reviewWork" class="review-dialog-content">
-        <!-- 作品基本信息 -->
-        <div class="review-header">
-          <h3>{{ reviewWork.title }}</h3>
-          <div class="review-meta">
-            <span>分类：{{ reviewWork.category || '未分类' }}</span>
-            <span>状态：<el-tag :type="reviewStatusTag(reviewWork.status)" size="small">{{ getStatusLabel(reviewWork.status) }}</el-tag></span>
-            <span>上传时间：{{ formatDate(reviewWork.fileUploadTime || reviewWork.uploadDate) }}</span>
+        <!-- 作品预览区 -->
+        <div class="review-preview">
+          <div class="review-cover">
+            <ModelCardCover :work="reviewWork" />
+          </div>
+          <div class="review-info">
+            <h3 class="review-title">{{ reviewWork.title }}</h3>
+            <div class="review-meta-row">
+              <span class="meta-item">
+                <i class="el-icon-folder"></i>
+                {{ reviewWork.category || '未分类' }}
+              </span>
+              <span :class="['status-badge', reviewWork.status]">
+                {{ getStatusLabel(reviewWork.status) }}
+              </span>
+            </div>
+            <div class="review-meta-row">
+              <span class="meta-item">
+                <i class="el-icon-calendar"></i>
+                {{ formatDate(reviewWork.fileUploadTime || reviewWork.uploadDate) }}
+              </span>
+            </div>
           </div>
         </div>
 
-        <!-- 教师评语 / 反馈历史 -->
-        <div class="review-history-section">
-          <h4>评语 / 反馈历史</h4>
+        <!-- 评语历史 -->
+        <div class="review-section">
+          <h4 class="section-title">
+            <i class="el-icon-chat-dot-round"></i>
+            评语 / 反馈历史
+          </h4>
           <div v-if="reviewHistory.length > 0" class="review-history-list">
             <div
               v-for="item in reviewHistory"
               :key="item.id"
-              class="history-item"
+              class="review-card"
             >
-              <div class="history-header">
-                <span class="history-author">{{ item.reviewerName }}（{{ item.reviewerRole === 'Admin' ? '管理员' : item.reviewerRole === 'Teacher' ? '教师' : '学生' }}）</span>
-                <el-tag
-                  size="mini"
-                  :type="item.type === 'resubmit' ? 'warning' : 'info'"
-                >
-                  {{ item.type === 'review' ? '教师评语' : '修改说明' }}
-                </el-tag>
-                <span class="history-time">{{ formatDateTime(item.createdAt) }}</span>
+              <div class="review-card-header">
+                <div class="reviewer-info">
+                  <span class="reviewer-avatar">{{ (item.reviewerName || '?')[0] }}</span>
+                  <div class="reviewer-details">
+                    <span class="reviewer-name">{{ item.reviewerName }}</span>
+                    <span class="reviewer-role">
+                      {{ item.reviewerRole === 'Admin' ? '管理员' : item.reviewerRole === 'Teacher' ? '教师' : '学生' }}
+                    </span>
+                  </div>
+                </div>
+                <div class="review-meta-right">
+                  <el-tag
+                    size="small"
+                    :type="item.type === 'resubmit' ? 'warning' : 'primary'"
+                  >
+                    {{ item.type === 'review' ? '教师评语' : '修改说明' }}
+                  </el-tag>
+                  <span class="review-time">{{ formatDateTime(item.createdAt) }}</span>
+                </div>
               </div>
-              <div class="history-content">{{ item.comment }}</div>
+              <div class="review-card-body">
+                <p>{{ item.comment }}</p>
+              </div>
             </div>
           </div>
-          <div v-else class="review-history-empty">
-            <p>暂无评语记录。等待教师审核后给出反馈。</p>
+          <div v-else class="review-empty">
+            <i class="el-icon-chat-dot-round"></i>
+            <p>暂无评语记录</p>
+            <span>等待教师审核后给出反馈</span>
           </div>
         </div>
 
-        <!-- 学生重新提交区域 -->
-        <div class="resubmit-section">
-          <h4>修改后重新提交</h4>
-          <p class="resubmit-hint">如需根据教师建议修改作品后可在此说明修改内容并标记为待审核。</p>
+        <!-- 重新提交 -->
+        <div class="review-section resubmit-section">
+          <h4 class="section-title">
+            <i class="el-icon-upload2"></i>
+            修改后重新提交
+          </h4>
+          <p class="resubmit-hint">如需根据教师建议修改作品，可在此说明修改内容并重新提交审核</p>
           <el-input
             v-model="resubmitComment"
             type="textarea"
-            :rows="3"
+            :rows="4"
             placeholder="请说明你做了哪些修改..."
             show-word-limit
             maxlength="500"
           />
           <div class="resubmit-actions">
-            <el-button @click="reviewDialogVisible = false">关闭</el-button>
-            <el-button type="primary" :loading="resubmitting" @click="handleResubmit">
+            <el-button @click="reviewDialogVisible = false" round>关闭</el-button>
+            <el-button type="primary" :loading="resubmitting" @click="handleResubmit" round>
+              <i class="el-icon-upload2"></i>
               重新提交审核
             </el-button>
           </div>
@@ -392,6 +469,7 @@
 <script>
 import http from '../../utils/http'
 import ModelCardCover from '../../components/ModelCardCover.vue'
+import { isModelFile } from '../../utils/fileUtils'
 
 export default {
   name: 'WorkManagement',
@@ -474,6 +552,7 @@ export default {
     }
   },
   methods: {
+    isModelFile,
     async loadWorks() {
       this.loading = true
       try {
@@ -925,11 +1004,15 @@ export default {
 
     async loadReviewHistory(workId) {
       try {
-        const { data } = await http.get(`/api/TeachingCollaboration/works/${workId}/reviews`)
-        this.reviewHistory = data.reviews || []
+        const res = await http.get(`/api/TeachingCollaboration/works/${workId}/reviews`)
+        this.reviewHistory = res.data?.reviews || []
       } catch (error) {
         console.error('加载评语历史失败:', error)
-        this.reviewHistory = []
+        if (error.response?.status === 403) {
+          this.reviewHistory = []
+        } else {
+          this.$message.error('加载评语历史失败')
+        }
       }
     },
 
@@ -1680,81 +1763,101 @@ export default {
 }
 
 /* 详情对话框内容 */
-.detail-header {
+.detail-content {
   display: flex;
+  flex-direction: column;
   gap: 24px;
-  padding-bottom: 24px;
-  border-bottom: 1px solid var(--border-color, #E8E2D8);
 }
 
-.detail-cover {
-  width: 180px;
-  height: 180px;
+.detail-header {
+  width: 100%;
+}
+
+.detail-preview {
+  width: 100%;
+  height: 320px;
   border-radius: var(--radius-lg, 18px);
   overflow: hidden;
-  flex-shrink: 0;
-  background: var(--border-light, #F2EDE6);
-  box-shadow: var(--shadow-card, 0 2px 12px rgba(0, 0, 0, .04), 0 1px 3px rgba(0, 0, 0, .03));
-  transition: transform var(--duration-normal, .3s);
+  background: var(--bg-card, #FFFFFF);
+  border: 1px solid var(--border-color, #E8E2D8);
+  box-shadow: var(--shadow-card);
 }
 
-.detail-cover:hover {
-  transform: scale(1.02);
+.preview-model-wrap {
+  width: 100%;
+  height: 100%;
 }
 
-.detail-cover-img {
+.preview-model-wrap :deep(.model-card-cover) {
+  width: 100%;
+  height: 100%;
+}
+
+.detail-preview-img {
   width: 100%;
   height: 100%;
   object-fit: cover;
 }
 
-.detail-cover-placeholder {
+.detail-preview-placeholder {
   width: 100%;
   height: 100%;
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 8px;
-  font-size: 13px;
-  color: var(--text-light, #888888);
+  gap: 12px;
   background: var(--primary-bg, #EDF5F0);
 }
 
-.detail-meta {
-  flex: 1;
+.file-emoji {
+  font-size: 64px;
+  opacity: 0.7;
+}
+
+.file-ext {
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--text-secondary, #555555);
+}
+
+.detail-info {
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  gap: 20px;
+}
+
+.detail-author-section {
+  background: var(--bg-card, #FFFFFF);
+  border-radius: var(--radius-lg, 18px);
+  border: 1px solid var(--border-color, #E8E2D8);
+  padding: 16px;
+  box-shadow: var(--shadow-card);
 }
 
 .detail-author {
   display: flex;
   align-items: center;
   gap: 12px;
-  padding: 12px 16px;
-  background: var(--bg-card, #FFFFFF);
-  border-radius: var(--radius-lg, 18px);
-  border: 1px solid var(--border-color, #E8E2D8);
-  box-shadow: var(--shadow-card, 0 2px 12px rgba(0, 0, 0, .04), 0 1px 3px rgba(0, 0, 0, .03));
-  transition: all var(--duration-fast, .18s);
-}
-
-.detail-author:hover {
-  box-shadow: var(--shadow-card-hover, 0 16px 40px rgba(0, 0, 0, .12));
 }
 
 .author-avatar-lg {
-  width: 40px;
-  height: 40px;
+  width: 48px;
+  height: 48px;
   border-radius: var(--radius-md, 14px);
-  background: var(--primary-bg, #EDF5F0);
+  background: linear-gradient(135deg, var(--primary, #2D8A6E), var(--primary-light, #45A884));
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  font-size: 16px;
+  font-size: 18px;
   font-weight: 600;
-  color: var(--primary, #2D8A6E);
+  color: #fff;
+}
+
+.author-info {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
 }
 
 .detail-author-name {
@@ -1763,33 +1866,98 @@ export default {
   color: var(--text-main, #1A1A1A);
 }
 
-.detail-stats {
-  display: flex;
-  gap: 20px;
-  font-size: 13px;
-  color: var(--text-secondary, #555555);
-  padding: 12px 16px;
-  background: var(--bg-card, #FFFFFF);
-  border-radius: var(--radius-lg, 18px);
-  border: 1px solid var(--border-color, #E8E2D8);
-}
-
 .detail-date {
   font-size: 12px;
   color: var(--text-light, #888888);
 }
 
-.detail-description {
-  padding: 24px 0;
-  border-bottom: 1px solid var(--border-color, #E8E2D8);
+.detail-stats-row {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 12px;
+}
+
+.stat-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  padding: 16px;
+  background: var(--bg-card, #FFFFFF);
+  border-radius: var(--radius-lg, 18px);
+  border: 1px solid var(--border-color, #E8E2D8);
+  box-shadow: var(--shadow-card);
+  transition: all var(--duration-fast, .18s);
+}
+
+.stat-item:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-card-hover);
+}
+
+.stat-item i {
+  font-size: 20px;
+  color: var(--primary, #2D8A6E);
+}
+
+.stat-item span:first-of-type {
+  font-size: 20px;
+  font-weight: 700;
+  color: var(--text-main, #1A1A1A);
+}
+
+.stat-label {
+  font-size: 12px;
+  color: var(--text-light, #888888);
+}
+
+.status-badge {
+  padding: 4px 12px;
+  border-radius: var(--radius-full, 9999px);
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.status-badge.已发布 {
+  background: rgba(76, 175, 80, 0.15);
+  color: #4CAF50;
+}
+
+.status-badge.待审核 {
+  background: rgba(251, 140, 0, 0.15);
+  color: #FB8C00;
+}
+
+.status-badge.草稿 {
+  background: rgba(100, 100, 100, 0.15);
+  color: #666666;
+}
+
+.detail-description,
+.detail-file {
+  background: var(--bg-card, #FFFFFF);
+  border-radius: var(--radius-lg, 18px);
+  border: 1px solid var(--border-color, #E8E2D8);
+  padding: 20px;
+  box-shadow: var(--shadow-card);
 }
 
 .detail-description h4,
 .detail-file h4 {
+  display: flex;
+  align-items: center;
+  gap: 8px;
   font-size: 15px;
   font-weight: 600;
   color: var(--text-main, #1A1A1A);
   margin: 0 0 16px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid var(--border-color, #E8E2D8);
+}
+
+.detail-description h4 i,
+.detail-file h4 i {
+  color: var(--primary, #2D8A6E);
 }
 
 .detail-description p {
@@ -1797,34 +1965,73 @@ export default {
   line-height: 1.7;
   color: var(--text-secondary, #555555);
   white-space: pre-wrap;
-  padding: 16px;
-  background: var(--bg-card, #FFFFFF);
-  border-radius: var(--radius-lg, 18px);
-  border: 1px solid var(--border-color, #E8E2D8);
+  margin: 0;
 }
 
-.detail-file {
-  padding-top: 24px;
+.file-info-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 16px;
 }
 
-.file-tags {
+.file-info-item {
   display: flex;
-  flex-wrap: wrap;
-  gap: 10px;
+  flex-direction: column;
+  gap: 4px;
+  padding: 12px;
+  background: var(--bg-page, #F8F9F5);
+  border-radius: var(--radius-md, 14px);
 }
 
-.file-tag {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  padding: 8px 16px;
-  border-radius: var(--radius-full, 9999px);
-  background: var(--primary-bg, #EDF5F0);
+.info-label {
   font-size: 12px;
+  color: var(--text-light, #888888);
+}
+
+.info-value {
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--text-main, #1A1A1A);
+  word-break: break-all;
+}
+
+/* 对话框按钮样式 */
+.dialog-footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+}
+
+.dialog-footer .el-button {
+  border-radius: var(--radius-lg, 18px);
   font-weight: 600;
-  color: var(--primary, #2D8A6E);
-  border: 1px solid var(--primary-glow, rgba(45, 138, 110, 0.2));
+  font-size: 14px;
+  padding: 10px 24px;
   transition: all var(--duration-fast, .18s);
+}
+
+.dialog-footer .el-button--default {
+  border: 1px solid var(--border-color, #E8E2D8);
+  background: var(--bg-card, #FFFFFF);
+  color: var(--text-secondary, #555555);
+}
+
+.dialog-footer .el-button--default:hover {
+  border-color: var(--primary, #2D8A6E);
+  color: var(--primary, #2D8A6E);
+  background: var(--primary-bg, #EDF5F0);
+}
+
+.dialog-footer .el-button--primary {
+  background: var(--primary, #2D8A6E);
+  border-color: var(--primary, #2D8A6E);
+  color: #fff;
+}
+
+.dialog-footer .el-button--primary:hover {
+  background: var(--primary-hover, #25755C);
+  border-color: var(--primary-hover, #25755C);
+  box-shadow: 0 4px 12px var(--primary-glow, rgba(45, 138, 110, 0.3));
 }
 
 .file-tag:hover {
@@ -1924,99 +2131,273 @@ export default {
   }
 }
 
-/* ========== 管理/反馈对话框样式（学生视角） ========== */
+/* ========== 管理/反馈对话框样式 ========== */
+::v-deep .review-dialog {
+  border-radius: var(--radius-xl, 24px);
+  overflow: hidden;
+  box-shadow: var(--shadow-popup);
+}
+
+::v-deep .review-dialog .el-dialog__header {
+  padding: 24px 28px;
+  font-size: 20px;
+  font-weight: 700;
+  color: var(--text-main, #1A1A1A);
+  background: var(--bg-card, #FFFFFF);
+  border-bottom: 1px solid var(--border-color, #E8E2D8);
+  margin: 0;
+}
+
+::v-deep .review-dialog .el-dialog__body {
+  padding: 0;
+  background: var(--bg-page, #F8F9F5);
+}
+
+::v-deep .review-dialog .el-dialog__footer {
+  padding: 20px 28px;
+  background: var(--bg-card, #FFFFFF);
+  border-top: 1px solid var(--border-color, #E8E2D8);
+}
+
 .review-dialog-content {
-  max-height: 60vh;
+  max-height: 70vh;
   overflow-y: auto;
-  padding-right: 4px;
+  padding: 24px;
 }
 
-.review-header {
-  margin-bottom: 20px;
-  padding-bottom: 16px;
-  border-bottom: 1px solid #e4e7ed;
-}
-
-.review-header h3 {
-  margin: 0 0 10px;
-  color: #182a3a;
-  font-size: 18px;
-}
-
-.review-meta {
+.review-preview {
   display: flex;
-  flex-wrap: wrap;
+  gap: 20px;
+  margin-bottom: 24px;
+  padding-bottom: 24px;
+  border-bottom: 1px solid var(--border-color, #E8E2D8);
+}
+
+.review-cover {
+  width: 160px;
+  height: 120px;
+  border-radius: var(--radius-lg, 18px);
+  overflow: hidden;
+  flex-shrink: 0;
+  background: var(--bg-card, #FFFFFF);
+  border: 1px solid var(--border-color, #E8E2D8);
+  box-shadow: var(--shadow-card);
+}
+
+.review-cover :deep(.model-card-cover) {
+  width: 100%;
+  height: 100%;
+}
+
+.review-info {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 12px;
+}
+
+.review-title {
+  font-size: 20px;
+  font-weight: 700;
+  color: var(--text-main, #1A1A1A);
+  margin: 0;
+}
+
+.review-meta-row {
+  display: flex;
+  align-items: center;
   gap: 16px;
-  color: #606266;
+}
+
+.meta-item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
   font-size: 13px;
+  color: var(--text-secondary, #555555);
 }
 
-.review-history-section {
-  margin-bottom: 20px;
-  padding-bottom: 16px;
-  border-bottom: 1px solid #e4e7ed;
+.meta-item i {
+  color: var(--primary, #2D8A6E);
 }
 
-.review-history-section h4,
-.resubmit-section h4 {
-  margin: 0 0 12px;
-  color: #303133;
-  font-size: 15px;
+.status-badge {
+  padding: 4px 12px;
+  border-radius: var(--radius-full, 9999px);
+  font-size: 12px;
   font-weight: 600;
+}
+
+.status-badge.已发布 {
+  background: rgba(76, 175, 80, 0.15);
+  color: #4CAF50;
+}
+
+.status-badge.待审核 {
+  background: rgba(251, 140, 0, 0.15);
+  color: #FB8C00;
+}
+
+.status-badge.草稿 {
+  background: rgba(100, 100, 100, 0.15);
+  color: #666666;
+}
+
+.review-section {
+  margin-bottom: 24px;
+  padding-bottom: 24px;
+  border-bottom: 1px solid var(--border-color, #E8E2D8);
+}
+
+.review-section:last-child {
+  border-bottom: none;
+  margin-bottom: 0;
+  padding-bottom: 0;
+}
+
+.section-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--text-main, #1A1A1A);
+  margin: 0 0 16px;
+}
+
+.section-title i {
+  color: var(--primary, #2D8A6E);
 }
 
 .review-history-list {
-  max-height: 240px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  max-height: 300px;
   overflow-y: auto;
 }
 
-.history-item {
-  padding: 12px;
-  margin-bottom: 8px;
-  background: #f5f7fa;
-  border-radius: 8px;
+.review-card {
+  background: var(--bg-card, #FFFFFF);
+  border-radius: var(--radius-lg, 18px);
+  border: 1px solid var(--border-color, #E8E2D8);
+  box-shadow: var(--shadow-card);
+  overflow: hidden;
+  transition: all var(--duration-fast, .18s);
 }
 
-.history-header {
+.review-card:hover {
+  box-shadow: var(--shadow-card-hover);
+  transform: translateY(-2px);
+}
+
+.review-card-header {
   display: flex;
   align-items: center;
-  gap: 10px;
-  margin-bottom: 6px;
+  justify-content: space-between;
+  padding: 16px;
+  background: var(--bg-page, #F8F9F5);
+  border-bottom: 1px solid var(--border-color, #E8E2D8);
 }
 
-.history-author {
+.reviewer-info {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.reviewer-avatar {
+  width: 40px;
+  height: 40px;
+  border-radius: var(--radius-md, 14px);
+  background: linear-gradient(135deg, var(--primary, #2D8A6E), var(--primary-light, #45A884));
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 16px;
   font-weight: 600;
-  color: #303133;
-  font-size: 13px;
+  color: #fff;
 }
 
-.history-time {
-  color: #909399;
-  font-size: 12px;
-  margin-left: auto;
+.reviewer-details {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
 }
 
-.history-content {
-  color: #606266;
+.reviewer-name {
   font-size: 14px;
-  line-height: 1.6;
-  white-space: pre-wrap;
+  font-weight: 600;
+  color: var(--text-main, #1A1A1A);
 }
 
-.review-history-empty {
-  text-align: center;
-  color: #c0c4cc;
-  padding: 20px 0;
+.reviewer-role {
+  font-size: 12px;
+  color: var(--text-light, #888888);
+}
+
+.review-meta-right {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.review-time {
+  font-size: 12px;
+  color: var(--text-light, #888888);
+}
+
+.review-card-body {
+  padding: 16px;
+}
+
+.review-card-body p {
+  font-size: 14px;
+  line-height: 1.7;
+  color: var(--text-secondary, #555555);
+  white-space: pre-wrap;
+  margin: 0;
+}
+
+.review-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 40px 20px;
+  background: var(--bg-card, #FFFFFF);
+  border-radius: var(--radius-lg, 18px);
+  border: 1px solid var(--border-color, #E8E2D8);
+}
+
+.review-empty i {
+  font-size: 48px;
+  color: var(--border-color, #E8E2D8);
+  margin-bottom: 16px;
+}
+
+.review-empty p {
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--text-main, #1A1A1A);
+  margin: 0 0 4px;
+}
+
+.review-empty span {
+  font-size: 13px;
+  color: var(--text-light, #888888);
 }
 
 .resubmit-section {
-  margin-top: 16px;
+  margin-bottom: 0;
 }
 
 .resubmit-hint {
-  margin: 0 0 12px;
-  color: #909399;
+  margin: 0 0 16px;
+  color: var(--text-secondary, #555555);
   font-size: 13px;
+  line-height: 1.6;
 }
 
 .resubmit-actions {
@@ -2024,5 +2405,41 @@ export default {
   justify-content: flex-end;
   gap: 12px;
   margin-top: 16px;
+}
+
+.resubmit-actions .el-button {
+  border-radius: var(--radius-lg, 18px);
+  font-weight: 600;
+  font-size: 14px;
+  padding: 10px 24px;
+  transition: all var(--duration-fast, .18s);
+}
+
+.resubmit-actions .el-button--default {
+  border: 1px solid var(--border-color, #E8E2D8);
+  background: var(--bg-card, #FFFFFF);
+  color: var(--text-secondary, #555555);
+}
+
+.resubmit-actions .el-button--default:hover {
+  border-color: var(--primary, #2D8A6E);
+  color: var(--primary, #2D8A6E);
+  background: var(--primary-bg, #EDF5F0);
+}
+
+.resubmit-actions .el-button--primary {
+  background: var(--primary, #2D8A6E);
+  border-color: var(--primary, #2D8A6E);
+  color: #fff;
+}
+
+.resubmit-actions .el-button--primary:hover {
+  background: var(--primary-hover, #25755C);
+  border-color: var(--primary-hover, #25755C);
+  box-shadow: 0 4px 12px var(--primary-glow, rgba(45, 138, 110, 0.3));
+}
+
+.resubmit-actions .el-button--primary i {
+  margin-right: 6px;
 }
 </style>

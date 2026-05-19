@@ -71,11 +71,6 @@ const routes = [
     meta: { public: true }
   },
   {
-    path: '/account/settings',
-    name: 'AccountSettings',
-    component: () => import('../views/account/Settings.vue')
-  },
-  {
     path: '/account/notifications',
     name: 'AccountNotifications',
     component: () => import('../views/account/NotificationList.vue')

@@ -401,7 +401,7 @@ namespace Backend.Controllers
 
         // PUT: api/Work/5
         [HttpPut("{id}")]
-        public async Task<IActionResult> PutWork(int id, [FromBody] WorkUpdateRequest request)
+        public async Task<IActionResult> UpdateWork(int id, [FromBody] WorkUpdateRequest request)
         {
             try
             {
@@ -745,6 +745,33 @@ namespace Backend.Controllers
 
                 // 增加浏览量
                 work.Views++;
+                
+                // 如果用户已登录，记录浏览历史
+                var userId = GetCurrentUserId();
+                if (userId != null)
+                {
+                    // 检查是否已经浏览过这个作品（如果浏览过，只更新浏览时间）
+                    var existingHistory = await _context.ViewHistories
+                        .FirstOrDefaultAsync(vh => vh.UserId == userId.Value && vh.WorkId == id);
+                    
+                    if (existingHistory != null)
+                    {
+                        // 更新浏览时间
+                        existingHistory.ViewedAt = DateTime.Now;
+                    }
+                    else
+                    {
+                        // 添加新的浏览记录
+                        var viewHistory = new ViewHistory
+                        {
+                            UserId = userId.Value,
+                            WorkId = id,
+                            ViewedAt = DateTime.Now
+                        };
+                        _context.ViewHistories.Add(viewHistory);
+                    }
+                }
+
                 await _context.SaveChangesAsync();
 
                 return Ok(new {
@@ -1032,31 +1059,32 @@ namespace Backend.Controllers
                 if (userId == null)
                     return Unauthorized(new { message = "未授权" });
 
-                // 从 ModerationItem 或使用最近浏览的作品（简化实现：返回用户自己最近上传的作品）
-                // 由于没有专门的浏览历史表，返回当前用户自己的作品作为历史
-                var works = await _context.Works
-                    .Where(w => w.UserId == userId.Value)
-                    .Include(w => w.Uploader)
-                    .OrderByDescending(w => w.UploadDate)
+                // 获取用户的浏览历史，按浏览时间倒序排列
+                var histories = await _context.ViewHistories
+                    .Where(vh => vh.UserId == userId.Value)
+                    .Include(vh => vh.Work)
+                        .ThenInclude(w => w.Uploader)
+                    .OrderByDescending(vh => vh.ViewedAt)
                     .Take(20)
-                    .Select(w => new
+                    .Select(vh => new
                     {
-                        id = w.Id,
-                        workId = w.Id,
-                        title = w.Title,
-                        description = w.Description,
-                        fileType = Path.GetExtension(w.FileName ?? "").TrimStart('.').ToLower(),
-                        previewImage = w.PreviewImage,
-                        fileName = w.FileName,
-                        filePath = w.FilePath,
-                        authorName = w.Uploader.Name ?? w.Uploader.Username,
-                        views = (int?)w.Views ?? 0,
-                        favorites = (int?)w.Favorites ?? 0,
-                        viewedAt = w.UploadDate
+                        id = vh.Id,
+                        workId = vh.WorkId,
+                        title = vh.Work.Title,
+                        description = vh.Work.Description,
+                        fileType = Path.GetExtension(vh.Work.FileName ?? "").TrimStart('.').ToLower(),
+                        previewImage = vh.Work.PreviewImage,
+                        fileName = vh.Work.FileName,
+                        filePath = vh.Work.FilePath,
+                        authorName = vh.Work.Uploader != null ? (vh.Work.Uploader.Name ?? vh.Work.Uploader.Username) : "未知作者",
+                        authorAvatar = vh.Work.Uploader != null ? vh.Work.Uploader.Avatar : null,
+                        views = (int?)vh.Work.Views ?? 0,
+                        favorites = (int?)vh.Work.Favorites ?? 0,
+                        viewedAt = vh.ViewedAt
                     })
                     .ToListAsync();
 
-                return Ok(works);
+                return Ok(histories);
             }
             catch (Exception ex)
             {
